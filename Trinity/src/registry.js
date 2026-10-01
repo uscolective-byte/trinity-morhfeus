@@ -56,9 +56,17 @@ const groups = [
     ['reporter', 'Spravodajca výsledkov', 'Priprav prehľad vykonaného, dôkazov a zostávajúcich obmedzení.']
   ]]
 ];
+export const SKILLS=[
+  {id:'planning',name:'Plánovanie úloh',description:'Rozdeľ požiadavku na kroky, závislosti a overiteľné výsledky.',clusters:['Riadenie','Podpora a automatizácia']},
+  {id:'secure-development',name:'Bezpečný vývoj',description:'Validuj vstupy, minimalizuj oprávnenia a pokrývaj hraničné prípady testami.',clusters:['Vývoj','Kvalita a bezpečnosť']},
+  {id:'cloud-operations',name:'Cloud prevádzka',description:'Over bindingy, build a health endpointy; nasadenie vyžaduje samostatné schválenie.',clusters:['Cloud a prevádzka']},
+  {id:'evidence-research',name:'Výskum s dôkazmi',description:'Oddeľ zdroje, fakty, odhady a neoverené predpoklady.',clusters:['Výskum','Dáta a pamäť']},
+  {id:'integration-design',name:'Návrh integrácií',description:'Najprv over dostupný konektor a jeho oprávnenia; tajomstvá nikdy nevypisuj.',clusters:['Dáta a pamäť','Cloud a prevádzka']},
+  {id:'quality-review',name:'Kontrola kvality',description:'Porovnaj výsledok s požiadavkami a uveď konkrétne zostávajúce riziká.',clusters:['Kvalita a bezpečnosť','Tvorba']}
+];
 export const AGENTS = groups.flatMap(([cluster, roles]) => roles.map(([id, name, role]) => ({
   id, name, cluster, role,
-  tools: ['search_memory','project_snapshot','calculate','analyze_text','current_time','list_capabilities', ...(['Výskum'].includes(cluster)||id==='orchestrator' ? ['web_search'] : []),
+  tools: ['search_memory','project_snapshot','calculate','analyze_text','current_time','list_capabilities','list_skills','list_connectors','install_plugin', ...(['Výskum'].includes(cluster)||id==='orchestrator' ? ['web_search'] : []),
     ...(['Riadenie','Cloud a prevádzka','Dáta a pamäť','Kvalita a bezpečnosť','Podpora a automatizácia'].includes(cluster) ? ['service_status'] : []),
     ...(id==='orchestrator'?['request_system_action','system_action_status']:[])]
 })));

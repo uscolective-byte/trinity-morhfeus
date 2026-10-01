@@ -1,44 +1,83 @@
 {
-  "project": "Morhfeus / Trinity",
-  "updated_at": "2026-10-01T20:06:10+02:00",
-  "source_of_truth": "C:\\Users\\saboi\\Documents\\Codex\\Morhfeus\\Trinity",
-  "production": {
-    "version": "6.7.0",
-    "cloudflare_version_id": "1b3f0e9a-5034-4246-b501-dd35cb0f861e",
-    "worker_url": "https://trinity.saboivan2008.workers.dev/",
-    "primary_url": "https://auru.dev/",
-    "live_studio_check": "passed",
-    "automated_tests": "37/37"
-  },
-  "firebase": {
-    "project_id": "trinity-morhfeus-20261001",
-    "hosting_url": "https://trinity-morhfeus-20261001.web.app/",
-    "status_bridge": "deployed_and_verified"
-  },
-  "steps": [
-    {"step": 1, "name": "Pravdivé jadro a stála osobnosť", "status": "completed"},
-    {"step": 2, "name": "Potrebné moduly Trinity", "status": "completed", "installed_plugins": 11},
-    {"step": 3, "name": "Privátne systémové schopnosti a lokálna brána", "status": "completed", "gateway_tests": "8/8", "pc_bridge_worker": "trinity-pc-bridge", "pc_bridge_version_id": "c62c93b6-5e69-4704-b3ac-98be6dddf516", "live_test": "passed"},
-    {"step": 4, "name": "AI Studio builder", "status": "completed", "live_project_id": "4f534a75-0459-4748-b166-d7031dae0344"},
-    {"step": 5, "name": "Izolovaný Python, Node.js a Java Sandbox", "status": "planned"},
-    {"step": 6, "name": "Google, Microsoft, sociálne a platobné konektory", "status": "planned_requires_oauth"}
-  ],
-  "next_action": "Pridať kapacitný manažér a izolovaný sandbox bez internetu a bez prístupu k tajomstvám.",
-  "local_runtime": {
-    "gateway_version": "1.2.0",
-    "autostart": true,
-    "cloud_status": "connected",
-    "pc_bridge_status": "connected",
-    "model": "qwen3:4b-instruct",
-    "live_inference": "passed",
-    "desktop_calculator_test": "passed"
-  },
-  "safety": {
-    "studio_preview_sandboxed": true,
-    "internet_in_code_sandbox": false,
-    "sandbox_secrets": false,
-    "external_action_claims_require_receipt": true,
-    "self_write_requires_review": true,
-    "payments_require_separate_user_approval": true
-  }
+    "project":  "Morhfeus / Trinity",
+    "source_of_truth":  "C:\\Users\\saboi\\Documents\\Codex\\Morhfeus\\Trinity",
+    "production":  {
+                       "version":  "6.7.0",
+                       "cloudflare_version_id":  "ae914af9-f156-4b6b-b9e9-7b297dd45a27",
+                       "worker_url":  "https://trinity.saboivan2008.workers.dev/",
+                       "primary_url":  "https://auru.dev/",
+                       "live_studio_check":  "passed",
+                       "automated_tests":  "40/40 Trinity, 8/8 Gateway, 2/2 PC Bridge"
+                   },
+    "firebase":  {
+                     "project_id":  "trinity-morhfeus-20261001",
+                     "hosting_url":  "https://trinity-morhfeus-20261001.web.app/",
+                     "status_bridge":  "deployed_and_verified"
+                 },
+    "steps":  [
+                  {
+                      "step":  1,
+                      "name":  "Pravdivé jadro a stála osobnosť",
+                      "status":  "completed"
+                  },
+                  {
+                      "step":  2,
+                      "name":  "Potrebné moduly Trinity",
+                      "status":  "completed",
+                      "installed_plugins":  13
+                  },
+                  {
+                      "step":  3,
+                      "name":  "Privátne systémové schopnosti a lokálna brána",
+                      "status":  "completed",
+                      "gateway_tests":  "8/8",
+                      "pc_bridge_worker":  "trinity-pc-bridge",
+                      "pc_bridge_version_id":  "26e78511-3ce5-4a78-85c3-f1bd14a1b1d3",
+                      "live_test":  "passed"
+                  },
+                  {
+                      "step":  4,
+                      "name":  "AI Studio builder",
+                      "status":  "completed",
+                      "live_project_id":  "4f534a75-0459-4748-b166-d7031dae0344"
+                  },
+                  {
+                      "step":  5,
+                      "name":  "Izolovaný Python, Node.js a Java Sandbox",
+                      "status":  "planned"
+                  },
+                  {
+                      "step":  6,
+                      "name":  "Google, Microsoft, sociálne a platobné konektory",
+                      "status":  "planned_requires_oauth"
+                  },
+                  {
+                      "step":  7,
+                      "name":  "Zručnosti, konektory a inštalácia dôveryhodných pluginov",
+                      "status":  "completed",
+                      "installed_plugins":  13
+                  }
+              ],
+    "next_action":  "Pridať kapacitný manažér a izolovaný sandbox bez internetu a bez prístupu k tajomstvám.",
+    "local_runtime":  {
+                          "gateway_version":  "1.2.0",
+                          "autostart":  true,
+                          "cloud_status":  "connected",
+                          "pc_bridge_status":  "connected",
+                          "model":  "qwen3:4b-instruct",
+                          "live_inference":  "passed",
+                          "desktop_calculator_test":  "passed"
+                      },
+    "safety":  {
+                   "studio_preview_sandboxed":  true,
+                   "internet_in_code_sandbox":  false,
+                   "sandbox_secrets":  false,
+                   "external_action_claims_require_receipt":  true,
+                   "self_write_requires_review":  true,
+                   "payments_require_separate_user_approval":  true
+               },
+    "build_status":  "success",
+    "last_sync":  "2026-10-01T22:24:56+02:00",
+    "modules_built":  3,
+    "updated_at":  "2026-10-01T22:24:56+02:00"
 }
