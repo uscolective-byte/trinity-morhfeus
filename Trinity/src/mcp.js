@@ -8,10 +8,10 @@ import {serviceStatus} from './services.js';
 const result=data=>({content:[{type:'text',text:JSON.stringify(data)}]});
 export function handleMcp(request,env,ctx){
   return createMcpHandler(()=>{
-    const server=new McpServer({name:'trinity',version:'6.5.0'});
+  const server=new McpServer({name:'trinity',version:'6.7.0'});
     server.registerTool('list_agents',{description:'Zoznam 40 špecialistov Trinity.',inputSchema:{}},async()=>result(AGENTS));
     server.registerTool('dispatch_task',{description:'Spustí skutočnú úlohu. Vrátené ID znamená zaradenie, nie dokončenie.',
-      inputSchema:{task:z.string().min(1).max(12000),agent:z.string().optional(),mode:z.enum(['single','team']).optional(),provider:z.enum(['workers-ai','ollama']).optional(),language:z.enum(['sk','en']).optional(),idempotency_key:z.string().uuid().optional()}},
+      inputSchema:{task:z.string().min(1).max(12000),agent:z.string().optional(),mode:z.enum(['single','team']).optional(),provider:z.enum(['workers-ai','ollama','local']).optional(),language:z.enum(['sk','en']).optional(),idempotency_key:z.string().uuid().optional()}},
       async args=>result(await createJob(env,args)));
     server.registerTool('get_task',{description:'Priebeh, nástroje a výsledky vykonávanej úlohy.',inputSchema:{id:z.string().uuid()}},async({id})=>result(await getJob(env,id)));
     server.registerTool('search_memory',{description:'Vyhľadá existujúcu zdieľanú pamäť Trinity.',inputSchema:{query:z.string().max(200)}},async({query})=>result(await searchMemory(env,query)));

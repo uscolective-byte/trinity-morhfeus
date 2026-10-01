@@ -21,12 +21,24 @@ export const systemActionSchema=z.object({
 
 const parseRow=row=>row?{...row,payload:JSON.parse(row.payload_json),receipt:row.receipt_json?JSON.parse(row.receipt_json):null,payload_json:undefined,receipt_json:undefined}:null;
 
+async function mirrorBridge(env,row){
+  if(!row||!env.PC_BRIDGE_SERVICE?.recordAction)return;
+  try{await env.PC_BRIDGE_SERVICE.recordAction({id:row.id,action:row.action,status:row.status,requested_by:row.requested_by||'trinity',updated_at:Date.now()});}
+  catch(error){console.error(JSON.stringify({event:'pc_bridge_mirror_failed',action_id:row.id,message:error instanceof Error?error.message:String(error)}));}
+}
+
+export async function getPCBridgeStatus(env){
+  if(!env.PC_BRIDGE_SERVICE?.getStatus)return {connected:false,status:'not-configured'};
+  try{return {status:'available',...await env.PC_BRIDGE_SERVICE.getStatus()};}
+  catch(error){console.error(JSON.stringify({event:'pc_bridge_status_failed',message:error instanceof Error?error.message:String(error)}));return {connected:false,status:'unavailable'};}
+}
+
 export async function createSystemAction(env,input,requestedBy='trinity'){
   const data=systemActionSchema.parse(input);const definition=SYSTEM_CAPABILITIES.find(item=>item.id===data.action);const id=crypto.randomUUID();const now=Date.now();const status=definition.approval?'proposed':'approved';
   await env.DB.prepare(`INSERT INTO ops_system_actions(id,action,payload_json,rationale,status,requested_by,approved_by,approved_at,expires_at,created_at,updated_at)
     VALUES(?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))`).bind(id,data.action,JSON.stringify(data.payload),data.rationale,status,requestedBy,definition.approval?null:'policy:auto-read',definition.approval?null:now,now+30*60_000).run();
   await env.DB.prepare("INSERT INTO ops_events(action,details) VALUES('system_action_proposed',?)").bind(JSON.stringify({id,action:data.action,status,requested_by:requestedBy})).run();
-  return getSystemAction(env,id);
+  const row=await getSystemAction(env,id);await mirrorBridge(env,row);return row;
 }
 
 export async function getSystemAction(env,id){return parseRow(await env.DB.prepare('SELECT * FROM ops_system_actions WHERE id=?').bind(id).first());}
@@ -36,12 +48,12 @@ export async function approveSystemAction(env,id,approvedBy='user'){
   const now=Date.now();const row=await env.DB.prepare("UPDATE ops_system_actions SET status='approved',approved_by=?,approved_at=?,updated_at=datetime('now') WHERE id=? AND status='proposed' AND expires_at>? RETURNING *").bind(approvedBy,now,id,now).first();
   if(!row){const current=await getSystemAction(env,id);throw new HttpError(current?409:404,current?`Akcia je v stave ${current.status}.`:'Akcia neexistuje.');}
   await env.DB.prepare("INSERT INTO ops_events(action,details) VALUES('system_action_approved',?)").bind(JSON.stringify({id,action:row.action,approved_by:approvedBy})).run();
-  return parseRow(row);
+  const parsed=parseRow(row);await mirrorBridge(env,parsed);return parsed;
 }
 
 export async function rejectSystemAction(env,id,rejectedBy='user'){
   const row=await env.DB.prepare("UPDATE ops_system_actions SET status='rejected',approved_by=?,updated_at=datetime('now') WHERE id=? AND status IN ('proposed','approved') RETURNING *").bind(rejectedBy,id).first();
-  if(!row)throw new HttpError(409,'Akciu už nemožno odmietnuť.');return parseRow(row);
+  if(!row)throw new HttpError(409,'Akciu už nemožno odmietnuť.');const parsed=parseRow(row);await mirrorBridge(env,parsed);return parsed;
 }
 
 export async function claimSystemAction(env,gatewayId){
@@ -49,7 +61,7 @@ export async function claimSystemAction(env,gatewayId){
   const row=await env.DB.prepare(`UPDATE ops_system_actions SET status='claimed',claimed_by=?,lease_until=?,attempts=attempts+1,updated_at=datetime('now')
     WHERE id=(SELECT id FROM ops_system_actions WHERE expires_at>? AND (status='approved' OR (status='claimed' AND lease_until<?)) ORDER BY created_at LIMIT 1)
     RETURNING *`).bind(gatewayId,lease,now,now).first();
-  return parseRow(row);
+  const parsed=parseRow(row);await mirrorBridge(env,parsed);return parsed;
 }
 
 export async function finishSystemAction(env,id,gatewayId,input){
@@ -59,7 +71,7 @@ export async function finishSystemAction(env,id,gatewayId,input){
     WHERE id=? AND status='claimed' AND claimed_by=? RETURNING *`).bind(data.status,data.receipt?JSON.stringify(data.receipt):null,data.error||null,Date.now(),id,gatewayId).first();
   if(!row)throw new HttpError(409,'Akcia nie je pridelená tejto lokálnej bráne.');
   await env.DB.prepare("INSERT INTO ops_events(action,details) VALUES('system_action_finished',?)").bind(JSON.stringify({id,action:row.action,status:data.status,gateway:gatewayId})).run();
-  return parseRow(row);
+  const parsed=parseRow(row);await mirrorBridge(env,parsed);return parsed;
 }
 
 export async function authenticateGateway(request,env){

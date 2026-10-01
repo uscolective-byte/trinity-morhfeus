@@ -1,0 +1,25 @@
+{
+  "checked_at": "2026-10-01T18:04:58.553Z",
+  "worker_version": "6.7.0",
+  "gateway": "connected",
+  "local_job_id": "4a0b014c-0050-4f6d-97e2-e921f23fa3c1",
+  "local_job_status": "completed",
+  "local_model": "qwen3:4b-instruct",
+  "local_response": "Lokálne PC prepojenie funguje.",
+  "desktop_action_id": "2946308a-546a-40ee-8993-d30245da1a1e",
+  "desktop_status": "completed",
+  "desktop_receipt": {
+    "action": "run",
+    "task": "desktop-control",
+    "desktop": {
+      "operation": "launch",
+      "app": "calculator",
+      "opened": true,
+      "window": {
+        "pid": 376,
+        "process": "ApplicationFrameHost",
+        "title": "Kalkulačka"
+      }
+    }
+  }
+}

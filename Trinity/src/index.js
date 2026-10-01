@@ -9,7 +9,7 @@ import {searchMemory,runTool} from './tools.js';
 import {PLUGINS,listPlugins,pluginEnabled} from './plugins.js';
 import {handleMcp} from './mcp.js';
 import {TRUTH_POLICY_VERSION} from './truth.js';
-import {SYSTEM_CAPABILITIES,createSystemAction,listSystemActions,getSystemAction,approveSystemAction,rejectSystemAction,claimSystemAction,finishSystemAction,authenticateGateway} from './system-actions.js';
+import {SYSTEM_CAPABILITIES,createSystemAction,listSystemActions,getSystemAction,approveSystemAction,rejectSystemAction,claimSystemAction,finishSystemAction,authenticateGateway,getPCBridgeStatus} from './system-actions.js';
 import {listStudioProjects,getStudioProject,createStudioProject,reviseStudioProject} from './studio.js';
 import html from '../public/index.html';
 import appJS from '../public/app.js.txt';
@@ -33,7 +33,7 @@ async function route(request,env,ctx){
   if(request.method==='GET'&&path==='/builder.css')return new Response(builderCSS,{headers:{'Content-Type':'text/css; charset=utf-8'}});
   if(request.method==='GET'&&path==='/theme.css')return new Response('',{headers:{'Content-Type':'text/css'}});
   if(path==='/health'||path==='/api/health'){
-    const response=json({service:'Trinity',version:'6.5.0',agents:40,status:'serving',truth_mode:'evidence-required'});const origin=request.headers.get('Origin');
+    const response=json({service:'Trinity',version:'6.7.0',agents:40,status:'serving',truth_mode:'evidence-required'});const origin=request.headers.get('Origin');
     if(['https://trinity-morhfeus-20261001.web.app','https://trinity-morhfeus-20261001.firebaseapp.com'].includes(origin)){response.headers.set('Access-Control-Allow-Origin',origin);response.headers.set('Vary','Origin');}
     return response;
   }
@@ -65,6 +65,11 @@ async function route(request,env,ctx){
     const gateway=await authenticateGateway(request,env);await rateLimit(env,`gateway-claim:${gateway}`,120);
     return json({action:await claimSystemAction(env,gateway)});
   }
+  if(path==='/api/system/pc-bridge/v1/heartbeat'&&request.method==='POST'){
+    const gateway=await authenticateGateway(request,env);await rateLimit(env,`gateway-heartbeat:${gateway}`,120);
+    if(!env.PC_BRIDGE_SERVICE?.heartbeat)throw new HttpError(503,'PC Bridge nie je nakonfigurovaný.');
+    return json(await env.PC_BRIDGE_SERVICE.heartbeat(await readJSON(request,32000)));
+  }
   const gatewayReceipt=path.match(/^\/api\/system\/actions\/([0-9a-f-]+)\/receipt$/i);
   if(gatewayReceipt&&request.method==='POST'){
     const gateway=await authenticateGateway(request,env);await rateLimit(env,`gateway-receipt:${gateway}`,120);
@@ -81,7 +86,7 @@ async function route(request,env,ctx){
     if(request.method==='POST'&&studioRoute[2]==='revise'){await rateLimit(env,`studio-revise:${user.id}`,8,300);return json({project:await reviseStudioProject(env,'primary',id,await readJSON(request,20000))});}
     if(request.method==='GET'&&studioRoute[2]==='export'){const project=await getStudioProject(env,'primary',id);return new Response(project.html,{headers:{'Content-Type':'text/html; charset=utf-8','Content-Disposition':`attachment; filename="${project.name.replace(/[^a-z0-9_-]+/gi,'-').slice(0,50)||'trinity-web'}.html"`}});}
   }
-  if(path==='/api/assistant/settings'&&request.method==='GET')return json({plugins:await listPlugins(env),truth_policy_version:TRUTH_POLICY_VERSION,version:'6.5.0'});
+  if(path==='/api/assistant/settings'&&request.method==='GET')return json({plugins:await listPlugins(env),truth_policy_version:TRUTH_POLICY_VERSION,version:'6.7.0'});
   const settingPlugin=path.match(/^\/api\/assistant\/settings\/plugins\/([a-z-]+)$/);
   if(settingPlugin&&request.method==='POST'){
     const plugin=PLUGINS.find(item=>item.id===settingPlugin[1]);if(!plugin)throw new HttpError(404,'Neznámy modul.');const {enabled}=z.object({enabled:z.boolean()}).strict().parse(await readJSON(request));
@@ -94,8 +99,8 @@ async function route(request,env,ctx){
       env.DB.prepare("SELECT COUNT(*) AS count FROM projects WHERE status IS NULL OR status NOT IN ('archived','deleted')").first(),
       env.DB.prepare("SELECT id,session_id,substr(task,1,120) AS task,status,updated_at FROM ops_jobs WHERE task NOT LIKE 'Kontrolný test%' ORDER BY updated_at DESC LIMIT 6").all()
     ]);
-    const services=[env.AI,env.DB,env.ARTIFACTS,env.Mastermind,env.OPS_WORKFLOW,env.OLLAMA_SECRET||env.OLLAMA_API_KEY];
-    return json({today_completed:today.count||0,memory_count:memory.count||0,project_count:projects.count||0,available_services:services.filter(Boolean).length,total_services:services.length,recent_jobs:recent.results});
+    const services=[env.AI,env.DB,env.ARTIFACTS,env.Mastermind,env.OPS_WORKFLOW,env.PC_BRIDGE_SERVICE,env.OLLAMA_SECRET||env.OLLAMA_API_KEY];
+    return json({today_completed:today.count||0,memory_count:memory.count||0,project_count:projects.count||0,available_services:services.filter(Boolean).length,total_services:services.length,pc_bridge:await getPCBridgeStatus(env),recent_jobs:recent.results});
   }
   if(path==='/api/assistant/projects'&&request.method==='GET'){
     const [projects,tasks]=await Promise.all([env.DB.prepare('SELECT id,name,description,status FROM projects ORDER BY updated_at DESC LIMIT 30').all(),env.DB.prepare('SELECT id,title,status,assigned_agent FROM tasks ORDER BY updated_at DESC LIMIT 50').all()]);
@@ -115,7 +120,7 @@ async function route(request,env,ctx){
       return json({action:systemActionRoute[2]==='approve'?await approveSystemAction(env,id,`user:${user.id}`):await rejectSystemAction(env,id,`user:${user.id}`)});
     }
   }
-  if(path==='/api/assistant/status'&&request.method==='GET')return json({name:'Trinity',mode:'cloud',model:'Trinity',available:true,cloud:true,identity:'single',active_specializations:AGENTS.length,capability_registry:'extensible',personality:'persistent',consciousness:false,decision_pipeline:'context → plan → tools → evidence check → response',truth_mode:'evidence-required',truth_policy_version:TRUTH_POLICY_VERSION,memory_location:'Cloudflare D1 · trinity-v03 · ops_memory + memory_long',tools:(await listPlugins(env)).filter(p=>p.enabled).flatMap(p=>p.tools)});
+  if(path==='/api/assistant/status'&&request.method==='GET')return json({name:'Trinity',mode:'cloud',model:'Trinity',available:true,cloud:true,local_available:!!env.TRINITY_GATEWAY_KEY,local_model:'qwen3:4b-instruct',pc_bridge:await getPCBridgeStatus(env),identity:'single',active_specializations:AGENTS.length,capability_registry:'extensible',personality:'persistent',consciousness:false,decision_pipeline:'context → plan → tools → evidence check → response',truth_mode:'evidence-required',truth_policy_version:TRUTH_POLICY_VERSION,memory_location:'Cloudflare D1 · trinity-v03 · ops_memory + memory_long',tools:(await listPlugins(env)).filter(p=>p.enabled).flatMap(p=>p.tools)});
   if(path==='/api/assistant/sessions'&&request.method==='GET')return json((await env.DB.prepare("SELECT session_id AS session,MIN(task) AS title,MAX(created_at) AS updated_at FROM ops_jobs WHERE task NOT LIKE 'Kontrolný test%' GROUP BY session_id ORDER BY updated_at DESC LIMIT 30").all()).results);
   if(path==='/api/assistant/history'&&request.method==='GET'){
     const id=uuid.parse(url.searchParams.get('session'));
@@ -127,7 +132,7 @@ async function route(request,env,ctx){
     const d=z.object({message:z.string().min(1).max(12000),session:z.string().uuid(),language:z.enum(['sk','en']).default('sk'),engine:z.string().optional(),remember:z.boolean().optional(),allow_files:z.boolean().optional()}).strict().parse(await readJSON(request));
     const wantsMemory=/^(zapamätaj si|zapamataj si|remember)\s*[:,-]?\s+/i.test(d.message);
     const delegated=shouldDelegate(d.message);
-    return json(await createJob(env,{task:d.message,session_id:d.session,agent:delegated?'auto':'orchestrator',mode:delegated?'team':'single',provider:'ollama',language:d.language,remember:d.remember||wantsMemory,idempotency_key:crypto.randomUUID()}),202);
+    return json(await createJob(env,{task:d.message,session_id:d.session,agent:delegated?'auto':'orchestrator',mode:delegated?'team':'single',provider:d.engine==='local'?'local':'ollama',language:d.language,remember:d.remember||wantsMemory,idempotency_key:crypto.randomUUID()}),202);
   }
   if(path==='/api/assistant/memory'){
     if(request.method==='GET')return json((await searchMemory(env,url.searchParams.get('q')||'')).records);
@@ -153,7 +158,7 @@ async function route(request,env,ctx){
   }
   if(path==='/api/ops/status'&&request.method==='GET'){
     const counts=await env.DB.prepare('SELECT status,COUNT(*) AS count FROM ops_jobs GROUP BY status').all();
-    return json({name:'Trinity',version:'6.5.0',agents:AGENTS.length,identity:'single',consciousness:false,truth_mode:'evidence-required',truth_policy_version:TRUTH_POLICY_VERSION,jobs:counts.results,
+    return json({name:'Trinity',version:'6.7.0',agents:AGENTS.length,identity:'single',consciousness:false,truth_mode:'evidence-required',truth_policy_version:TRUTH_POLICY_VERSION,jobs:counts.results,
       development_access_until:env.TRINITY_DEV_UNTIL||null,
       providers:{'workers-ai':env.AI?'configured':'missing',ollama:env.OLLAMA_SECRET||env.OLLAMA_API_KEY?'configured':'missing'},
       memory:await env.DB.prepare('SELECT (SELECT COUNT(*) FROM ops_memory) AS notes,(SELECT COUNT(*) FROM memory_long) AS legacy,(SELECT COUNT(*) FROM ops_jobs) AS conversations').first(),
@@ -190,7 +195,7 @@ async function route(request,env,ctx){
   if(path==='/api/ops/services'&&request.method==='GET')return json(await serviceStatus(env));
   if(path==='/api/ops/providers/test'&&request.method==='POST'){
     await rateLimit(env,`provider:${user.id}`,4);
-    const {provider}=z.object({provider:z.enum(['workers-ai','ollama'])}).parse(await readJSON(request));
+    const {provider}=z.object({provider:z.enum(['workers-ai','ollama','local'])}).parse(await readJSON(request));
     try{const response=await callModel(env,provider,[{role:'user',content:'Odpovedz iba: TRINITY_OK'}],40);return json({status:'verified',provider,model:response.model,response:response.text});}
     catch(e){return json({status:'failed',provider,error:e.message},502);}
   }

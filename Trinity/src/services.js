@@ -1,3 +1,5 @@
+import {createSystemAction,getSystemAction} from './system-actions.js';
+
 export const SERVICES = {
   CORE: { name:'Jadro', path:'/health' }, BUILDER:{name:'Vývoj',path:'/health'},
   DISPATCHER:{name:'Dispatcher',path:'/health'}, MEMORY:{name:'Pamäť',path:'/api/stats'},
@@ -37,6 +39,16 @@ export async function getOllamaKey(env) {
   return key.trim();
 }
 export async function callModel(env, provider, messages, maxTokens = 1200) {
+  if(provider==='local'){
+    if(!env.TRINITY_GATEWAY_KEY)throw new Error('Lokálna brána nie je nakonfigurovaná.');
+    const action=await createSystemAction(env,{action:'read',payload:{task:'local-inference',messages,max_tokens:maxTokens},rationale:'Lokálna AI odpoveď na používateľovu požiadavku'},'provider:local');
+    for(let attempt=0;attempt<180;attempt++){
+      await new Promise(resolve=>setTimeout(resolve,1000));const current=await getSystemAction(env,action.id);
+      if(current?.status==='completed')return {text:current.receipt.response,model:current.receipt.model,provider:'local',usage:current.receipt.usage||null};
+      if(current?.status==='failed')throw new Error(current.error||'Lokálny model zlyhal.');
+    }
+    throw new Error('Lokálny model neodpovedal v časovom limite.');
+  }
   if(provider==='ollama') {
     const key=await getOllamaKey(env);
     const model=env.OLLAMA_MODEL || 'gemma4:31b';

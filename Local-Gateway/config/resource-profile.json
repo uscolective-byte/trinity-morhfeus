@@ -1,0 +1,23 @@
+{
+  "profile": "trinity-balanced-local",
+  "detected": {
+    "cpu": "Intel Core i5-10310U",
+    "cores": 4,
+    "logical_processors": 8,
+    "ram_gb": 15.6,
+    "gpu": "Intel UHD Graphics",
+    "gpu_vram_gb": 1.0,
+    "storage": "WDC PC SN530 NVMe 256GB"
+  },
+  "ollama": {
+    "model": "qwen3:4b-instruct",
+    "threads": 6,
+    "context": 4096,
+    "max_output_tokens": 600,
+    "keep_alive": "30m"
+  },
+  "headroom": {
+    "reserved_logical_processors": 2,
+    "reason": "Windows and the interactive desktop must remain responsive."
+  }
+}

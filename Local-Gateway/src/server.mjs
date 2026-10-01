@@ -6,6 +6,7 @@ import {CAPABILITIES,ACTIONS} from './policy.mjs';
 import {ProposalStore} from './store.mjs';
 import {executeProposal,readWorkspaceFile} from './executor.mjs';
 import {startCloudLink} from './cloud-link.mjs';
+import {startBridgeHeartbeat} from './bridge-heartbeat.mjs';
 
 const here=path.dirname(fileURLToPath(import.meta.url));
 const gatewayRoot=path.resolve(here,'..');
@@ -15,6 +16,7 @@ const token=process.env.TRINITY_LOCAL_TOKEN;
 if(!token||token.length<32)throw new Error('TRINITY_LOCAL_TOKEN chýba alebo je príliš krátky. Spusti setup.ps1.');
 const store=new ProposalStore(dataDir);await store.init();
 let cloudState={status:process.env.TRINITY_GATEWAY_KEY?'connecting':'not-configured'};
+let pcBridgeState={status:process.env.TRINITY_PC_BRIDGE_KEY?'connecting':'not-configured'};
 
 const digest=value=>createHash('sha256').update(value||'').digest();
 const authorized=request=>{const supplied=request.headers.authorization?.replace(/^Bearer\s+/i,'')||'';return supplied.length>0&&timingSafeEqual(digest(supplied),digest(token));};
@@ -24,7 +26,7 @@ async function body(request,limit=1_100_000){let size=0,chunks=[];for await(cons
 const server=http.createServer(async(request,response)=>{
   try{
     const url=new URL(request.url,'http://127.0.0.1');
-    if(request.method==='GET'&&url.pathname==='/health')return send(response,200,{service:'Trinity Local Gateway',version:'1.0.0',status:'ready',binding:'127.0.0.1',cloud:cloudState.status});
+    if(request.method==='GET'&&url.pathname==='/health')return send(response,200,{service:'Trinity Local Gateway',version:'1.2.0',status:'ready',binding:'127.0.0.1',cloud:cloudState.status,pc_bridge:pcBridgeState.status,desktop_control:'approval-required',local_model:'qwen3:4b-instruct'});
     if(!authorized(request))return send(response,401,{error:'Neplatné lokálne oprávnenie.'});
     if(request.method==='GET'&&url.pathname==='/api/capabilities')return send(response,200,{internal:true,capabilities:CAPABILITIES});
     if(request.method==='GET'&&url.pathname==='/api/proposals')return send(response,200,{items:await store.list()});
@@ -51,4 +53,5 @@ const server=http.createServer(async(request,response)=>{
 
 const port=Number(process.env.TRINITY_LOCAL_PORT||8791);
 startCloudLink({baseUrl:(process.env.TRINITY_CLOUD_URL||'').replace(/\/$/,''),key:process.env.TRINITY_GATEWAY_KEY,store,workspaceRoot,dataDir,onState:state=>{cloudState=state;if(state.status!=='connected')console.log(JSON.stringify({event:'cloud_link',status:state.status,id:state.id}));}});
+startBridgeHeartbeat({baseUrl:process.env.TRINITY_PC_BRIDGE_URL,key:process.env.TRINITY_PC_BRIDGE_KEY,capabilities:CAPABILITIES.map(item=>item.id),onState:state=>{pcBridgeState=state;if(state.status!=='connected')console.log(JSON.stringify({event:'pc_bridge',status:state.status,error:state.error}));}});
 server.listen(port,'127.0.0.1',()=>console.log(JSON.stringify({event:'gateway_ready',host:'127.0.0.1',port,workspace:workspaceRoot,cloud:cloudState.status})));

@@ -3,7 +3,7 @@ import {agentById,selectTeam} from './registry.js';
 import {HttpError} from './security.js';
 export const jobSchema=z.object({task:z.string().trim().min(1).max(12000),
   agent:z.string().default('auto'),mode:z.enum(['single','team']).default('single'),
-  provider:z.enum(['workers-ai','ollama']).default('workers-ai'),
+  provider:z.enum(['workers-ai','ollama','local']).default('workers-ai'),
   session_id:z.string().uuid().optional(),team:z.array(z.string()).min(1).max(5).optional(),
   language:z.enum(['sk','en']).default('sk'),remember:z.boolean().default(false),idempotency_key:z.string().uuid().optional()}).strict();
 export async function createJob(env, body) {

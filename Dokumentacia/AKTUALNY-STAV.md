@@ -6,8 +6,9 @@ Aktualizované: 1. októbra 2026
 
 - Hlavná adresa: <https://auru.dev/>
 - Worker: <https://trinity.saboivan2008.workers.dev/>
-- Produkčná verzia: `6.5.0`
-- Cloudflare Version ID: `e1999413-7972-46fd-ab30-4dce85a3a9d2`
+- Produkčná verzia: `6.7.0`
+- Cloudflare Version ID: `1b3f0e9a-5034-4246-b501-dd35cb0f861e`
+- PC Bridge Worker: `trinity-pc-bridge`, Version ID `c62c93b6-5e69-4704-b3ac-98be6dddf516`
 - Firebase stavový most: <https://trinity-morhfeus-20261001.web.app/>
 
 ## Dokončené kroky
@@ -19,6 +20,7 @@ Aktualizované: 1. októbra 2026
 5. **Nastavenia** – informačné moduly boli presunuté do Nastavení a voliteľné moduly sa dajú zapnúť alebo vypnúť.
 6. **Firebase** – nový projekt a hosting stavového mosta boli nasadené; CORS spojenie s produkčným Workerom bolo overené.
 7. **MCP** – Cloud endpoint aj lokálne Codex mosty pre Trinity a Firebase sú nakonfigurované. Nová relácia Codexu ich načíta zo spoločnej MCP konfigurácie.
+8. **PC Bridge orchestrácia** – Worker `trinity-pc-bridge` je pripojený k Trinity cez interné RPC. Lokálna brána 1.2.0 posiela heartbeat cez autorizovaný endpoint Trinity, používa `qwen3:4b-instruct` a zrkadlí stavy schválených systémových akcií.
 
 ## Ešte nepripojené
 
@@ -30,12 +32,14 @@ Aktualizované: 1. októbra 2026
 
 - Lokálny Worker build: úspešný.
 - Worker testy: 37/37 úspešných.
-- Lokálna brána: 7/7 úspešných.
+- Lokálna brána: 8/8 úspešných.
+- PC Bridge Worker: 2/2 testy a produkčný dry-run úspešné.
 - D1 migrácie `0009` a `0010`: aplikované v produkcii.
-- Živé `/health`: Trinity 6.5.0.
+- Živé `/health`: Trinity 6.7.0.
+- Živý PC test: lokálny model odpovedal „Lokálne PC prepojenie funguje.“ a schválená desktopová akcia otvorila potvrdené okno Kalkulačky.
 - Živé AI Studio: projekt `4f534a75-0459-4748-b166-d7031dae0344`, úplné HTML, vložená CSP, živý náhľad.
 - Firebase Hosting: HTTP 200; CORS pre produkčný stavový endpoint overený.
-- Záznamy: `Trinity/verification/studio-live.json`, `Trinity/verification/system-capabilities-live.json`.
+- Záznamy: `Trinity/verification/studio-live.json`, `Trinity/verification/system-capabilities-live.json`, `Trinity/verification/pc-bridge-live.json`.
 
 ## Pravidlo pravdivosti
 

@@ -6,6 +6,7 @@ import path from 'node:path';
 import {resolveSafePath,validatePackage,RUN_TASKS} from '../src/policy.mjs';
 import {ProposalStore,sha256} from '../src/store.mjs';
 import {executeProposal,readWorkspaceFile} from '../src/executor.mjs';
+import {validateDesktopRequest} from '../src/desktop.mjs';
 
 async function workspace(){const root=await mkdtemp(path.join(os.tmpdir(),'trinity-gateway-'));await mkdir(path.join(root,'Trinity'),{recursive:true});await writeFile(path.join(root,'Trinity','a.txt'),'old','utf8');return root;}
 
@@ -36,3 +37,9 @@ test('selfwrite cannot alter gateway or secrets',async()=>{
 test('read returns evidence hash',async()=>{const root=await workspace();const value=await readWorkspaceFile(root,'Trinity/a.txt');assert.equal(value.content,'old');assert.equal(value.sha256,sha256('old'));});
 test('commands and packages are allowlisted',()=>{assert.deepEqual(Object.keys(RUN_TASKS).sort(),['build','diff-check','git-status','tests']);assert.equal(validatePackage('zod','4.6.5'),'zod@4.6.5');assert.throws(()=>validatePackage('zod','latest'),/presnú verziu/);});
 test('remote action import is idempotent',async()=>{const root=await workspace();const store=new ProposalStore(path.join(root,'data'));const remote={id:'8a8a8a8a-1234-4123-8123-123456789abc',action:'read',payload:{path:'Trinity/a.txt'},expires_at:Date.now()+60_000};const first=await store.importApproved(remote);const second=await store.importApproved(remote);assert.equal(first.id,second.id);assert.equal((await store.list()).length,1);});
+test('desktop controller is allowlisted and rejects broad control',()=>{
+  assert.deepEqual(validateDesktopRequest({task:'desktop-control',operation:'launch',app:'calculator'}),{operation:'launch',app:'calculator',text:null});
+  assert.throws(()=>validateDesktopRequest({task:'desktop-control',operation:'launch',app:'powershell'}),/povolenom zozname/);
+  assert.throws(()=>validateDesktopRequest({task:'desktop-control',operation:'type',app:'explorer',text:'x'}),/Poznámkovom bloku/);
+  assert.throws(()=>validateDesktopRequest({task:'desktop-control',operation:'click',app:'notepad'}),/nie je povolená/);
+});

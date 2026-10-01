@@ -6,6 +6,7 @@ Hlavný pracovný priečinok projektu Trinity. Od 1. októbra 2026 sa nové zdro
 
 - `Trinity` – aktuálny produkčný Cloudflare Worker a hlavný zdrojový kód.
 - `Local-Gateway` – privátna lokálna brána pre schválené systémové operácie.
+- `PC-Bridge-Worker` – Cloudflare Worker pre heartbeat, stav PC a interné orchestrátorové RPC.
 - `Firebase` – Firebase Hosting stavového mosta na produkčnú Trinity.
 - `Prototypy` – staršie alebo pomocné verzie, ktoré nie sú produkčným zdrojom.
 - `Navrhy` – vizuálne koncepty.

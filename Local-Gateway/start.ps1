@@ -14,6 +14,10 @@ try {
     $env:TRINITY_GATEWAY_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($cloudPtr)
     $env:TRINITY_CLOUD_URL = 'https://auru.dev'
   }
+  if ($env:TRINITY_GATEWAY_KEY) {
+    $env:TRINITY_PC_BRIDGE_KEY = $env:TRINITY_GATEWAY_KEY
+    $env:TRINITY_PC_BRIDGE_URL = 'https://auru.dev/api/system/pc-bridge'
+  }
   Set-Location $root
   node src/server.mjs
 } finally {
@@ -21,4 +25,5 @@ try {
   if ($ptr -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
   Remove-Item Env:\TRINITY_LOCAL_TOKEN -ErrorAction SilentlyContinue
   Remove-Item Env:\TRINITY_GATEWAY_KEY -ErrorAction SilentlyContinue
+  Remove-Item Env:\TRINITY_PC_BRIDGE_KEY -ErrorAction SilentlyContinue
 }

@@ -18,7 +18,7 @@ Tento súbor je prvý kontrolný bod pre nový chat alebo model. Pred pokračova
 
 ## Aktuálny stav
 
-Trinity 6.5.0 je nasadená s reálnym AI Studio builderom, Nastaveniami, privátnou lokálnou bránou a Firebase stavovým mostom. Produkčný checkpoint je Cloudflare Version ID `e1999413-7972-46fd-ab30-4dce85a3a9d2`; Worker testy prešli 37/37.
+Trinity 6.7.0 je nasadená s AI Studio builderom, Nastaveniami, privátnou lokálnou bránou 1.2.0, Workerom `trinity-pc-bridge` a Firebase stavovým mostom. Produkčný checkpoint Trinity je `1b3f0e9a-5034-4246-b501-dd35cb0f861e`, PC Bridge checkpoint je `c62c93b6-5e69-4704-b3ac-98be6dddf516`; Worker testy prešli 37/37, gateway 8/8 a PC Bridge 2/2. Živý lokálny AI a desktopový test prešiel.
 
 ## Aktuálny ďalší krok
 

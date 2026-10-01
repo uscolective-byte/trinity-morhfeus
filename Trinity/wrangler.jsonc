@@ -111,6 +111,10 @@
   ],
   "services": [
     {
+      "binding": "PC_BRIDGE_SERVICE",
+      "service": "trinity-pc-bridge"
+    },
+    {
       "binding": "CORE",
       "service": "trinity-core"
     },

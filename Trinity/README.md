@@ -92,6 +92,6 @@ npx wrangler d1 migrations apply DB --remote
 npm run deploy
 ```
 
-Aktuálna verzia 6.5.0 prešla 37 automatizovanými testami. Obsahuje stálu osobnosť, režim pravdy, 11 nainštalovaných modulov, privátnu lokálnu bránu a reálny AI Studio builder. Živé overenie Studia je v `verification/studio-live.json`.
+Aktuálna verzia 6.7.0 prešla 37 automatizovanými testami. Obsahuje stálu osobnosť, režim pravdy, 11 nainštalovaných modulov, AI Studio builder a privátnu lokálnu bránu prepojenú s Workerom `trinity-pc-bridge` cez interné Cloudflare RPC. Živé overenie Studia je v `verification/studio-live.json`; lokálny model a desktopový bridge sú overené v `verification/pc-bridge-live.json`.
 
 Aktuálny Cloudflare Version ID: `e1999413-7972-46fd-ab30-4dce85a3a9d2`.

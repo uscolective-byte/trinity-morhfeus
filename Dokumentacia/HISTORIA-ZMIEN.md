@@ -20,3 +20,7 @@
 - Vytvorený a nasadený Firebase projekt `trinity-morhfeus-20261001` so stavovým mostom na produkčnú Trinity.
 - Codex MCP konfigurácia bola rozšírená o lokálny Trinity most a Firebase MCP server.
 - Aplikované migrácie `0009` a `0010` a nasadená verzia 6.5.0; Worker testy prešli 37/37.
+- Pôvodný `trinity-pc-bridge` bol nahradený bezpečným Durable Object Workerom s interným RPC, heartbeatom a secretom namiesto plain-text kľúča.
+- Trinity 6.7.0 zrkadlí životný cyklus systémových akcií do PC Bridge a zobrazuje živý stav lokálnej brány.
+- Lokálna brána 1.2.0 používa `qwen3:4b-instruct`, automatický štart a bezpečný zoznam desktopových operácií; testy prešli 8/8.
+- End-to-end test Cloudflare → lokálny Qwen → Cloudflare prešiel a potvrdená desktopová akcia otvorila Kalkulačku.

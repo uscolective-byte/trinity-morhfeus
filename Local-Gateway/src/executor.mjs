@@ -4,9 +4,22 @@ import {spawn} from 'node:child_process';
 import {randomUUID} from 'node:crypto';
 import {resolveSafePath,RUN_TASKS,validatePackage,validateProject} from './policy.mjs';
 import {sha256} from './store.mjs';
+import {executeDesktop} from './desktop.mjs';
 
 const MAX_TEXT=1_000_000;
 const MAX_OUTPUT=128_000;
+const RESOURCE_PROFILE=JSON.parse(await readFile(new URL('../config/resource-profile.json',import.meta.url),'utf8'));
+
+async function runLocalInference(payload){
+  if(payload.task!=='local-inference'||!Array.isArray(payload.messages)||payload.messages.length<1||payload.messages.length>20)throw new Error('Neplatná lokálna AI požiadavka.');
+  const messages=payload.messages.map(message=>{if(!['system','user','assistant'].includes(message?.role)||typeof message.content!=='string'||message.content.length>20_000)throw new Error('Neplatná správa pre lokálny model.');return {role:message.role,content:message.content};});
+  const profile=RESOURCE_PROFILE.ollama,model=profile.model,maxTokens=Math.max(32,Math.min(Number(payload.max_tokens)||1200,profile.max_output_tokens));
+  const response=await fetch('http://127.0.0.1:11434/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model,messages,stream:false,keep_alive:profile.keep_alive,options:{num_predict:maxTokens,num_ctx:profile.context,num_thread:profile.threads,temperature:0.25}}),signal:AbortSignal.timeout(180_000)});
+  const text=await response.text();let data={};try{data=JSON.parse(text);}catch{}
+  if(!response.ok)throw new Error(`Lokálny Ollama model zlyhal (HTTP ${response.status}).`);
+  if(!data.message?.content?.trim())throw new Error('Lokálny model vrátil prázdnu odpoveď.');
+  return {action:'read',task:'local-inference',model,response:data.message.content,usage:{input:data.prompt_eval_count||0,output:data.eval_count||0},completed:true};
+}
 
 async function runProcess(command,args,{cwd,timeoutMs=120_000}={}){
   return new Promise((resolve,reject)=>{
@@ -42,6 +55,7 @@ export async function executeProposal(workspaceRoot,proposal,dataDir){
     return {action:proposal.action,path:payload.path,before_sha256:before,after_sha256:after,bytes:Buffer.byteLength(payload.content)};
   }
   if(proposal.action==='run'){
+    if(payload.task==='desktop-control')return {action:'run',task:'desktop-control',desktop:await executeDesktop(payload)};
     const project=validateProject(payload.project);const task=RUN_TASKS[payload.task];if(!task)throw new Error('Úloha nie je povolená.');
     const cwd=await resolveSafePath(workspaceRoot,project);const result=await runProcess(task.command,task.args,{cwd});return {action:'run',project,task:payload.task,...result};
   }
@@ -59,6 +73,7 @@ export async function executeProposal(workspaceRoot,proposal,dataDir){
     const outbox=path.join(dataDir,'outbox');await mkdir(outbox,{recursive:true});const destination=path.join(outbox,`${proposal.id}-${path.basename(source)}`);await copyFile(source,destination);
     return {action:proposal.action,state:'staged-local-only',source:payload.path,outbox:destination,bytes:info.size,note:'Externý cieľ ešte nie je pripojený; súbor nebol zverejnený.'};
   }
+  if(proposal.action==='read'&&payload.task==='local-inference')return runLocalInference(payload);
   if(proposal.action==='read')return readWorkspaceFile(workspaceRoot,payload.path);
   throw new Error('Neznáma systémová akcia.');
 }
