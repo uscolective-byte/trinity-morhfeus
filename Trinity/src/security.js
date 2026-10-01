@@ -14,10 +14,11 @@ export async function validKey(token, env) {
   }
   return false;
 }
-export async function issueSession(env,until=Date.now()+43200000){
+export async function issueSession(env,until=Date.now()+43200000,email=null){
   const token=Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('hex');
   const expires=Math.min(Date.now()+43200000,until);
-  await env.DB.prepare('INSERT INTO ops_sessions(token_hash,expires_at) VALUES(?,?)').bind(await hash(token),expires).run();
+  if(email)await env.DB.prepare('INSERT INTO ops_sessions(token_hash,expires_at,email) VALUES(?,?,?)').bind(await hash(token),expires,email.trim().toLowerCase()).run();
+  else await env.DB.prepare('INSERT INTO ops_sessions(token_hash,expires_at) VALUES(?,?)').bind(await hash(token),expires).run();
   await env.DB.prepare('DELETE FROM ops_sessions WHERE expires_at < ?').bind(Date.now()).run();
   return Response.json({ok:true},{headers:{'Set-Cookie':`trinity_session=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${Math.max(0,Math.floor((expires-Date.now())/1000))}`}});
 }
@@ -27,13 +28,20 @@ export async function allowDevConnection(request,env){
   return equal(ip,env.TRINITY_DEV_IP);
 }
 export async function authenticate(request, env) {
+  const googleOnly=env.TRINITY_AUTH_MODE==='google';
   const token = request.headers.get('Authorization')?.replace(/^Bearer /, '') || request.headers.get('X-Trinity-Token');
-  if (await validKey(token, env)) return { id: (await hash(token)).slice(0, 24) };
+  if (!googleOnly&&await validKey(token, env)) return { id: (await hash(token)).slice(0, 24),email:null,role:null };
   const session = request.headers.get('Cookie')?.match(/(?:^|;\s*)trinity_session=([a-f0-9]{64})(?:;|$)/)?.[1];
   if (session) {
     const digest = await hash(session);
-    const row = await env.DB.prepare('SELECT expires_at FROM ops_sessions WHERE token_hash = ?').bind(digest).first();
-    if (row && row.expires_at > Date.now()) return { id: digest.slice(0, 24) };
+    if(googleOnly){
+      const row=await env.DB.prepare(`SELECT s.expires_at,s.email,u.role,u.status FROM ops_sessions s
+        LEFT JOIN ops_users u ON lower(u.email)=lower(s.email) WHERE s.token_hash=?`).bind(digest).first();
+      if(row&&row.expires_at>Date.now()&&row.email&&row.status==='active')return {id:digest.slice(0,24),email:row.email,role:row.role};
+    }else{
+      const row = await env.DB.prepare('SELECT expires_at FROM ops_sessions WHERE token_hash = ?').bind(digest).first();
+      if (row && row.expires_at > Date.now()) return { id: digest.slice(0, 24),email:null,role:null };
+    }
   }
   throw new HttpError(401, 'Prihlás sa do Trinity.');
 }

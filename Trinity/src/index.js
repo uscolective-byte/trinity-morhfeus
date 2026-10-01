@@ -11,6 +11,7 @@ import {handleMcp} from './mcp.js';
 import {TRUTH_POLICY_VERSION} from './truth.js';
 import {SYSTEM_CAPABILITIES,createSystemAction,listSystemActions,getSystemAction,approveSystemAction,rejectSystemAction,claimSystemAction,finishSystemAction,authenticateGateway,getPCBridgeStatus} from './system-actions.js';
 import {listStudioProjects,getStudioProject,createStudioProject,reviseStudioProject} from './studio.js';
+import {beginGoogleLogin,finishGoogleLogin,googleAuthRequired,googleOAuthConfigured} from './google-auth.js';
 import html from '../public/index.html';
 import appJS from '../public/app.js.txt';
 import css from '../public/style.css';
@@ -22,6 +23,7 @@ import assistantJS from '../public/assistant/chat.js.txt';
 export {TrinityAgent,ChatAgent,GuardianAgent,TrinityOperations};
 const json=(data,status=200)=>Response.json(data,{status});
 const uuid=z.string().uuid();
+function requireAdmin(user){if(user.role!=='admin')throw new HttpError(403,'Táto operácia je dostupná iba správcovi Trinity.');}
 async function route(request,env,ctx){
   const url=new URL(request.url),path=url.pathname;
   if(request.method==='GET'&&['/','/ops','/dashboard','/index.html'].includes(path))return new Response(path==='/ops'?html:assistantHTML,{headers:{'Content-Type':'text/html; charset=utf-8',
@@ -37,19 +39,33 @@ async function route(request,env,ctx){
     if(['https://trinity-morhfeus-20261001.web.app','https://trinity-morhfeus-20261001.firebaseapp.com'].includes(origin)){response.headers.set('Access-Control-Allow-Origin',origin);response.headers.set('Vary','Origin');}
     return response;
   }
+  if(path==='/api/auth/config'&&request.method==='GET')return json({google_enabled:googleAuthRequired(env)&&googleOAuthConfigured(env),google_required:googleAuthRequired(env)});
+  if(path==='/api/auth/google/start'&&request.method==='GET'){
+    if(!googleAuthRequired(env))throw new HttpError(404,'Google prihlasovanie zatiaľ nie je aktivované.');
+    await rateLimit(env,`google-start:${(await hash(request.headers.get('CF-Connecting-IP')||'unknown')).slice(0,24)}`,10,300);
+    return beginGoogleLogin(env);
+  }
+  if(path==='/api/auth/google/callback'&&request.method==='GET'){
+    if(!googleAuthRequired(env))throw new HttpError(404,'Google prihlasovanie zatiaľ nie je aktivované.');
+    await rateLimit(env,`google-callback:${(await hash(request.headers.get('CF-Connecting-IP')||'unknown')).slice(0,24)}`,10,300);
+    return finishGoogleLogin(request,env);
+  }
   checkOrigin(request);
   if(path==='/api/ops/dev-login'&&request.method==='POST'){
+    if(googleAuthRequired(env))throw new HttpError(403,'Použi prihlásenie cez Google.');
     if(!await allowDevConnection(request,env))throw new HttpError(401,'Automatický vývojový vstup pre toto pripojenie nie je dostupný.');
     await rateLimit(env,'dev-login',20,60);
     return issueSession(env,Date.parse(env.TRINITY_DEV_UNTIL));
   }
   if(path==='/api/ops/login'&&request.method==='POST'){
+    if(googleAuthRequired(env))throw new HttpError(403,'Prihlásenie prístupovým kľúčom je vypnuté. Použi Google.');
     await rateLimit(env,'login:'+(await hash(request.headers.get('CF-Connecting-IP')||'local')).slice(0,24),10,300);
     const {key}=z.object({key:z.string().max(2048)}).parse(await readJSON(request));
     if(!await validKey(key,env))throw new HttpError(401,'Nesprávny prístupový kľúč.');
     return issueSession(env);
   }
   if(path==='/api/ops/redeem'&&request.method==='POST'){
+    if(googleAuthRequired(env))throw new HttpError(403,'Jednorazové kľúče sú vypnuté. Použi Google.');
     await rateLimit(env,'redeem:'+(await hash(request.headers.get('CF-Connecting-IP')||'local')).slice(0,24),10,300);
     const {ticket}=z.object({ticket:z.string().regex(/^[a-f0-9]{64}$/)}).parse(await readJSON(request));
     const used=await env.DB.prepare('DELETE FROM ops_login_tickets WHERE token_hash=? RETURNING expires_at').bind(await hash(ticket)).first();
@@ -76,6 +92,22 @@ async function route(request,env,ctx){
     return json({action:await finishSystemAction(env,uuid.parse(gatewayReceipt[1]),gateway,await readJSON(request,180000))});
   }
   const user=await authenticate(request,env);
+  if(path==='/api/ops/users/pending'&&request.method==='GET'){
+    requireAdmin(user);
+    const rows=await env.DB.prepare("SELECT email,display_name,created_at FROM ops_users WHERE status='pending' AND role='user' ORDER BY created_at").all();
+    return json({items:rows.results});
+  }
+  const reviewUser=path.match(/^\/api\/ops\/users\/([^/]+)\/(approve|reject)$/);
+  if(reviewUser&&request.method==='POST'){
+    requireAdmin(user);z.object({}).strict().parse(await readJSON(request));
+    let email;try{email=decodeURIComponent(reviewUser[1]).trim().toLowerCase();}catch{throw new HttpError(400,'Neplatný e-mail.');}
+    z.string().email().parse(email);
+    const status=reviewUser[2]==='approve'?'active':'rejected';
+    const changed=await env.DB.prepare("UPDATE ops_users SET status=?,approved_by=?,approved_at=datetime('now'),updated_at=datetime('now') WHERE email=? AND role='user' AND status='pending' RETURNING email,status").bind(status,user.email,email).first();
+    if(!changed)throw new HttpError(404,'Čakajúci profil neexistuje.');
+    await env.DB.prepare("INSERT INTO ops_events(action,details) VALUES('user_access_reviewed',?)").bind(JSON.stringify({email,status,admin:user.email})).run();
+    return json(changed);
+  }
   if(path==='/api/assistant/studio/projects'){
     if(request.method==='GET')return json({items:await listStudioProjects(env,'primary')});
     if(request.method==='POST'){await rateLimit(env,`studio-generate:${user.id}`,5,300);return json({project:await createStudioProject(env,'primary',await readJSON(request,20000))},201);}
@@ -158,7 +190,7 @@ async function route(request,env,ctx){
   }
   if(path==='/api/ops/status'&&request.method==='GET'){
     const counts=await env.DB.prepare('SELECT status,COUNT(*) AS count FROM ops_jobs GROUP BY status').all();
-    return json({name:'Trinity',version:'6.7.0',agents:AGENTS.length,identity:'single',consciousness:false,truth_mode:'evidence-required',truth_policy_version:TRUTH_POLICY_VERSION,jobs:counts.results,
+    return json({name:'Trinity',version:'6.7.0',agents:AGENTS.length,identity:'single',account:{email:user.email||null,role:user.role||null},consciousness:false,truth_mode:'evidence-required',truth_policy_version:TRUTH_POLICY_VERSION,jobs:counts.results,
       development_access_until:env.TRINITY_DEV_UNTIL||null,
       providers:{'workers-ai':env.AI?'configured':'missing',ollama:env.OLLAMA_SECRET||env.OLLAMA_API_KEY?'configured':'missing'},
       memory:await env.DB.prepare('SELECT (SELECT COUNT(*) FROM ops_memory) AS notes,(SELECT COUNT(*) FROM memory_long) AS legacy,(SELECT COUNT(*) FROM ops_jobs) AS conversations').first(),

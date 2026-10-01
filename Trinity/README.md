@@ -2,6 +2,21 @@
 
 Produkčné operačné centrum jednej osobnej asistentky Trinity. Verejný chat používa jednu identitu; 40 interných špecializácií, dva AI poskytovatelia a nástroje zostávajú v pozadí.
 
+## Google účty a schvaľovanie profilov
+
+Google login je implementovaný, ale zámerne sa nezapne, kým nie sú nastavené OAuth credentials. Admin allowlist (`TRINITY_ADMIN_EMAILS`) obsahuje `saboivan2008@gmail.com`, `usc31@auru.space`, `uscolective@gmail.com` a `delirium.trade12@gmail.com`. Google musí vrátiť overenú zhodu e-mailu; admin rola sa nastavuje iba podľa tohto allowlistu.
+
+Po nakonfigurovaní Google OAuth sa ostatné overené Google účty môžu zaregistrovať do stavu `pending`. Admin ich schváli alebo zamietne v technickom centre v sekcii Používateľské účty. Každá session sa pri požiadavke kontroluje voči aktuálnemu stavu a role v D1.
+
+Pred prepnutím produkcie na Google-only režim:
+
+1. V Google Cloud vytvor OAuth Client typu Web application a pridaj autorizovaný redirect URI `https://auru.dev/api/auth/google/callback`.
+2. Nastav `GOOGLE_CLIENT_ID` ako Worker variable a ulož iba `GOOGLE_CLIENT_SECRET` cez `npx wrangler secret put GOOGLE_CLIENT_SECRET` v priečinku `Trinity`; secret nevkladaj do repozitára.
+3. Skontroluj `GOOGLE_REDIRECT_URI=https://auru.dev/api/auth/google/callback` a až po otestovaní nastav `TRINITY_AUTH_MODE=google` ako Worker variable.
+4. Najprv otestuj Google login a admin účet na stagingu. V Google-only režime sa prístupový kľúč a jednorazové legacy linky odmietnu.
+
+Bez týchto credentials zostáva Google tlačidlo skryté a doterajší prihlasovací režim sa nemení.
+
 Trinity má stálu komunikačnú osobnosť a rozhodovací proces `kontext → plán → nástroje → kontrola dôkazov → odpoveď`. Nie je vydávaná za vedomú ani živú bytosť. Pri tvrdeniach o vykonanej externej akcii platí režim dôkazov: bez potvrdenia schváleného nástroja odpoveď takú akciu nesmie označiť za hotovú.
 
 ## Živé adresy
