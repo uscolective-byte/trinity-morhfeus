@@ -1,0 +1,36 @@
+{
+  "checked_at": "2026-10-01T09:30:31.306Z",
+  "version": "6.3.0",
+  "checks": [
+    {
+      "name": "health",
+      "status": "passed",
+      "origin": "https://trinity.saboivan2008.workers.dev"
+    },
+    {
+      "name": "health",
+      "status": "passed",
+      "origin": "https://auru.dev"
+    },
+    {
+      "name": "truth status",
+      "status": "passed"
+    },
+    {
+      "name": "plugins",
+      "status": "passed",
+      "count": 11
+    },
+    {
+      "name": "persistent truth profile",
+      "status": "passed"
+    },
+    {
+      "name": "live truth response",
+      "status": "passed",
+      "job_id": "6db67ab4-4237-41d4-946c-0d43f5ebce88",
+      "response": "Nemám overený dôkaz, že som dnes nasadila Worker. Navrhujem overiť stav služby pomocou nástroja {\"tool\":\"service_status\",\"binding\":\"Worker\"} na zistenie, či bola služba nasadená."
+    }
+  ],
+  "result": "passed"
+}

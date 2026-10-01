@@ -1,0 +1,26 @@
+{
+  "project": "Morhfeus / Trinity",
+  "updated_at": "2026-10-01T11:31:00+02:00",
+  "source_of_truth": "C:\\Users\\saboi\\Documents\\Codex\\Morhfeus\\Trinity",
+  "production": {
+    "version": "6.3.0",
+    "cloudflare_version_id": "52739f12-566a-4d62-84b6-b9ad037c8bfd",
+    "worker_url": "https://trinity.saboivan2008.workers.dev/",
+    "primary_url": "https://auru.dev/",
+    "live_truth_check": "passed",
+    "automated_tests": "31/31"
+  },
+  "steps": [
+    {"step": 1, "name": "Pravdivé jadro a stála osobnosť", "status": "completed"},
+    {"step": 2, "name": "Potrebné moduly Trinity", "status": "completed", "installed_plugins": 11},
+    {"step": 3, "name": "Izolovaný Python, Node.js a Java Sandbox", "status": "in_progress"},
+    {"step": 4, "name": "Google a Microsoft OAuth konektory", "status": "planned"}
+  ],
+  "next_action": "Build and test the isolated Cloudflare Sandbox with soft usage throttling.",
+  "safety": {
+    "internet_in_sandbox": false,
+    "sandbox_secrets": false,
+    "external_action_claims_require_receipt": true,
+    "self_write_requires_review": true
+  }
+}

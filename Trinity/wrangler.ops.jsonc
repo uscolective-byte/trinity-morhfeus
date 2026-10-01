@@ -1,0 +1,27 @@
+{
+  "account_id": "b60342e5e52f5646fbd4e913bb409334",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": true,
+  "preview_urls": false,
+  "keep_vars": true,
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true
+    },
+    "traces": {
+      "enabled": true
+    }
+  },
+  "services": [
+    {
+      "binding": "TRINITY",
+      "service": "trinity"
+    }
+  ],
+  "name": "trinity-ops",
+  "main": "services/ops-proxy.js"
+}

@@ -1,0 +1,12 @@
+**/node_modules/
+**/.credentials/
+**/.wrangler/
+**/dist/
+**/*.log
+Zaznamy/
+Referencie/
+Prototypy/
+*.dpapi
+.env
+.env.*
+.dev.vars

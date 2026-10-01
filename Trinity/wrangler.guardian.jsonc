@@ -1,0 +1,48 @@
+{
+  "account_id": "b60342e5e52f5646fbd4e913bb409334",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": true,
+  "preview_urls": false,
+  "keep_vars": true,
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true
+    },
+    "traces": {
+      "enabled": true
+    }
+  },
+  "services": [
+    {
+      "binding": "TRINITY",
+      "service": "trinity"
+    }
+  ],
+  "name": "trinity-guardian",
+  "main": "services/guardian.js",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "trinity-v03",
+      "database_id": "ca8ea24e-f7db-431e-b8bf-97f713ae4533"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "Mastermind",
+      "id": "0b92ed2717d742daa860f1827797297f"
+    }
+  ],
+  "ai": {
+    "binding": "AI"
+  },
+  "triggers": {
+    "crons": [
+      "*/15 * * * *"
+    ]
+  }
+}

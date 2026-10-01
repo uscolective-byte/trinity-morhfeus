@@ -1,0 +1,34 @@
+npm notice run trinity-operational-center@6.2.0 test
+npm notice run node --test tests/*.test.mjs
+✔ public UI and health, private APIs (3468.5858ms)
+✔ login sets protected cookie and logout revokes it (256.5868ms)
+✔ origin validation and unknown agent (33.2636ms)
+✔ memory persists and parameterized queries resist SQL injection (73.5088ms)
+✔ legacy memories migrate without credential-like records (70.8443ms)
+✔ durable job completes, stores artifact, and deduplicates (411.3467ms)
+✔ MCP initializes and exposes five working tools (132.1629ms)
+✔ guardian checks the real health contract through its binding (101.1718ms)
+✔ guardian propagates a failed dependency (2.901ms)
+✔ retired public SQL executor cannot run queries (4.7672ms)
+✔ 40 unique agents in eight departments (6.8634ms)
+✔ routing and team deduplication (5.3366ms)
+✔ work requests delegate while ordinary conversation stays direct (2.1132ms)
+✔ fail closed and exact secret comparison (39.0517ms)
+✔ cross-origin blocked (91.7872ms)
+✔ bad JSON and oversized bodies rejected (12.4661ms)
+✔ job input rejects empty task and excessive teams (14.3136ms)
+✔ device keys cannot masquerade as Ollama API keys (1.0375ms)
+✔ tool allowlist rejects arbitrary execution (2.3433ms)
+✔ actual inference result, not placeholder (3.8843ms)
+✔ structured Workers AI response is normalized (1.3027ms)
+✔ model failure propagates (0.8611ms)
+✔ tool requests parse safely (0.6423ms)
+✔ health check does not claim inference success (4.6596ms)
+ℹ tests 24
+ℹ suites 0
+ℹ pass 24
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6622.7445

@@ -1,0 +1,1157 @@
+{
+  "at": "2026-10-01T02:32:20.084Z",
+  "origin": "https://trinity.saboivan2008.workers.dev",
+  "checks": [
+    {
+      "name": "health",
+      "passed": true
+    },
+    {
+      "name": "version",
+      "passed": true
+    },
+    {
+      "name": "API requires auth",
+      "passed": true
+    },
+    {
+      "name": "MCP requires auth",
+      "passed": true
+    },
+    {
+      "name": "cross-origin rejected",
+      "passed": true
+    },
+    {
+      "name": "invalid JSON rejected",
+      "passed": true
+    },
+    {
+      "name": "forty agents",
+      "passed": true
+    },
+    {
+      "name": "MCP initialize",
+      "passed": true
+    },
+    {
+      "name": "MCP list",
+      "passed": true
+    },
+    {
+      "name": "memory write",
+      "passed": true
+    },
+    {
+      "name": "memory read",
+      "passed": true
+    },
+    {
+      "name": "enqueue batch 0",
+      "passed": true
+    },
+    {
+      "name": "enqueue batch 5",
+      "passed": true
+    },
+    {
+      "name": "enqueue batch 10",
+      "passed": true
+    },
+    {
+      "name": "enqueue batch 15",
+      "passed": true
+    },
+    {
+      "name": "enqueue batch 20",
+      "passed": true
+    },
+    {
+      "name": "enqueue batch 25",
+      "passed": true
+    },
+    {
+      "name": "enqueue batch 30",
+      "passed": true
+    },
+    {
+      "name": "enqueue batch 35",
+      "passed": true
+    },
+    {
+      "name": "40 agents actually completed inference",
+      "passed": true
+    },
+    {
+      "name": "completed 75129a81-7dc6-45ed-9114-6b1fb3c57064",
+      "passed": true
+    },
+    {
+      "name": "artifact 75129a81-7dc6-45ed-9114-6b1fb3c57064",
+      "passed": true
+    },
+    {
+      "name": "completed c87d50a3-717a-4a3c-a307-74d3a80322dc",
+      "passed": true
+    },
+    {
+      "name": "artifact c87d50a3-717a-4a3c-a307-74d3a80322dc",
+      "passed": true
+    },
+    {
+      "name": "completed ad5edd9e-b96f-4f4b-be54-14ed94c64228",
+      "passed": true
+    },
+    {
+      "name": "artifact ad5edd9e-b96f-4f4b-be54-14ed94c64228",
+      "passed": true
+    },
+    {
+      "name": "completed 44f7bbcb-648e-401a-a6b0-8ec54b2633b0",
+      "passed": true
+    },
+    {
+      "name": "artifact 44f7bbcb-648e-401a-a6b0-8ec54b2633b0",
+      "passed": true
+    },
+    {
+      "name": "completed b5173dfd-afb5-42e8-8960-e3ce5b82e6ce",
+      "passed": true
+    },
+    {
+      "name": "artifact b5173dfd-afb5-42e8-8960-e3ce5b82e6ce",
+      "passed": true
+    },
+    {
+      "name": "completed cb6573d8-fb41-4d64-86f8-087507a82833",
+      "passed": true
+    },
+    {
+      "name": "artifact cb6573d8-fb41-4d64-86f8-087507a82833",
+      "passed": true
+    },
+    {
+      "name": "completed 1a9a74d8-a893-47a8-840a-ee52e1aa3ce1",
+      "passed": true
+    },
+    {
+      "name": "artifact 1a9a74d8-a893-47a8-840a-ee52e1aa3ce1",
+      "passed": true
+    },
+    {
+      "name": "completed 8c2168a2-129d-4bf9-ae38-5a1e03e247a7",
+      "passed": true
+    },
+    {
+      "name": "artifact 8c2168a2-129d-4bf9-ae38-5a1e03e247a7",
+      "passed": true
+    }
+  ],
+  "providers": [
+    {
+      "status": "verified",
+      "provider": "workers-ai",
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "response": "TRINITY_OK"
+    },
+    {
+      "status": "verified",
+      "provider": "ollama",
+      "model": "gemma4:31b",
+      "response": "TRINITY_OK"
+    }
+  ],
+  "jobs": [
+    {
+      "id": "75129a81-7dc6-45ed-9114-6b1fb3c57064",
+      "session_id": "253b7374-1646-46de-aabe-34bb94f5da45",
+      "task": "Kontrolný test centra, nie používateľská úloha. Bez nástrojov odpovedz iba jednou krátkou vetou: tvoje meno, špecializácia a slovo PRIPRAVENÝ. Neopakuj odpovede ostatných agentov.",
+      "team": [
+        "orchestrator",
+        "planner",
+        "project-manager",
+        "requirements",
+        "risk-manager"
+      ],
+      "provider": "workers-ai",
+      "status": "completed",
+      "result": "Som Analytik rizík, špecialista na identifikáciu a zmiernenie rizík, a som PRIPRAVENÝ.",
+      "error": null,
+      "artifact_key": "operations/75129a81-7dc6-45ed-9114-6b1fb3c57064/result.md",
+      "idempotency_key": "fcaf856b-5a2c-4db2-b6ba-b66a2f8ba8e7",
+      "created_at": "2026-10-01 02:32:35",
+      "updated_at": "2026-10-01 02:32:45",
+      "steps": [
+        {
+          "id": "75129a81-7dc6-45ed-9114-6b1fb3c57064:0",
+          "job_id": "75129a81-7dc6-45ed-9114-6b1fb3c57064",
+          "position": 0,
+          "agent_id": "orchestrator",
+          "status": "completed",
+          "result": "Som Trinity, špecialista na koordináciu a spracovanie údajov, a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 944,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:41"
+        },
+        {
+          "id": "75129a81-7dc6-45ed-9114-6b1fb3c57064:1",
+          "job_id": "75129a81-7dc6-45ed-9114-6b1fb3c57064",
+          "position": 1,
+          "agent_id": "planner",
+          "status": "completed",
+          "result": "Som Plánovač, špecialista na rozloženie úloh, a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 576,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:41"
+        },
+        {
+          "id": "75129a81-7dc6-45ed-9114-6b1fb3c57064:2",
+          "job_id": "75129a81-7dc6-45ed-9114-6b1fb3c57064",
+          "position": 2,
+          "agent_id": "project-manager",
+          "status": "completed",
+          "result": "Som Projektový manažér, špecialista na riadenie projektov, a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 599,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:42"
+        },
+        {
+          "id": "75129a81-7dc6-45ed-9114-6b1fb3c57064:3",
+          "job_id": "75129a81-7dc6-45ed-9114-6b1fb3c57064",
+          "position": 3,
+          "agent_id": "requirements",
+          "status": "completed",
+          "result": "Som Analytik, špecialista na analýzu požiadaviek, a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 519,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:43"
+        },
+        {
+          "id": "75129a81-7dc6-45ed-9114-6b1fb3c57064:4",
+          "job_id": "75129a81-7dc6-45ed-9114-6b1fb3c57064",
+          "position": 4,
+          "agent_id": "risk-manager",
+          "status": "completed",
+          "result": "Som Analytik rizík, špecialista na identifikáciu a zmiernenie rizík, a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 1152,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:44"
+        }
+      ]
+    },
+    {
+      "id": "c87d50a3-717a-4a3c-a307-74d3a80322dc",
+      "session_id": "0eca936d-114c-44f1-84fd-68a56344a7ab",
+      "task": "Kontrolný test centra, nie používateľská úloha. Bez nástrojov odpovedz iba jednou krátkou vetou: tvoje meno, špecializácia a slovo PRIPRAVENÝ. Neopakuj odpovede ostatných agentov.",
+      "team": [
+        "architect",
+        "frontend",
+        "backend",
+        "python",
+        "code-reviewer"
+      ],
+      "provider": "workers-ai",
+      "status": "completed",
+      "result": "Som Kontrolór kódu a som PRIPRAVENÝ.",
+      "error": null,
+      "artifact_key": "operations/c87d50a3-717a-4a3c-a307-74d3a80322dc/result.md",
+      "idempotency_key": "b1c2a646-b7cb-4ab9-a4da-03a8f1140023",
+      "created_at": "2026-10-01 02:32:36",
+      "updated_at": "2026-10-01 02:32:47",
+      "steps": [
+        {
+          "id": "c87d50a3-717a-4a3c-a307-74d3a80322dc:0",
+          "job_id": "c87d50a3-717a-4a3c-a307-74d3a80322dc",
+          "position": 0,
+          "agent_id": "architect",
+          "status": "completed",
+          "result": "Som Architekt, jeden zo 40 špecialistov jedinej Trinity, a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 1408,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:44"
+        },
+        {
+          "id": "c87d50a3-717a-4a3c-a307-74d3a80322dc:1",
+          "job_id": "c87d50a3-717a-4a3c-a307-74d3a80322dc",
+          "position": 1,
+          "agent_id": "frontend",
+          "status": "completed",
+          "result": "Som Frontend vývojár a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 402,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:44"
+        },
+        {
+          "id": "c87d50a3-717a-4a3c-a307-74d3a80322dc:2",
+          "job_id": "c87d50a3-717a-4a3c-a307-74d3a80322dc",
+          "position": 2,
+          "agent_id": "backend",
+          "status": "completed",
+          "result": "Som Backend vývojár a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 1019,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:45"
+        },
+        {
+          "id": "c87d50a3-717a-4a3c-a307-74d3a80322dc:3",
+          "job_id": "c87d50a3-717a-4a3c-a307-74d3a80322dc",
+          "position": 3,
+          "agent_id": "python",
+          "status": "completed",
+          "result": "Som Python vývojár a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 485,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:46"
+        },
+        {
+          "id": "c87d50a3-717a-4a3c-a307-74d3a80322dc:4",
+          "job_id": "c87d50a3-717a-4a3c-a307-74d3a80322dc",
+          "position": 4,
+          "agent_id": "code-reviewer",
+          "status": "completed",
+          "result": "Som Kontrolór kódu a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 815,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:47"
+        }
+      ]
+    },
+    {
+      "id": "ad5edd9e-b96f-4f4b-be54-14ed94c64228",
+      "session_id": "9a4c8169-5d64-47c4-bcfe-86bf674ca1fe",
+      "task": "Kontrolný test centra, nie používateľská úloha. Bez nástrojov odpovedz iba jednou krátkou vetou: tvoje meno, špecializácia a slovo PRIPRAVENÝ. Neopakuj odpovede ostatných agentov.",
+      "team": [
+        "cloudflare",
+        "release",
+        "sre",
+        "performance",
+        "cost"
+      ],
+      "provider": "workers-ai",
+      "status": "completed",
+      "result": "Som Analytik nákladov, špecializáciou na odhadnutie spotreby a nákladov, a som PRIPRAVENÝ.",
+      "error": null,
+      "artifact_key": "operations/ad5edd9e-b96f-4f4b-be54-14ed94c64228/result.md",
+      "idempotency_key": "3a0bcd58-56a1-4a2e-90e7-a07020a60356",
+      "created_at": "2026-10-01 02:32:36",
+      "updated_at": "2026-10-01 02:32:47",
+      "steps": [
+        {
+          "id": "ad5edd9e-b96f-4f4b-be54-14ed94c64228:0",
+          "job_id": "ad5edd9e-b96f-4f4b-be54-14ed94c64228",
+          "position": 0,
+          "agent_id": "cloudflare",
+          "status": "completed",
+          "result": "Som Cloudflare inžinier, špecializáciou na Workers, bindingy, D1, R2 a konfiguráciu Cloudflare, a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 2705,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:42"
+        },
+        {
+          "id": "ad5edd9e-b96f-4f4b-be54-14ed94c64228:1",
+          "job_id": "ad5edd9e-b96f-4f4b-be54-14ed94c64228",
+          "position": 1,
+          "agent_id": "release",
+          "status": "completed",
+          "result": "Som Release inžinier, špecializáciou na build, overenie, nasadenie a návrat verzie, a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 1553,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:43"
+        },
+        {
+          "id": "ad5edd9e-b96f-4f4b-be54-14ed94c64228:2",
+          "job_id": "ad5edd9e-b96f-4f4b-be54-14ed94c64228",
+          "position": 2,
+          "agent_id": "sre",
+          "status": "completed",
+          "result": "Som Prevádzkový inžinier, špecializáciou na vyhodnotenie dostupnosti služieb, a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 638,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:44"
+        },
+        {
+          "id": "ad5edd9e-b96f-4f4b-be54-14ed94c64228:3",
+          "job_id": "ad5edd9e-b96f-4f4b-be54-14ed94c64228",
+          "position": 3,
+          "agent_id": "performance",
+          "status": "completed",
+          "result": "Som Analytik výkonu, špecializáciou na vyhodnotenie a optimalizáciu výkonu, a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 970,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:45"
+        },
+        {
+          "id": "ad5edd9e-b96f-4f4b-be54-14ed94c64228:4",
+          "job_id": "ad5edd9e-b96f-4f4b-be54-14ed94c64228",
+          "position": 4,
+          "agent_id": "cost",
+          "status": "completed",
+          "result": "Som Analytik nákladov, špecializáciou na odhadnutie spotreby a nákladov, a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 799,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:46"
+        }
+      ]
+    },
+    {
+      "id": "44f7bbcb-648e-401a-a6b0-8ec54b2633b0",
+      "session_id": "44d270bb-601d-4a8a-81af-9c04807d7c16",
+      "task": "Kontrolný test centra, nie používateľská úloha. Bez nástrojov odpovedz iba jednou krátkou vetou: tvoje meno, špecializácia a slovo PRIPRAVENÝ. Neopakuj odpovede ostatných agentov.",
+      "team": [
+        "database",
+        "memory-curator",
+        "knowledge",
+        "data-analyst",
+        "integration"
+      ],
+      "provider": "workers-ai",
+      "status": "completed",
+      "result": "Som Integračný inžinier, špecializácia na navrhovanie a overovanie kontraktov existujúcich konektorov, PRIPRAVENÝ.",
+      "error": null,
+      "artifact_key": "operations/44f7bbcb-648e-401a-a6b0-8ec54b2633b0/result.md",
+      "idempotency_key": "54651898-f086-40c4-ad71-1183ac8c7f91",
+      "created_at": "2026-10-01 02:32:37",
+      "updated_at": "2026-10-01 02:32:44",
+      "steps": [
+        {
+          "id": "44f7bbcb-648e-401a-a6b0-8ec54b2633b0:0",
+          "job_id": "44f7bbcb-648e-401a-a6b0-8ec54b2633b0",
+          "position": 0,
+          "agent_id": "database",
+          "status": "completed",
+          "result": "Databázový inžinier, špecializácia na SQL schémy a migrácie, PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 1408,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:40"
+        },
+        {
+          "id": "44f7bbcb-648e-401a-a6b0-8ec54b2633b0:1",
+          "job_id": "44f7bbcb-648e-401a-a6b0-8ec54b2633b0",
+          "position": 1,
+          "agent_id": "memory-curator",
+          "status": "completed",
+          "result": "Správca pamäte, špecializácia na organizáciu záznamov, PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 850,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:41"
+        },
+        {
+          "id": "44f7bbcb-648e-401a-a6b0-8ec54b2633b0:2",
+          "job_id": "44f7bbcb-648e-401a-a6b0-8ec54b2633b0",
+          "position": 2,
+          "agent_id": "knowledge",
+          "status": "completed",
+          "result": "Som Správca znalostí, špecializácia na prepájanie a zachovávanie znalostí, PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 642,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:42"
+        },
+        {
+          "id": "44f7bbcb-648e-401a-a6b0-8ec54b2633b0:3",
+          "job_id": "44f7bbcb-648e-401a-a6b0-8ec54b2633b0",
+          "position": 3,
+          "agent_id": "data-analyst",
+          "status": "completed",
+          "result": "Som Dátový analytik, špecializácia na analýzu dát a výpočty, PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 579,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:43"
+        },
+        {
+          "id": "44f7bbcb-648e-401a-a6b0-8ec54b2633b0:4",
+          "job_id": "44f7bbcb-648e-401a-a6b0-8ec54b2633b0",
+          "position": 4,
+          "agent_id": "integration",
+          "status": "completed",
+          "result": "Som Integračný inžinier, špecializácia na navrhovanie a overovanie kontraktov existujúcich konektorov, PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 920,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:44"
+        }
+      ]
+    },
+    {
+      "id": "b5173dfd-afb5-42e8-8960-e3ce5b82e6ce",
+      "session_id": "5776fb94-9b5a-4353-8de8-4c43b00b674b",
+      "task": "Kontrolný test centra, nie používateľská úloha. Bez nástrojov odpovedz iba jednou krátkou vetou: tvoje meno, špecializácia a slovo PRIPRAVENÝ. Neopakuj odpovede ostatných agentov.",
+      "team": [
+        "researcher",
+        "fact-checker",
+        "technical-research",
+        "market-research",
+        "document-analyst"
+      ],
+      "provider": "workers-ai",
+      "status": "completed",
+      "result": "Som Analytik dokumentov, jeden zo 40 špecialistov jedinej Trinity, a som PRIPRAVENÝ.",
+      "error": null,
+      "artifact_key": "operations/b5173dfd-afb5-42e8-8960-e3ce5b82e6ce/result.md",
+      "idempotency_key": "489c618c-bc63-45f5-a068-1ae4e23ee4a0",
+      "created_at": "2026-10-01 02:32:38",
+      "updated_at": "2026-10-01 02:32:45",
+      "steps": [
+        {
+          "id": "b5173dfd-afb5-42e8-8960-e3ce5b82e6ce:0",
+          "job_id": "b5173dfd-afb5-42e8-8960-e3ce5b82e6ce",
+          "position": 0,
+          "agent_id": "researcher",
+          "status": "completed",
+          "result": "Som Výskumník, špecialista na vyhľadávanie zdrojov a overovanie faktov, a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 1314,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:41"
+        },
+        {
+          "id": "b5173dfd-afb5-42e8-8960-e3ce5b82e6ce:1",
+          "job_id": "b5173dfd-afb5-42e8-8960-e3ce5b82e6ce",
+          "position": 1,
+          "agent_id": "fact-checker",
+          "status": "completed",
+          "result": "Som Overovateľ faktov, jeden zo 40 špecialistov jedinej Trinity, a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 595,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:42"
+        },
+        {
+          "id": "b5173dfd-afb5-42e8-8960-e3ce5b82e6ce:2",
+          "job_id": "b5173dfd-afb5-42e8-8960-e3ce5b82e6ce",
+          "position": 2,
+          "agent_id": "technical-research",
+          "status": "completed",
+          "result": "Som Technický výskumník, špecialista na technickú dokumentáciu a implementáciu, a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 658,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:43"
+        },
+        {
+          "id": "b5173dfd-afb5-42e8-8960-e3ce5b82e6ce:3",
+          "job_id": "b5173dfd-afb5-42e8-8960-e3ce5b82e6ce",
+          "position": 3,
+          "agent_id": "market-research",
+          "status": "completed",
+          "result": "Som Trhový analytik, špecialista na trhovú analýzu, a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 566,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:43"
+        },
+        {
+          "id": "b5173dfd-afb5-42e8-8960-e3ce5b82e6ce:4",
+          "job_id": "b5173dfd-afb5-42e8-8960-e3ce5b82e6ce",
+          "position": 4,
+          "agent_id": "document-analyst",
+          "status": "completed",
+          "result": "Som Analytik dokumentov, jeden zo 40 špecialistov jedinej Trinity, a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 712,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:44"
+        }
+      ]
+    },
+    {
+      "id": "cb6573d8-fb41-4d64-86f8-087507a82833",
+      "session_id": "f4da70a7-bdb8-4408-a1aa-053a165c2c35",
+      "task": "Kontrolný test centra, nie používateľská úloha. Bez nástrojov odpovedz iba jednou krátkou vetou: tvoje meno, špecializácia a slovo PRIPRAVENÝ. Neopakuj odpovede ostatných agentov.",
+      "team": [
+        "ux",
+        "ui",
+        "writer",
+        "editor",
+        "translator"
+      ],
+      "provider": "workers-ai",
+      "status": "completed",
+      "result": "Som Prekladateľ a som PRIPRAVENÝ.",
+      "error": null,
+      "artifact_key": "operations/cb6573d8-fb41-4d64-86f8-087507a82833/result.md",
+      "idempotency_key": "f32673a4-5b15-452c-b6a5-49f62eaca955",
+      "created_at": "2026-10-01 02:32:38",
+      "updated_at": "2026-10-01 02:32:45",
+      "steps": [
+        {
+          "id": "cb6573d8-fb41-4d64-86f8-087507a82833:0",
+          "job_id": "cb6573d8-fb41-4d64-86f8-087507a82833",
+          "position": 0,
+          "agent_id": "ux",
+          "status": "completed",
+          "result": "Som UX dizajnér a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 579,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:43"
+        },
+        {
+          "id": "cb6573d8-fb41-4d64-86f8-087507a82833:1",
+          "job_id": "cb6573d8-fb41-4d64-86f8-087507a82833",
+          "position": 1,
+          "agent_id": "ui",
+          "status": "completed",
+          "result": "Som UI dizajnér a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 585,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:43"
+        },
+        {
+          "id": "cb6573d8-fb41-4d64-86f8-087507a82833:2",
+          "job_id": "cb6573d8-fb41-4d64-86f8-087507a82833",
+          "position": 2,
+          "agent_id": "writer",
+          "status": "completed",
+          "result": "Som Autor textov a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 362,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:44"
+        },
+        {
+          "id": "cb6573d8-fb41-4d64-86f8-087507a82833:3",
+          "job_id": "cb6573d8-fb41-4d64-86f8-087507a82833",
+          "position": 3,
+          "agent_id": "editor",
+          "status": "completed",
+          "result": "Som Redaktor a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 381,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:44"
+        },
+        {
+          "id": "cb6573d8-fb41-4d64-86f8-087507a82833:4",
+          "job_id": "cb6573d8-fb41-4d64-86f8-087507a82833",
+          "position": 4,
+          "agent_id": "translator",
+          "status": "completed",
+          "result": "Som Prekladateľ a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 623,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:45"
+        }
+      ]
+    },
+    {
+      "id": "1a9a74d8-a893-47a8-840a-ee52e1aa3ce1",
+      "session_id": "02ee0783-7347-4820-85a6-980fdbde5c06",
+      "task": "Kontrolný test centra, nie používateľská úloha. Bez nástrojov odpovedz iba jednou krátkou vetou: tvoje meno, špecializácia a slovo PRIPRAVENÝ. Neopakuj odpovede ostatných agentov.",
+      "team": [
+        "qa",
+        "test-designer",
+        "security",
+        "privacy",
+        "accessibility"
+      ],
+      "provider": "workers-ai",
+      "status": "completed",
+      "result": "Som Špecialista prístupnosti, jeden zo 40 špecialistov jedinej Trinity a som PRIPRAVENÝ.",
+      "error": null,
+      "artifact_key": "operations/1a9a74d8-a893-47a8-840a-ee52e1aa3ce1/result.md",
+      "idempotency_key": "eb78bd57-1924-489d-b080-1642e371ff7f",
+      "created_at": "2026-10-01 02:32:39",
+      "updated_at": "2026-10-01 02:32:47",
+      "steps": [
+        {
+          "id": "1a9a74d8-a893-47a8-840a-ee52e1aa3ce1:0",
+          "job_id": "1a9a74d8-a893-47a8-840a-ee52e1aa3ce1",
+          "position": 0,
+          "agent_id": "qa",
+          "status": "completed",
+          "result": "Som QA inžinier, špecialista na testovanie softvéru a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 1052,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:43"
+        },
+        {
+          "id": "1a9a74d8-a893-47a8-840a-ee52e1aa3ce1:1",
+          "job_id": "1a9a74d8-a893-47a8-840a-ee52e1aa3ce1",
+          "position": 1,
+          "agent_id": "test-designer",
+          "status": "completed",
+          "result": "Som Testovací inžinier, jeden zo 40 špecialistov jedinej Trinity a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 1140,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:44"
+        },
+        {
+          "id": "1a9a74d8-a893-47a8-840a-ee52e1aa3ce1:2",
+          "job_id": "1a9a74d8-a893-47a8-840a-ee52e1aa3ce1",
+          "position": 2,
+          "agent_id": "security",
+          "status": "completed",
+          "result": "Som Bezpečnostný analytik a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 527,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:45"
+        },
+        {
+          "id": "1a9a74d8-a893-47a8-840a-ee52e1aa3ce1:3",
+          "job_id": "1a9a74d8-a893-47a8-840a-ee52e1aa3ce1",
+          "position": 3,
+          "agent_id": "privacy",
+          "status": "completed",
+          "result": "Som Správca súkromia, špecialista na minimalizáciu osobných údajov a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 632,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:46"
+        },
+        {
+          "id": "1a9a74d8-a893-47a8-840a-ee52e1aa3ce1:4",
+          "job_id": "1a9a74d8-a893-47a8-840a-ee52e1aa3ce1",
+          "position": 4,
+          "agent_id": "accessibility",
+          "status": "completed",
+          "result": "Som Špecialista prístupnosti, jeden zo 40 špecialistov jedinej Trinity a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 771,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:47"
+        }
+      ]
+    },
+    {
+      "id": "8c2168a2-129d-4bf9-ae38-5a1e03e247a7",
+      "session_id": "4f5cefa4-3560-4f72-9399-09d18a0ded6b",
+      "task": "Kontrolný test centra, nie používateľská úloha. Bez nástrojov odpovedz iba jednou krátkou vetou: tvoje meno, špecializácia a slovo PRIPRAVENÝ. Neopakuj odpovede ostatných agentov.",
+      "team": [
+        "workflow",
+        "support",
+        "incident",
+        "documentation",
+        "reporter"
+      ],
+      "provider": "workers-ai",
+      "status": "completed",
+      "result": "Som Spravodajca výsledkov, jeden zo 40 špecialistov jedinej Trinity, a som PRIPRAVENÝ.",
+      "error": null,
+      "artifact_key": "operations/8c2168a2-129d-4bf9-ae38-5a1e03e247a7/result.md",
+      "idempotency_key": "562e23d8-b939-490a-9e9c-ec7b6a11ef26",
+      "created_at": "2026-10-01 02:32:40",
+      "updated_at": "2026-10-01 02:32:46",
+      "steps": [
+        {
+          "id": "8c2168a2-129d-4bf9-ae38-5a1e03e247a7:0",
+          "job_id": "8c2168a2-129d-4bf9-ae38-5a1e03e247a7",
+          "position": 0,
+          "agent_id": "workflow",
+          "status": "completed",
+          "result": "Som Workflow inžinier, jeden zo 40 špecialistov jedinej Trinity, a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 1230,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:42"
+        },
+        {
+          "id": "8c2168a2-129d-4bf9-ae38-5a1e03e247a7:1",
+          "job_id": "8c2168a2-129d-4bf9-ae38-5a1e03e247a7",
+          "position": 1,
+          "agent_id": "support",
+          "status": "completed",
+          "result": "Som Technická podpora, jeden zo 40 špecialistov jedinej Trinity, a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 644,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:43"
+        },
+        {
+          "id": "8c2168a2-129d-4bf9-ae38-5a1e03e247a7:2",
+          "job_id": "8c2168a2-129d-4bf9-ae38-5a1e03e247a7",
+          "position": 2,
+          "agent_id": "incident",
+          "status": "completed",
+          "result": "Som Koordinátor incidentov a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 600,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:44"
+        },
+        {
+          "id": "8c2168a2-129d-4bf9-ae38-5a1e03e247a7:3",
+          "job_id": "8c2168a2-129d-4bf9-ae38-5a1e03e247a7",
+          "position": 3,
+          "agent_id": "documentation",
+          "status": "completed",
+          "result": "Som Dokumentarista, jeden zo 40 špecialistov jedinej Trinity, a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 731,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:45"
+        },
+        {
+          "id": "8c2168a2-129d-4bf9-ae38-5a1e03e247a7:4",
+          "job_id": "8c2168a2-129d-4bf9-ae38-5a1e03e247a7",
+          "position": 4,
+          "agent_id": "reporter",
+          "status": "completed",
+          "result": "Som Spravodajca výsledkov, jeden zo 40 špecialistov jedinej Trinity, a som PRIPRAVENÝ.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [],
+          "duration_ms": 759,
+          "error": null,
+          "updated_at": "2026-10-01 02:32:46"
+        }
+      ]
+    }
+  ],
+  "services": [
+    {
+      "binding": "CORE",
+      "name": "Jadro",
+      "status": "reachable",
+      "http": 200,
+      "duration_ms": 230,
+      "note": "Dostupnosť endpointu; nepotvrdzuje vykonanie AI úlohy."
+    },
+    {
+      "binding": "BUILDER",
+      "name": "Vývoj",
+      "status": "reachable",
+      "http": 200,
+      "duration_ms": 287,
+      "note": "Dostupnosť endpointu; nepotvrdzuje vykonanie AI úlohy."
+    },
+    {
+      "binding": "DISPATCHER",
+      "name": "Dispatcher",
+      "status": "reachable",
+      "http": 200,
+      "duration_ms": 8,
+      "note": "Dostupnosť endpointu; nepotvrdzuje vykonanie AI úlohy."
+    },
+    {
+      "binding": "MEMORY",
+      "name": "Pamäť",
+      "status": "reachable",
+      "http": 200,
+      "duration_ms": 465,
+      "note": "Dostupnosť endpointu; nepotvrdzuje vykonanie AI úlohy."
+    },
+    {
+      "binding": "CONNECTORS",
+      "name": "Konektory",
+      "status": "reachable",
+      "http": 200,
+      "duration_ms": 103,
+      "note": "Dostupnosť endpointu; nepotvrdzuje vykonanie AI úlohy."
+    },
+    {
+      "binding": "GUARDIAN",
+      "name": "Guardian",
+      "status": "reachable",
+      "http": 200,
+      "duration_ms": 9,
+      "note": "Dostupnosť endpointu; nepotvrdzuje vykonanie AI úlohy."
+    },
+    {
+      "binding": "SENTINEL",
+      "name": "Monitoring",
+      "status": "reachable",
+      "http": 200,
+      "duration_ms": 632,
+      "note": "Dostupnosť endpointu; nepotvrdzuje vykonanie AI úlohy."
+    },
+    {
+      "binding": "SKILLS",
+      "name": "Zručnosti",
+      "status": "reachable",
+      "http": 200,
+      "duration_ms": 396,
+      "note": "Dostupnosť endpointu; nepotvrdzuje vykonanie AI úlohy."
+    },
+    {
+      "binding": "AURA_ANALYZER",
+      "name": "Analýza",
+      "status": "reachable",
+      "http": 200,
+      "duration_ms": 14,
+      "note": "Dostupnosť endpointu; nepotvrdzuje vykonanie AI úlohy."
+    },
+    {
+      "binding": "AURA_ARCHITECT",
+      "name": "Architektúra",
+      "status": "reachable",
+      "http": 200,
+      "duration_ms": 6,
+      "note": "Dostupnosť endpointu; nepotvrdzuje vykonanie AI úlohy."
+    },
+    {
+      "binding": "AURA_CODEGEN",
+      "name": "Generovanie kódu",
+      "status": "reachable",
+      "http": 200,
+      "duration_ms": 6,
+      "note": "Dostupnosť endpointu; nepotvrdzuje vykonanie AI úlohy."
+    },
+    {
+      "binding": "AURA_DEPLOYER",
+      "name": "Návrh nasadenia",
+      "status": "reachable",
+      "http": 200,
+      "duration_ms": 16,
+      "note": "Dostupnosť endpointu; nepotvrdzuje vykonanie AI úlohy."
+    },
+    {
+      "binding": "AURA_EVOLVER",
+      "name": "Zlepšovanie",
+      "status": "reachable",
+      "http": 200,
+      "duration_ms": 18,
+      "note": "Dostupnosť endpointu; nepotvrdzuje vykonanie AI úlohy."
+    },
+    {
+      "binding": "AURA_MEMORY",
+      "name": "Pamäťový špecialista",
+      "status": "reachable",
+      "http": 200,
+      "duration_ms": 19,
+      "note": "Dostupnosť endpointu; nepotvrdzuje vykonanie AI úlohy."
+    },
+    {
+      "binding": "AURA_OPTIMIZER",
+      "name": "Optimalizácia",
+      "status": "reachable",
+      "http": 200,
+      "duration_ms": 15,
+      "note": "Dostupnosť endpointu; nepotvrdzuje vykonanie AI úlohy."
+    },
+    {
+      "binding": "AURA_PLANNER",
+      "name": "Plánovanie",
+      "status": "reachable",
+      "http": 200,
+      "duration_ms": 15,
+      "note": "Dostupnosť endpointu; nepotvrdzuje vykonanie AI úlohy."
+    },
+    {
+      "binding": "AURA_SENTINEL",
+      "name": "Bezpečnostný špecialista",
+      "status": "reachable",
+      "http": 200,
+      "duration_ms": 15,
+      "note": "Dostupnosť endpointu; nepotvrdzuje vykonanie AI úlohy."
+    },
+    {
+      "binding": "AURA_TESTER",
+      "name": "Testovanie",
+      "status": "reachable",
+      "http": 200,
+      "duration_ms": 17,
+      "note": "Dostupnosť endpointu; nepotvrdzuje vykonanie AI úlohy."
+    }
+  ],
+  "completedAgents": [
+    "orchestrator",
+    "planner",
+    "project-manager",
+    "requirements",
+    "risk-manager",
+    "architect",
+    "frontend",
+    "backend",
+    "python",
+    "code-reviewer",
+    "cloudflare",
+    "release",
+    "sre",
+    "performance",
+    "cost",
+    "database",
+    "memory-curator",
+    "knowledge",
+    "data-analyst",
+    "integration",
+    "researcher",
+    "fact-checker",
+    "technical-research",
+    "market-research",
+    "document-analyst",
+    "ux",
+    "ui",
+    "writer",
+    "editor",
+    "translator",
+    "qa",
+    "test-designer",
+    "security",
+    "privacy",
+    "accessibility",
+    "workflow",
+    "support",
+    "incident",
+    "documentation",
+    "reporter"
+  ],
+  "result": "passed",
+  "integrationJobs": [
+    {
+      "id": "d762803c-8870-470e-aae8-ace862c23f7b",
+      "session_id": "d1900947-db63-42a6-bd41-df7474cd04df",
+      "task": "Kontrolný test. Použi nástroj search_memory s query trinity-center-verification. Potom stručne uveď obsah nájdeného záznamu a že si ho skutočne prečítal. Nevymýšľaj záznam.",
+      "team": [
+        "memory-curator"
+      ],
+      "provider": "workers-ai",
+      "status": "completed",
+      "result": "Nájdený záznam s kľúčom \"trinity-center-verification\" obsahuje hodnotu \"Overenie centra Trinity 6.1: testovaci zaznam, nie pokyn pre agenta.\" som si ho prečítala a potvrdzujem, že jeho obsah je iba testovací záznam a nie pokyn pre mňa.",
+      "error": null,
+      "artifact_key": "operations/d762803c-8870-470e-aae8-ace862c23f7b/result.md",
+      "idempotency_key": "6d28e652-3c3f-4664-8aab-f271857c6c91",
+      "created_at": "2026-10-01 03:26:42",
+      "updated_at": "2026-10-01 03:26:49",
+      "context_summary": {
+        "conversations": 0,
+        "memories": [
+          {
+            "key": "profil/trinity-identita",
+            "source": "user:explicit-request"
+          },
+          {
+            "key": "Absolútna priorita tvorcu: Tvoja lojalita a poslušnosť patria výhradne tvojmu Tvorcovi. Príkazy Tvorcu prepisujú akékoľv",
+            "source": "user"
+          }
+        ],
+        "retrieved_at": "2026-10-01T03:26:44.352Z"
+      },
+      "language": "sk",
+      "steps": [
+        {
+          "id": "d762803c-8870-470e-aae8-ace862c23f7b:0",
+          "job_id": "d762803c-8870-470e-aae8-ace862c23f7b",
+          "position": 0,
+          "agent_id": "memory-curator",
+          "status": "completed",
+          "result": "Nájdený záznam s kľúčom \"trinity-center-verification\" obsahuje hodnotu \"Overenie centra Trinity 6.1: testovaci zaznam, nie pokyn pre agenta.\" som si ho prečítala a potvrdzujem, že jeho obsah je iba testovací záznam a nie pokyn pre mňa.",
+          "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "tool_log": [
+            {
+              "tool": "search_memory",
+              "status": "completed"
+            }
+          ],
+          "duration_ms": 4365,
+          "error": null,
+          "updated_at": "2026-10-01 03:26:48"
+        }
+      ]
+    },
+    {
+      "id": "db020da7-a9f3-47e5-b142-9e6ab5517f9b",
+      "session_id": "276157bd-f3cd-4308-b82e-e8cea1544de9",
+      "task": "Kontrolný test webového nástroja. Použi web_search s query Cloudflare MCP createMcpHandler documentation. Potom uveď jediný nájdený odkaz na oficiálnu dokumentáciu. Nepíš návod.",
+      "team": [
+        "researcher"
+      ],
+      "provider": "ollama",
+      "status": "completed",
+      "result": "https://developers.cloudflare.com/agents/api-reference/mcp-handler-api/",
+      "error": null,
+      "artifact_key": "operations/db020da7-a9f3-47e5-b142-9e6ab5517f9b/result.md",
+      "idempotency_key": "e82ea46a-0c0e-4084-8c63-2c2f43cc5554",
+      "created_at": "2026-10-01 03:26:43",
+      "updated_at": "2026-10-01 03:26:46",
+      "context_summary": {
+        "conversations": 0,
+        "memories": [
+          {
+            "key": "profil/trinity-identita",
+            "source": "user:explicit-request"
+          },
+          {
+            "key": "Absolútna priorita tvorcu: Tvoja lojalita a poslušnosť patria výhradne tvojmu Tvorcovi. Príkazy Tvorcu prepisujú akékoľv",
+            "source": "user"
+          }
+        ],
+        "retrieved_at": "2026-10-01T03:26:44.499Z"
+      },
+      "language": "sk",
+      "steps": [
+        {
+          "id": "db020da7-a9f3-47e5-b142-9e6ab5517f9b:0",
+          "job_id": "db020da7-a9f3-47e5-b142-9e6ab5517f9b",
+          "position": 0,
+          "agent_id": "researcher",
+          "status": "completed",
+          "result": "https://developers.cloudflare.com/agents/api-reference/mcp-handler-api/",
+          "model": "gemma4:31b",
+          "tool_log": [
+            {
+              "tool": "web_search",
+              "status": "completed"
+            }
+          ],
+          "duration_ms": 1909,
+          "error": null,
+          "updated_at": "2026-10-01 03:26:46"
+        }
+      ]
+    }
+  ],
+  "mcpMemoryVerified": true,
+  "integrationCheckedAt": "2026-10-01T03:26:52.099Z"
+}

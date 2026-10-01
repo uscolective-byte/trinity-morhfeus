@@ -1,0 +1,16 @@
+{
+  "name": "trinity-operational-center",
+  "version": "6.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --ip 127.0.0.1",
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types",
+    "test": "node --test tests/*.test.mjs",
+    "test:truth-live": "node scripts/live-truth-test.mjs"
+  },
+  "dependencies": {"agents":"0.24.0", "@modelcontextprotocol/server":"2.0.0", "zod":"4.6.5"},
+  "devDependencies": {"wrangler":"4.145.0", "miniflare":"5.20260930.0-alpha"}
+}
