@@ -1,0 +1,24 @@
+{
+  "checked_at": "2026-10-01T09:47:50.169Z",
+  "worker_version": "6.4.0",
+  "gateway_health": {
+    "service": "Trinity Local Gateway",
+    "version": "1.0.0",
+    "status": "ready",
+    "binding": "127.0.0.1",
+    "cloud": "completed"
+  },
+  "action_id": "10158e3b-b4bf-4357-bd25-f511485a07f5",
+  "action": "write",
+  "status": "completed",
+  "receipt": {
+    "action": "write",
+    "path": "Trinity/verification/system-capabilities-6.4-live.txt",
+    "before_sha256": "absent",
+    "after_sha256": "7d256187ac76497698b27f72d7c0c3ca205fabcd817d4eeac69717d79c4d08a0",
+    "bytes": 123
+  },
+  "error": null,
+  "file_exists": true,
+  "system_tools_public": false
+}

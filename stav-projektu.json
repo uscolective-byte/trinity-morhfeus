@@ -1,26 +1,35 @@
 {
   "project": "Morhfeus / Trinity",
-  "updated_at": "2026-10-01T11:31:00+02:00",
+  "updated_at": "2026-10-01T12:30:00+02:00",
   "source_of_truth": "C:\\Users\\saboi\\Documents\\Codex\\Morhfeus\\Trinity",
   "production": {
-    "version": "6.3.0",
-    "cloudflare_version_id": "52739f12-566a-4d62-84b6-b9ad037c8bfd",
+    "version": "6.5.0",
+    "cloudflare_version_id": "e1999413-7972-46fd-ab30-4dce85a3a9d2",
     "worker_url": "https://trinity.saboivan2008.workers.dev/",
     "primary_url": "https://auru.dev/",
-    "live_truth_check": "passed",
-    "automated_tests": "31/31"
+    "live_studio_check": "passed",
+    "automated_tests": "37/37"
+  },
+  "firebase": {
+    "project_id": "trinity-morhfeus-20261001",
+    "hosting_url": "https://trinity-morhfeus-20261001.web.app/",
+    "status_bridge": "deployed_and_verified"
   },
   "steps": [
     {"step": 1, "name": "Pravdivé jadro a stála osobnosť", "status": "completed"},
     {"step": 2, "name": "Potrebné moduly Trinity", "status": "completed", "installed_plugins": 11},
-    {"step": 3, "name": "Izolovaný Python, Node.js a Java Sandbox", "status": "in_progress"},
-    {"step": 4, "name": "Google a Microsoft OAuth konektory", "status": "planned"}
+    {"step": 3, "name": "Privátne systémové schopnosti a lokálna brána", "status": "completed", "gateway_tests": "7/7"},
+    {"step": 4, "name": "AI Studio builder", "status": "completed", "live_project_id": "4f534a75-0459-4748-b166-d7031dae0344"},
+    {"step": 5, "name": "Izolovaný Python, Node.js a Java Sandbox", "status": "planned"},
+    {"step": 6, "name": "Google, Microsoft, sociálne a platobné konektory", "status": "planned_requires_oauth"}
   ],
-  "next_action": "Build and test the isolated Cloudflare Sandbox with soft usage throttling.",
+  "next_action": "Pridať kapacitný manažér a izolovaný sandbox bez internetu a bez prístupu k tajomstvám.",
   "safety": {
-    "internet_in_sandbox": false,
+    "studio_preview_sandboxed": true,
+    "internet_in_code_sandbox": false,
     "sandbox_secrets": false,
     "external_action_claims_require_receipt": true,
-    "self_write_requires_review": true
+    "self_write_requires_review": true,
+    "payments_require_separate_user_approval": true
   }
 }

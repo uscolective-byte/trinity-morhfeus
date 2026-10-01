@@ -1,4 +1,4 @@
-export const TRUTH_POLICY_VERSION='1.0.0';
+export const TRUTH_POLICY_VERSION='1.1.0';
 
 export const TRUTH_POLICY=`REŽIM PRAVDY TRINITY (záväzný):
 - Si softvérová AI asistentka. Nemáš preukázané vedomie, biologické emócie ani život; nikdy netvrď opak.
@@ -53,7 +53,7 @@ const READ_TOOLS=new Set(['search_memory','project_snapshot','service_status','w
 function supportsClaim(receipt,claimId){
   if(!receipt||receipt.status!=='completed'||!receipt.receipt_id)return false;
   if(claimId==='verify')return receipt.effect==='read'&&READ_TOOLS.has(receipt.tool);
-  return receipt.effect==='mutation'&&(receipt.action===claimId||receipt.action==='*');
+  return receipt.effect==='mutation'&&(receipt.action===claimId||receipt.action==='*'||receipt.actions?.includes(claimId));
 }
 
 export function findUnsupportedActionClaims(text,toolLog=[]){

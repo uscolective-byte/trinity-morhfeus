@@ -1,0 +1,12 @@
+{
+  "checked_at": "2026-10-01T10:03:58.237Z",
+  "job_id": "40d77b7f-d5bb-4260-8dd7-dd3f86cc88d9",
+  "job_status": "completed",
+  "result": "Nástroj request_system_action vrátil ID 4cf8dd37-8598-49bb-a6b0-37ca6d4dfd77 a stav approved, čo znamená, že požiadavka na čítanie súboru README.md bola schválená. Teraz čaká na potvrdenie od lokálnej brány.",
+  "system_action": {
+    "id": "4cf8dd37-8598-49bb-a6b0-37ca6d4dfd77",
+    "action": "read",
+    "status": "completed",
+    "requested_by": "agent:orchestrator"
+  }
+}

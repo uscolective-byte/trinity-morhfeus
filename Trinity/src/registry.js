@@ -59,7 +59,8 @@ const groups = [
 export const AGENTS = groups.flatMap(([cluster, roles]) => roles.map(([id, name, role]) => ({
   id, name, cluster, role,
   tools: ['search_memory','project_snapshot','calculate','analyze_text','current_time','list_capabilities', ...(['Výskum'].includes(cluster)||id==='orchestrator' ? ['web_search'] : []),
-    ...(['Riadenie','Cloud a prevádzka','Dáta a pamäť','Kvalita a bezpečnosť','Podpora a automatizácia'].includes(cluster) ? ['service_status'] : [])]
+    ...(['Riadenie','Cloud a prevádzka','Dáta a pamäť','Kvalita a bezpečnosť','Podpora a automatizácia'].includes(cluster) ? ['service_status'] : []),
+    ...(id==='orchestrator'?['request_system_action','system_action_status']:[])]
 })));
 export function agentById(id) { return AGENTS.find(a => a.id === id); }
 export function shouldDelegate(task) {

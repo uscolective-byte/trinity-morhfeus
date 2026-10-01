@@ -1,6 +1,7 @@
 **/node_modules/
 **/.credentials/
 **/.wrangler/
+**/.firebase/
 **/dist/
 **/*.log
 Zaznamy/

@@ -53,6 +53,9 @@ auru.dev chat
 - kontrola dostupnosti interných služieb
 - MCP nástroje: `list_agents`, `dispatch_task`, `get_task`, `search_memory`, `check_services`
 - bezpečný návrat z Ollama na Workers AI pri výpadku primárneho modelu
+- AI Studio: generovanie kompletného webu, živý sandboxovaný náhľad, iterácie, verzie v D1/R2 a export HTML
+- samostatná sekcia Nastavenia s prepínaním voliteľných modulov
+- privátne systémové operácie cez lokálnu bránu, samostatné schválenie a auditné potvrdenie
 - stála osobnosť uložená v D1, bez predstierania vedomia alebo biologických emócií
 - automatická blokácia nepodložených tvrdení typu „nasadila som“, „vymazala som“ alebo „overila som“
 - potvrdenia nástrojov s identifikátorom, časom a typom účinku
@@ -89,6 +92,6 @@ npx wrangler d1 migrations apply DB --remote
 npm run deploy
 ```
 
-Aktuálna verzia 6.3.0 prešla 31 automatizovanými testami. Obsahuje stálu osobnosť, režim pravdy vyžadujúci dôkaz vykonanej externej akcie a 11 nainštalovaných modulov. Živé overenie režimu pravdy sa zapisuje do `verification/truth-live.json`.
+Aktuálna verzia 6.5.0 prešla 37 automatizovanými testami. Obsahuje stálu osobnosť, režim pravdy, 11 nainštalovaných modulov, privátnu lokálnu bránu a reálny AI Studio builder. Živé overenie Studia je v `verification/studio-live.json`.
 
-Aktuálny Cloudflare Version ID: `52739f12-566a-4d62-84b6-b9ad037c8bfd`.
+Aktuálny Cloudflare Version ID: `e1999413-7972-46fd-ab30-4dce85a3a9d2`.

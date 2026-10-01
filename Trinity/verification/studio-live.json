@@ -1,0 +1,12 @@
+{
+  "checked_at": "2026-10-01T10:21:00.618Z",
+  "endpoint": "https://auru.dev",
+  "project_id": "4f534a75-0459-4748-b166-d7031dae0344",
+  "name": "Trinity Studio Live Test",
+  "version": 1,
+  "status": "ready",
+  "model": "gemma4:31b",
+  "html_complete": true,
+  "csp_present": true,
+  "html_size": 9924
+}

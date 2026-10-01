@@ -1,0 +1,14 @@
+{
+  "hosting": {
+    "public": "public",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "cleanUrls": true,
+    "trailingSlash": false,
+    "headers": [{"source": "**", "headers": [
+      {"key": "Content-Security-Policy", "value": "default-src 'self'; connect-src 'self' https://auru.dev; style-src 'self'; script-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"},
+      {"key": "Referrer-Policy", "value": "no-referrer"},
+      {"key": "X-Content-Type-Options", "value": "nosniff"},
+      {"key": "X-Frame-Options", "value": "DENY"}
+    ]}]
+  }
+}

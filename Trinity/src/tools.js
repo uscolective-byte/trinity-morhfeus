@@ -1,6 +1,8 @@
 import {z} from 'zod';
 import {boundedText,getOllamaKey,serviceStatus,SERVICES} from './services.js';
 import {ensureToolEnabled,pluginEnabled,listPlugins} from './plugins.js';
+import {createSystemAction,getSystemAction,actionEvidence} from './system-actions.js';
+const INTERNAL_TOOLS=new Set(['request_system_action','system_action_status']);
 export const TOOL_SCHEMAS={
   search_memory:z.object({query:z.string().max(200).default('')}).strict(),
   project_snapshot:z.object({}).strict(),
@@ -10,6 +12,8 @@ export const TOOL_SCHEMAS={
   ,analyze_text:z.object({text:z.string().max(20000)}).strict()
   ,current_time:z.object({timezone:z.string().min(1).max(80).default('Europe/Bratislava')}).strict()
   ,list_capabilities:z.object({query:z.string().max(80).default('')}).strict()
+  ,request_system_action:z.object({action:z.enum(['read','write','edit','selfwrite','run','deploy','share','upload','upgrade']),payload:z.record(z.string(),z.unknown()).default({}),rationale:z.string().min(3).max(1000)}).strict()
+  ,system_action_status:z.object({id:z.string().uuid()}).strict()
 };
 export async function searchMemory(env,query='') {
   const pattern=`%${query.replace(/[!%_]/g,'!$&')}%`;
@@ -19,8 +23,17 @@ export async function searchMemory(env,query='') {
 }
 export async function runTool(env, agent, name, input) {
   if(!agent.tools.includes(name)||!TOOL_SCHEMAS[name]) throw new Error('Tool not allowed');
-  await ensureToolEnabled(env,name);
+  if(!INTERNAL_TOOLS.has(name))await ensureToolEnabled(env,name);
+  if(name==='request_system_action'&&input&&typeof input==='object')input={action:input.action,payload:input.payload||(typeof input.resource==='string'?{path:input.resource}:{}),rationale:input.rationale||input.reason};
   const args=TOOL_SCHEMAS[name].parse(input);
+  if(name==='request_system_action'){
+    const action=await createSystemAction(env,args,`agent:${agent.id||'trinity'}`);
+    return {id:action.id,action:action.action,status:action.status,approval_required:action.status==='proposed',expires_at:action.expires_at,note:action.status==='proposed'?`Čaká na samostatné schválenie používateľa príkazom SCHVÁĽ ${action.id}.`:'Bezpečné čítanie čaká na lokálnu bránu.',_evidence:{effect:'proposal'}};
+  }
+  if(name==='system_action_status'){
+    const action=await getSystemAction(env,args.id);if(!action)throw new Error('Systémová akcia neexistuje.');
+    return {id:action.id,action:action.action,status:action.status,receipt:action.receipt,error:action.error,_evidence:action.status==='completed'?{effect:'mutation',actions:actionEvidence(action.action),receipt_id:action.id}:null};
+  }
   if(name==='calculate'){
     const v=args.values;let result;
     if(args.operation==='add')result=v.reduce((a,b)=>a+b,0);
@@ -67,4 +80,4 @@ export async function recallMemory(env,task){
   return [...records.values()];
 }
 export const TOOL_HELP={search_memory:'Vyhľadá pamäť: {query:string}',project_snapshot:'Prečíta projekty a úlohy: {}',
-  service_status:'Overí služby: {binding?: názov služby}',web_search:'Vyhľadá webové zdroje: {query:string}',calculate:'Presný výpočet {operation:add|subtract|multiply|divide|percentage|mean,values:number[]}; percentage je [percento,základ]',analyze_text:'Počet slov a znakov: {text:string}',current_time:'Skutočný čas a dátum: {timezone?: IANA názov}',list_capabilities:'Zoznam nainštalovaných schopností Trinity: {query?: string}'};
+  service_status:'Overí služby: {binding?: názov služby}',web_search:'Vyhľadá webové zdroje: {query:string}',calculate:'Presný výpočet {operation:add|subtract|multiply|divide|percentage|mean,values:number[]}; percentage je [percento,základ]',analyze_text:'Počet slov a znakov: {text:string}',current_time:'Skutočný čas a dátum: {timezone?: IANA názov}',list_capabilities:'Zoznam nainštalovaných verejných modulov Trinity: {query?: string}',request_system_action:'Vytvorí iba návrh internej akcie; zmeny čakajú na výslovné schválenie: {action, payload, rationale}',system_action_status:'Overí stav a potvrdenie internej akcie: {id}'};

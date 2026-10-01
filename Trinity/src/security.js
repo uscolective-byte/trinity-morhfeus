@@ -5,7 +5,7 @@ export class HttpError extends Error {
 export async function hash(value) {
   return Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))).toString('hex');
 }
-async function equal(a, b) { return timingSafeEqual(Buffer.from(await hash(a)), Buffer.from(await hash(b))); }
+export async function equal(a, b) { return timingSafeEqual(Buffer.from(await hash(a)), Buffer.from(await hash(b))); }
 export async function validKey(token, env) {
   token=typeof token==='string'?token.trim():token;
   if (!token || token.length > 2048) return false;
