@@ -13,6 +13,7 @@ import {SYSTEM_CAPABILITIES,createSystemAction,listSystemActions,getSystemAction
 import {listStudioProjects,getStudioProject,createStudioProject,reviseStudioProject} from './studio.js';
 import {beginGoogleLogin,finishGoogleLogin,googleAuthRequired,googleOAuthConfigured} from './google-auth.js';
 import {normalizeLanguage} from './cognition.js';
+import {readControl,assertRunning} from './control.js';
 import html from '../public/index.html';
 import appJS from '../public/app.js.txt';
 import css from '../public/style.css';
@@ -24,7 +25,7 @@ import assistantJS from '../public/assistant/chat.js.txt';
 export {TrinityAgent,ChatAgent,GuardianAgent,TrinityOperations};
 const json=(data,status=200)=>Response.json(data,{status});
 const uuid=z.string().uuid();
-function requireAdmin(user){if(user.role!=='admin')throw new HttpError(403,'Táto operácia je dostupná iba správcovi Trinity.');}
+function requireAdmin(user){if(!['admin','owner'].includes(user.role))throw new HttpError(403,'Táto operácia je dostupná iba správcovi Trinity.');}
 async function route(request,env,ctx){
   const url=new URL(request.url),path=url.pathname;
   if(request.method==='GET'&&['/','/ops','/dashboard','/index.html'].includes(path))return new Response(path==='/ops'?html:assistantHTML,{headers:{'Content-Type':'text/html; charset=utf-8',
@@ -63,7 +64,7 @@ async function route(request,env,ctx){
     await rateLimit(env,'login:'+(await hash(request.headers.get('CF-Connecting-IP')||'local')).slice(0,24),10,300);
     const {key}=z.object({key:z.string().max(2048)}).parse(await readJSON(request));
     if(!await validKey(key,env))throw new HttpError(401,'Nesprávny prístupový kľúč.');
-    return issueSession(env);
+    return issueSession(env,undefined,env.TRINITY_OWNER_EMAIL||null);
   }
   if(path==='/api/ops/redeem'&&request.method==='POST'){
     if(googleAuthRequired(env))throw new HttpError(403,'Jednorazové kľúče sú vypnuté. Použi Google.');
@@ -93,6 +94,18 @@ async function route(request,env,ctx){
     return json({action:await finishSystemAction(env,uuid.parse(gatewayReceipt[1]),gateway,await readJSON(request,180000))});
   }
   const user=await authenticate(request,env);
+  if(path==='/api/ops/control'){
+    requireAdmin(user);
+    if(request.method==='GET')return json(await readControl(env));
+    if(request.method==='POST'){
+      const d=z.object({emergency_stop:z.boolean(),reason:z.string().trim().max(500).default('')}).strict().parse(await readJSON(request));
+      await env.DB.prepare("UPDATE ops_control SET emergency_stop=?,reason=?,updated_by=?,updated_at=datetime('now') WHERE id=1").bind(d.emergency_stop?1:0,d.reason||null,user.email||'owner').run();
+      await env.DB.prepare("INSERT INTO ops_events(action,details) VALUES(?,?)").bind(d.emergency_stop?'emergency_stop_enabled':'emergency_stop_disabled',JSON.stringify({by:user.email||'owner',reason:d.reason||null})).run();
+      return json(await readControl(env));
+    }
+  }
+  const control=await readControl(env);
+  if(control.emergency_stop&&!['/api/ops/status','/api/ops/control','/api/ops/logout'].includes(path))assertRunning(control);
   if(path==='/api/ops/users/pending'&&request.method==='GET'){
     requireAdmin(user);
     const rows=await env.DB.prepare("SELECT email,display_name,created_at FROM ops_users WHERE status='pending' AND role='user' ORDER BY created_at").all();
@@ -166,7 +179,7 @@ async function route(request,env,ctx){
     const wantsMemory=/^(zapamätaj si|zapamataj si|remember)\s*[:,-]?\s+/i.test(d.message);
     const delegated=shouldDelegate(d.message);
     const provider=d.engine==='local'?'local':d.engine==='ollama'?'ollama':'workers-ai';
-    return json(await createJob(env,{task:d.message,session_id:d.session,agent:delegated?'auto':'orchestrator',mode:delegated?'team':'single',provider,language:d.language,remember:d.remember||wantsMemory,idempotency_key:crypto.randomUUID()}),202);
+    return json(await createJob(env,{task:d.message,session_id:d.session,agent:delegated?'auto':'orchestrator',mode:delegated?'team':'single',provider,language:d.language,remember:d.remember||wantsMemory,owner_mode:user.owner===true||user.role==='owner',idempotency_key:crypto.randomUUID()}),202);
   }
   const mediaRoute=path.match(/^\/api\/assistant\/media\/images\/([0-9a-f-]+)$/i);
   if(mediaRoute&&request.method==='GET'){
@@ -199,7 +212,7 @@ async function route(request,env,ctx){
   }
   if(path==='/api/ops/status'&&request.method==='GET'){
     const counts=await env.DB.prepare('SELECT status,COUNT(*) AS count FROM ops_jobs GROUP BY status').all();
-    return json({name:'Trinity',version:'8.0.0',agents:AGENTS.length,identity:'single',account:{email:user.email||null,role:user.role||null},consciousness:false,truth_mode:'evidence-required',truth_policy_version:TRUTH_POLICY_VERSION,jobs:counts.results,
+    return json({name:'Trinity',version:'8.0.0',agents:AGENTS.length,identity:'single',account:{email:user.email||null,role:user.role||null},control,consciousness:false,truth_mode:'evidence-required',truth_policy_version:TRUTH_POLICY_VERSION,jobs:counts.results,
       development_access_until:env.TRINITY_DEV_UNTIL||null,
       providers:{'workers-ai':env.AI?'configured':'missing',ollama:env.OLLAMA_SECRET||env.OLLAMA_API_KEY?'configured':'missing'},
       memory:await env.DB.prepare('SELECT (SELECT COUNT(*) FROM ops_memory) AS notes,(SELECT COUNT(*) FROM memory_long) AS legacy,(SELECT COUNT(*) FROM ops_jobs) AS conversations').first(),
@@ -243,7 +256,7 @@ async function route(request,env,ctx){
     catch(e){return json({status:'failed',provider,error:e.message},502);}
   }
   if(path==='/api/ops/jobs'){
-    if(request.method==='POST'){await rateLimit(env,`job:${user.id}`,12);return json(await createJob(env,await readJSON(request)),202);}
+    if(request.method==='POST'){await rateLimit(env,`job:${user.id}`,12);return json(await createJob(env,{...await readJSON(request),owner_mode:user.owner===true||user.role==='owner'}),202);}
     if(request.method==='GET')return json((await env.DB.prepare('SELECT id,session_id,task,team,status,error,created_at,updated_at FROM ops_jobs ORDER BY created_at DESC,rowid DESC LIMIT 50').all()).results);
   }
   const jobRoute=path.match(/^\/api\/ops\/jobs\/([^/]+)(?:\/(artifact|cancel))?$/);

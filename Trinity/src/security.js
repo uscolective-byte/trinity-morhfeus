@@ -30,7 +30,7 @@ export async function allowDevConnection(request,env){
 export async function authenticate(request, env) {
   const googleOnly=env.TRINITY_AUTH_MODE==='google';
   const token = request.headers.get('Authorization')?.replace(/^Bearer /, '') || request.headers.get('X-Trinity-Token');
-  if (!googleOnly&&await validKey(token, env)) return { id: (await hash(token)).slice(0, 24),email:null,role:null };
+  if (!googleOnly&&await validKey(token, env)) return { id: (await hash(token)).slice(0, 24),email:env.TRINITY_OWNER_EMAIL||null,role:'owner',owner:true };
   const session = request.headers.get('Cookie')?.match(/(?:^|;\s*)trinity_session=([a-f0-9]{64})(?:;|$)/)?.[1];
   if (session) {
     const digest = await hash(session);
@@ -39,8 +39,11 @@ export async function authenticate(request, env) {
         LEFT JOIN ops_users u ON lower(u.email)=lower(s.email) WHERE s.token_hash=?`).bind(digest).first();
       if(row&&row.expires_at>Date.now()&&row.email&&row.status==='active')return {id:digest.slice(0,24),email:row.email,role:row.role};
     }else{
-      const row = await env.DB.prepare('SELECT expires_at FROM ops_sessions WHERE token_hash = ?').bind(digest).first();
-      if (row && row.expires_at > Date.now()) return { id: digest.slice(0, 24),email:null,role:null };
+      const row = await env.DB.prepare('SELECT expires_at,email FROM ops_sessions WHERE token_hash = ?').bind(digest).first();
+      if (row && row.expires_at > Date.now()) {
+        const owner=Boolean(row.email&&env.TRINITY_OWNER_EMAIL&&row.email.toLowerCase()===env.TRINITY_OWNER_EMAIL.toLowerCase());
+        return { id: digest.slice(0, 24),email:row.email||null,role:owner?'owner':null,owner };
+      }
     }
   }
   throw new HttpError(401, 'Prihlás sa do Trinity.');
