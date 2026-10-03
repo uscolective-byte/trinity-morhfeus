@@ -49,7 +49,8 @@
   ],
   "vars": {
     "CF_ACCOUNT_ID": "b60342e5e52f5646fbd4e913bb409334",
-    "AI_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+    "AI_MODEL": "@cf/openai/gpt-oss-120b",
+    "IMAGE_MODEL": "@cf/black-forest-labs/flux-1-schnell",
     "OLLAMA_MODEL": "gemma4:31b",
     "TRINITY_ADMIN_EMAILS": "saboivan2008@gmail.com,usc31@auru.space,uscolective@gmail.com,delirium.trade12@gmail.com",
     "GOOGLE_REDIRECT_URI": "https://auru.dev/api/auth/google/callback"

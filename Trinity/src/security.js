@@ -10,7 +10,7 @@ export async function validKey(token, env) {
   token=typeof token==='string'?token.trim():token;
   if (!token || token.length > 2048) return false;
   for (const secret of [env.TRINITY_OPS_KEY, env.TRINITY_SESSION_SECRET]) {
-    if (typeof secret === 'string' && secret.length >= 16 && await equal(token, secret)) return true;
+    if (typeof secret === 'string' && secret.length >= 8 && await equal(token, secret)) return true;
   }
   return false;
 }

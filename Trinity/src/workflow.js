@@ -1,6 +1,7 @@
 import {WorkflowEntrypoint} from 'cloudflare:workers';
 import {runAgent} from './engine.js';
 import {recallMemory} from './tools.js';
+import {tokenBudget} from './cognition.js';
 export class TrinityOperations extends WorkflowEntrypoint {
   async run(event, step) {
     const id=event.payload.job_id;
@@ -12,7 +13,7 @@ export class TrinityOperations extends WorkflowEntrypoint {
         return job;
       });
       const history=await step.do('load-context',async()=>{
-        const rows=await this.env.DB.prepare("SELECT task,substr(result,1,3500) AS result FROM ops_jobs WHERE session_id=? AND id<>? AND status='completed' ORDER BY created_at DESC LIMIT 3").bind(job.session_id,id).all();
+        const rows=await this.env.DB.prepare("SELECT task,substr(result,1,5000) AS result FROM ops_jobs WHERE session_id=? AND id<>? AND status='completed' ORDER BY created_at DESC LIMIT 8").bind(job.session_id,id).all();
         const memory=await recallMemory(this.env,job.task);
         const summary={conversations:rows.results.length,memories:memory.map(r=>({key:r.key,source:r.source})),retrieved_at:new Date().toISOString()};
         await this.env.DB.prepare('UPDATE ops_jobs SET context_summary=? WHERE id=?').bind(JSON.stringify(summary),id).run();
@@ -27,7 +28,7 @@ export class TrinityOperations extends WorkflowEntrypoint {
           await this.env.DB.prepare(`INSERT INTO ops_steps(id,job_id,position,agent_id,status) VALUES(?,?,?,?,'running')
             ON CONFLICT(id) DO UPDATE SET status='running',error=NULL,updated_at=datetime('now')`).bind(stepId,id,position,agent).run();
           try {
-            const result=await runAgent(this.env,agent,job.task,[history,...outputs.map(o=>`${o.agent_id}: ${o.text}`)].join('\n'),job.provider,1200,job.language||'sk');
+            const result=await runAgent(this.env,agent,job.task,[history,...outputs.map(o=>`${o.agent_id}: ${o.text}`)].join('\n'),job.provider,tokenBudget(agent,job.task),job.language||'auto');
             await this.env.DB.prepare("UPDATE ops_steps SET status='completed',result=?,model=?,tool_log=?,duration_ms=?,updated_at=datetime('now') WHERE id=?")
               .bind(result.text,result.model,JSON.stringify(result.tool_log),result.duration_ms,stepId).run();
             return result;

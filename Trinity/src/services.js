@@ -38,6 +38,19 @@ export async function getOllamaKey(env) {
   if (!key || /^(ssh-|-----BEGIN)/.test(key.trim())) throw new Error('Ollama vyžaduje API kľúč; device key nie je API kľúč.');
   return key.trim();
 }
+export function extractModelText(result) {
+  if(typeof result==='string')return result;
+  if(typeof result?.output_text==='string')return result.output_text;
+  if(typeof result?.response==='string')return result.response;
+  if(typeof result?.choices?.[0]?.message?.content==='string')return result.choices[0].message.content;
+  if(Array.isArray(result?.output)){
+    return result.output.flatMap(item=>Array.isArray(item?.content)?item.content:[])
+      .filter(part=>['output_text','text'].includes(part?.type)||typeof part?.text==='string')
+      .map(part=>part.text||'').join('\n');
+  }
+  if(result?.response&&typeof result.response==='object')return JSON.stringify(result.response);
+  return '';
+}
 export async function callModel(env, provider, messages, maxTokens = 1200) {
   if(provider==='local'){
     if(!env.TRINITY_GATEWAY_KEY)throw new Error('Lokálna brána nie je nakonfigurovaná.');
@@ -63,12 +76,12 @@ export async function callModel(env, provider, messages, maxTokens = 1200) {
     return {text:data.message.content,model,provider,usage:{input:data.prompt_eval_count||0,output:data.eval_count||0}};
   }
   if(provider!=='workers-ai') throw new Error('Unknown provider');
-  const model=env.AI_MODEL || '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+  const model=env.AI_MODEL || '@cf/openai/gpt-oss-120b';
   let timer,result;
   try {result=await Promise.race([env.AI.run(model,{messages,max_tokens:maxTokens,temperature:0.25}),
     new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Workers AI timeout')),65000);})]);}
   finally {clearTimeout(timer);}
-  const text=typeof result.response==='string'?result.response:result.choices?.[0]?.message?.content || (result.response&&typeof result.response==='object'?JSON.stringify(result.response):'');
+  const text=extractModelText(result);
   if(!text.trim()) throw new Error('Workers AI vrátilo prázdnu odpoveď.');
   return {text,model,provider,usage:result.usage||null};
 }

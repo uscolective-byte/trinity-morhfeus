@@ -1,11 +1,12 @@
 import {z} from 'zod';
 import {agentById,selectTeam} from './registry.js';
 import {HttpError} from './security.js';
+import {normalizeLanguage} from './cognition.js';
 export const jobSchema=z.object({task:z.string().trim().min(1).max(12000),
   agent:z.string().default('auto'),mode:z.enum(['single','team']).default('single'),
   provider:z.enum(['workers-ai','ollama','local']).default('workers-ai'),
   session_id:z.string().uuid().optional(),team:z.array(z.string()).min(1).max(5).optional(),
-  language:z.enum(['sk','en']).default('sk'),remember:z.boolean().default(false),idempotency_key:z.string().uuid().optional()}).strict();
+  language:z.string().max(35).default('auto').transform(normalizeLanguage),remember:z.boolean().default(false),idempotency_key:z.string().uuid().optional()}).strict();
 export async function createJob(env, body) {
   const data=jobSchema.parse(body);
   if(data.agent!=='auto'&&!agentById(data.agent))throw new HttpError(400,'Neznámy agent.');

@@ -107,6 +107,6 @@ npx wrangler d1 migrations apply DB --remote
 npm run deploy
 ```
 
-Aktuálna verzia 6.7.0 prešla 37 automatizovanými testami. Obsahuje stálu osobnosť, režim pravdy, 11 nainštalovaných modulov, AI Studio builder a privátnu lokálnu bránu prepojenú s Workerom `trinity-pc-bridge` cez interné Cloudflare RPC. Živé overenie Studia je v `verification/studio-live.json`; lokálny model a desktopový bridge sú overené v `verification/pc-bridge-live.json`.
+Lokálna verzia 8.0.0 pridáva viacjazyčný chat s automatickým výberom jazyka, model `@cf/openai/gpt-oss-120b`, rozšírené vedecké a technické inštrukcie, väčší kontext rozhovoru, štyri bezpečné nástrojové kroky, rozšírenú matematiku a skutočné generovanie obrázkov cez Workers AI + R2. Video a hudba zostávajú pravdivo označené ako nepripojené, kým nebude nakonfigurovaný a živým testom overený vhodný generátor. Táto verzia nie je produkčná, kým neprejde nasadením a živým overením.
 
 Aktuálny Cloudflare Version ID: `e1999413-7972-46fd-ab30-4dce85a3a9d2`.

@@ -67,6 +67,7 @@ export const SKILLS=[
 export const AGENTS = groups.flatMap(([cluster, roles]) => roles.map(([id, name, role]) => ({
   id, name, cluster, role,
   tools: ['search_memory','project_snapshot','calculate','analyze_text','current_time','list_capabilities','list_skills','list_connectors','install_plugin', ...(['Výskum'].includes(cluster)||id==='orchestrator' ? ['web_search'] : []),
+    ...(['ui','writer','orchestrator'].includes(id)?['generate_image']:[]),
     ...(['Riadenie','Cloud a prevádzka','Dáta a pamäť','Kvalita a bezpečnosť','Podpora a automatizácia'].includes(cluster) ? ['service_status'] : []),
     ...(id==='orchestrator'?['request_system_action','system_action_status']:[])]
 })));

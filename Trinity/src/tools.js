@@ -9,7 +9,8 @@ export const TOOL_SCHEMAS={
   project_snapshot:z.object({}).strict(),
   service_status:z.object({binding:z.enum(Object.keys(SERVICES)).optional()}).strict(),
   web_search:z.object({query:z.string().min(3).max(500)}).strict()
-  ,calculate:z.object({operation:z.enum(['add','subtract','multiply','divide','percentage','mean']),values:z.array(z.number().finite()).min(1).max(100)}).strict()
+  ,generate_image:z.object({prompt:z.string().min(3).max(2048),seed:z.number().int().min(1).max(9999999999).optional()}).strict()
+  ,calculate:z.object({operation:z.enum(['add','subtract','multiply','divide','percentage','mean','power','sqrt','log10','sin','cos','tan']),values:z.array(z.number().finite()).min(1).max(100)}).strict()
   ,analyze_text:z.object({text:z.string().max(20000)}).strict()
   ,current_time:z.object({timezone:z.string().min(1).max(80).default('Europe/Bratislava')}).strict()
   ,list_capabilities:z.object({query:z.string().max(80).default('')}).strict()
@@ -46,7 +47,28 @@ export async function runTool(env, agent, name, input) {
     if(args.operation==='divide'){if(v.slice(1).includes(0))throw new Error('Delenie nulou nie je povolené.');result=v.slice(1).reduce((a,b)=>a/b,v[0]);}
     if(args.operation==='percentage'){if(v.length!==2)throw new Error('Percentá vyžadujú [percento,základ].');result=v[0]*v[1]/100;}
     if(args.operation==='mean')result=v.reduce((a,b)=>a+b,0)/v.length;
+    if(args.operation==='power'){if(v.length!==2)throw new Error('Mocnina vyžaduje [základ,exponent].');result=Math.pow(v[0],v[1]);}
+    if(args.operation==='sqrt'){if(v.length!==1||v[0]<0)throw new Error('Odmocnina vyžaduje jedno nezáporné číslo.');result=Math.sqrt(v[0]);}
+    if(args.operation==='log10'){if(v.length!==1||v[0]<=0)throw new Error('Logaritmus vyžaduje jedno kladné číslo.');result=Math.log10(v[0]);}
+    if(args.operation==='sin')result=Math.sin(v[0]);
+    if(args.operation==='cos')result=Math.cos(v[0]);
+    if(args.operation==='tan')result=Math.tan(v[0]);
     if(!Number.isFinite(result))throw new Error('Výsledok je mimo číselného rozsahu.');return {operation:args.operation,result};
+  }
+  if(name==='generate_image'){
+    if(!env.AI||!env.ARTIFACTS)throw new Error('Generovanie obrázkov nie je nakonfigurované.');
+    const model=env.IMAGE_MODEL||'@cf/black-forest-labs/flux-1-schnell';
+    const imageInput={prompt:args.prompt};if(args.seed!==undefined)imageInput.seed=args.seed;
+    const generated=await env.AI.run(model,imageInput);
+    let bytes;
+    if(typeof generated?.image==='string')bytes=Uint8Array.from(Buffer.from(generated.image,'base64'));
+    else if(generated instanceof Uint8Array)bytes=generated;
+    else if(generated instanceof ArrayBuffer)bytes=new Uint8Array(generated);
+    else throw new Error('Model obrázka vrátil neznámy formát.');
+    if(!bytes.length||bytes.length>12_000_000)throw new Error('Obrázok má neplatnú veľkosť.');
+    const id=crypto.randomUUID(),key=`media/images/${id}.jpg`;
+    await env.ARTIFACTS.put(key,bytes,{httpMetadata:{contentType:'image/jpeg'},customMetadata:{model,prompt:args.prompt.slice(0,500)}});
+    return {id,type:'image',model,url:`/api/assistant/media/images/${id}`,prompt:args.prompt,_evidence:{effect:'create',actions:['generate_image'],receipt_id:id}};
   }
   if(name==='analyze_text'){const words=args.text.match(/[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu)||[];return {characters:[...args.text].length,words:words.length,sentences:args.text.trim()?args.text.split(/[.!?]+/).filter(x=>x.trim()).length:0,reading_minutes:Math.ceil(words.length/200)};}
   if(name==='current_time'){
@@ -95,4 +117,4 @@ export async function recallMemory(env,task){
   return [...records.values()];
 }
 export const TOOL_HELP={search_memory:'Vyhľadá pamäť: {query:string}',project_snapshot:'Prečíta projekty a úlohy: {}',
-  service_status:'Overí služby: {binding?: názov služby}',web_search:'Vyhľadá webové zdroje: {query:string}',calculate:'Presný výpočet {operation:add|subtract|multiply|divide|percentage|mean,values:number[]}; percentage je [percento,základ]',analyze_text:'Počet slov a znakov: {text:string}',current_time:'Skutočný čas a dátum: {timezone?: IANA názov}',list_capabilities:'Zoznam nainštalovaných verejných modulov Trinity: {query?: string}',list_skills:'Zoznam zabudovaných pracovných zručností Trinity: {query?: string}',list_connectors:'Skutočný stav nakonfigurovaných konektorov; nikdy nevracia tajomstvá: {}',install_plugin:'Nainštaluje alebo obnoví iba plugin z dôveryhodného katalógu Trinity: {id,reason}',request_system_action:'Vytvorí iba návrh internej akcie; zmeny čakajú na výslovné schválenie. Desktop používa action run a payload {task:"desktop-control",operation:"list|launch|focus|type",app?:"notepad|calculator|paint|explorer",text?:string}: {action, payload, rationale}',system_action_status:'Overí stav a potvrdenie internej akcie: {id}'};
+  service_status:'Overí služby: {binding?: názov služby}',web_search:'Vyhľadá aktuálne webové zdroje: {query:string}',generate_image:'Skutočne vytvorí obrázok a uloží ho do súkromného archívu: {prompt:string,seed?:integer}',calculate:'Presný výpočet {operation:add|subtract|multiply|divide|percentage|mean|power|sqrt|log10|sin|cos|tan,values:number[]}; trigonometria používa radiány',analyze_text:'Počet slov a znakov: {text:string}',current_time:'Skutočný čas a dátum: {timezone?: IANA názov}',list_capabilities:'Zoznam nainštalovaných verejných modulov Trinity: {query?: string}',list_skills:'Zoznam zabudovaných pracovných zručností Trinity: {query?: string}',list_connectors:'Skutočný stav nakonfigurovaných konektorov; nikdy nevracia tajomstvá: {}',install_plugin:'Nainštaluje alebo obnoví iba plugin z dôveryhodného katalógu Trinity: {id,reason}',request_system_action:'Vytvorí iba návrh internej akcie; zmeny čakajú na výslovné schválenie. Desktop používa action run a payload {task:"desktop-control",operation:"list|launch|focus|type",app?:"notepad|calculator|paint|explorer",text?:string}: {action, payload, rationale}',system_action_status:'Overí stav a potvrdenie internej akcie: {id}'};

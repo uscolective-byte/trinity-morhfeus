@@ -2,6 +2,7 @@ export const PLUGINS=[
  {id:'memory',name:'Pamäť',icon:'◈',description:'Ukladá tvoje poznámky a pripomína relevantné informácie pred odpoveďou.',tools:['search_memory'],dependency:'Cloudflare D1',version:'1.1.0'},
  {id:'projects',name:'Projekty',icon:'▦',description:'Číta existujúce projekty a úlohy. Nepredstiera ich dokončenie.',tools:['project_snapshot'],dependency:'Cloudflare D1',version:'1.0.0'},
  {id:'web',name:'Webový výskum',icon:'◎',description:'Vyhľadáva aktuálne zdroje cez overený účet Ollama.',tools:['web_search'],dependency:'Ollama API',version:'1.0.0'},
+ {id:'images',name:'Tvorba obrázkov',icon:'◉',description:'Generuje skutočné obrázky pomocou Workers AI a bezpečne ich ukladá do R2.',tools:['generate_image'],dependency:'Workers AI + R2',version:'1.0.0'},
  {id:'monitor',name:'Strážca služieb',icon:'⌁',description:'Overuje dostupnosť existujúcich služieb Trinity.',tools:['service_status'],dependency:'Service bindings',version:'1.0.0'},
  {id:'calculator',name:'Presné výpočty',icon:'±',description:'Počíta súčet, rozdiel, súčin, podiel, percentá a priemer. Bez spúšťania cudzieho kódu.',tools:['calculate'],dependency:'Lokálny výpočet vo Workeri',version:'1.0.0'},
  {id:'text',name:'Analýza textu',icon:'Aa',description:'Spočíta znaky, slová, vety a odhadne čas čítania.',tools:['analyze_text'],dependency:'Lokálny výpočet vo Workeri',version:'1.0.0'},
