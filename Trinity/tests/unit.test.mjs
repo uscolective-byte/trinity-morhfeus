@@ -8,6 +8,7 @@ import {runTool} from '../src/tools.js';
 import {extractModelText,getOllamaKey,serviceStatus} from '../src/services.js';
 import {TRUTH_POLICY,findUnsupportedActionClaims,truthStatus} from '../src/truth.js';
 import {normalizeLanguage,languageDirective,tokenBudget} from '../src/cognition.js';
+import {planTask} from '../src/planner.js';
 test('40 unique agents in eight departments',()=>{assert.equal(AGENTS.length,40);assert.equal(new Set(AGENTS.map(a=>a.id)).size,40);assert.equal(new Set(AGENTS.map(a=>a.cluster)).size,8);});
 test('routing and team deduplication',()=>{assert.deepEqual(selectTeam('Cloudflare binding','team'),['planner','cloudflare','qa','orchestrator']);assert.equal(selectTeam('test','team','orchestrator').length,3);});
 test('work requests delegate while ordinary conversation stays direct',()=>{assert.equal(shouldDelegate('Ahoj Trinity'),false);assert.equal(shouldDelegate('Oprav a otestuj Cloudflare Worker'),true);assert.ok(AGENTS.find(a=>a.id==='orchestrator').tools.includes('web_search'));});
@@ -17,6 +18,7 @@ test('bad JSON and oversized bodies rejected',async()=>{await assert.rejects(rea
 test('job input rejects empty task and excessive teams',()=>{assert.equal(jobSchema.safeParse({task:' '}).success,false);assert.equal(jobSchema.safeParse({task:'hello',team:Array(6).fill('qa')}).success,false);});
 test('chat accepts world language tags and automatic language detection',()=>{assert.equal(jobSchema.parse({task:'こんにちは',language:'ja'}).language,'ja');assert.equal(jobSchema.parse({task:'مرحبا'}).language,'auto');assert.throws(()=>normalizeLanguage('../../bad'));assert.match(languageDirective('auto'),/jazyk/);});
 test('complex scientific work receives a larger reasoning budget',()=>{assert.ok(tokenBudget('orchestrator','Analyzuj kvantovú fyziku')>tokenBudget('writer','Ahoj'));});
+test('next-gen planner classifies intent and risk without model claims',()=>{const research=planTask('Vyhľadaj aktuálne zdroje o kvantovej fyzike');assert.equal(research.intent,'research');assert.equal(research.risk,'low');const build=planTask('Vytvor a nasad webovú aplikáciu');assert.equal(build.intent,'build');assert.equal(build.risk,'high');assert.equal(build.requires_approval,true);assert.ok(build.steps.length>=3);});
 test('device keys cannot masquerade as Ollama API keys',async()=>assert.rejects(getOllamaKey({OLLAMA_API_KEY:'ssh-ed25519 public'})));
 test('tool allowlist rejects arbitrary execution',async()=>assert.rejects(runTool({},AGENTS[0],'shell',{command:'whoami'})));
 test('image generation stores a real artifact and returns a private media URL',async()=>{let stored;const env={AI:{run:async()=>({image:Buffer.from('jpeg-bytes').toString('base64')})},ARTIFACTS:{put:async(key,value,options)=>{stored={key,value,options};}},DB:{prepare:()=>({bind(){return this;},first:async()=>({installed:1,enabled:1})})}};const result=await runTool(env,AGENTS.find(a=>a.id==='orchestrator'),'generate_image',{prompt:'hviezdna hmlovina'});assert.match(result.url,/^\/api\/assistant\/media\/images\/[0-9a-f-]{36}$/);assert.match(stored.key,/^media\/images\//);assert.equal(stored.options.httpMetadata.contentType,'image/jpeg');});
