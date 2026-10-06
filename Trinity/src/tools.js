@@ -3,7 +3,8 @@ import {boundedText,getOllamaKey,serviceStatus,SERVICES} from './services.js';
 import {ensureToolEnabled,pluginEnabled,listPlugins,installPlugin} from './plugins.js';
 import {SKILLS} from './registry.js';
 import {createSystemAction,getSystemAction,actionEvidence} from './system-actions.js';
-const INTERNAL_TOOLS=new Set(['request_system_action','system_action_status']);
+import {getPortfolio} from './trading.js';
+export const INTERNAL_TOOLS=new Set(['request_system_action','system_action_status']);
 export const TOOL_SCHEMAS={
   search_memory:z.object({query:z.string().max(200).default('')}).strict(),
   project_snapshot:z.object({}).strict(),
@@ -19,6 +20,7 @@ export const TOOL_SCHEMAS={
   ,install_plugin:z.object({id:z.string().regex(/^[a-z-]{1,40}$/),reason:z.string().min(3).max(300)}).strict()
   ,request_system_action:z.object({action:z.enum(['read','write','edit','selfwrite','run','deploy','share','upload','upgrade']),payload:z.record(z.string(),z.unknown()).default({}),rationale:z.string().min(3).max(1000)}).strict()
   ,system_action_status:z.object({id:z.string().uuid()}).strict()
+  ,portfolio_summary:z.object({portfolio_id:z.string().uuid().optional()}).strict()
 };
 export async function searchMemory(env,query='') {
   const pattern=`%${query.replace(/[!%_]/g,'!$&')}%`;
@@ -98,6 +100,15 @@ export async function runTool(env, agent, name, input) {
       env.DB.prepare('SELECT id,title,status,assigned_agent FROM tasks ORDER BY updated_at DESC LIMIT 20').all()
     ]);return {projects:projects.results,tasks:tasks.results};
   }
+  if(name==='portfolio_summary'){
+    const owner=(env.TRINITY_OWNER_EMAIL||'').trim().toLowerCase();
+    if(!owner)throw new Error('Vlastník papierového portfólia nie je nakonfigurovaný.');
+    let id=args.portfolio_id;
+    if(!id){const row=await env.DB.prepare('SELECT id FROM trading_portfolios WHERE owner_id=? ORDER BY created_at LIMIT 1').bind(owner).first();id=row?.id;}
+    if(!id)throw new Error('Papierové portfólio ešte neexistuje.');
+    const result=await getPortfolio(env,owner,id);
+    return {...result,_evidence:{effect:'read',receipt_id:`portfolio:${id}`}};
+  }
   if(name==='web_search') {
     const key=await getOllamaKey(env);
     const r=await fetch('https://ollama.com/api/web_search',{method:'POST',
@@ -117,4 +128,4 @@ export async function recallMemory(env,task){
   return [...records.values()];
 }
 export const TOOL_HELP={search_memory:'Vyhľadá pamäť: {query:string}',project_snapshot:'Prečíta projekty a úlohy: {}',
-  service_status:'Overí služby: {binding?: názov služby}',web_search:'Vyhľadá aktuálne webové zdroje: {query:string}',generate_image:'Skutočne vytvorí obrázok a uloží ho do súkromného archívu: {prompt:string,seed?:integer}',calculate:'Presný výpočet {operation:add|subtract|multiply|divide|percentage|mean|power|sqrt|log10|sin|cos|tan,values:number[]}; trigonometria používa radiány',analyze_text:'Počet slov a znakov: {text:string}',current_time:'Skutočný čas a dátum: {timezone?: IANA názov}',list_capabilities:'Zoznam nainštalovaných verejných modulov Trinity: {query?: string}',list_skills:'Zoznam zabudovaných pracovných zručností Trinity: {query?: string}',list_connectors:'Skutočný stav nakonfigurovaných konektorov; nikdy nevracia tajomstvá: {}',install_plugin:'Nainštaluje alebo obnoví iba plugin z dôveryhodného katalógu Trinity: {id,reason}',request_system_action:'Vytvorí iba návrh internej akcie; zmeny čakajú na výslovné schválenie. Desktop používa action run a payload {task:"desktop-control",operation:"list|launch|focus|type",app?:"notepad|calculator|paint|explorer",text?:string}: {action, payload, rationale}',system_action_status:'Overí stav a potvrdenie internej akcie: {id}'};
+  service_status:'Overí služby: {binding?: názov služby}',web_search:'Vyhľadá aktuálne webové zdroje: {query:string}',generate_image:'Skutočne vytvorí obrázok a uloží ho do súkromného archívu: {prompt:string,seed?:integer}',portfolio_summary:'Prečíta simulované portfólio, pozície a zisk alebo stratu bez vykonania reálneho obchodu: {portfolio_id?:uuid}',calculate:'Presný výpočet {operation:add|subtract|multiply|divide|percentage|mean|power|sqrt|log10|sin|cos|tan,values:number[]}; trigonometria používa radiány',analyze_text:'Počet slov a znakov: {text:string}',current_time:'Skutočný čas a dátum: {timezone?: IANA názov}',list_capabilities:'Zoznam nainštalovaných verejných modulov Trinity: {query?: string}',list_skills:'Zoznam zabudovaných pracovných zručností Trinity: {query?: string}',list_connectors:'Skutočný stav nakonfigurovaných konektorov; nikdy nevracia tajomstvá: {}',install_plugin:'Nainštaluje alebo obnoví iba plugin z dôveryhodného katalógu Trinity: {id,reason}',request_system_action:'Vytvorí iba návrh internej akcie; zmeny čakajú na výslovné schválenie. Desktop používa action run a payload {task:"desktop-control",operation:"list|launch|focus|type",app?:"notepad|calculator|paint|explorer",text?:string}: {action, payload, rationale}',system_action_status:'Overí stav a potvrdenie internej akcie: {id}'};

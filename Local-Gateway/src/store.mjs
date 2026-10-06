@@ -10,18 +10,29 @@ export function stableJSON(value){
 export const sha256=value=>createHash('sha256').update(value).digest('hex');
 
 export class ProposalStore{
-  constructor(dataDir){this.dataDir=dataDir;this.file=path.join(dataDir,'proposals.json');this.audit=path.join(dataDir,'audit.jsonl');this.queue=Promise.resolve();}
+  constructor(dataDir,{maxItems=1000}={}){this.dataDir=dataDir;this.file=path.join(dataDir,'proposals.json');this.audit=path.join(dataDir,'audit.jsonl');this.queue=Promise.resolve();this.maxItems=maxItems;}
   async init(){await mkdir(this.dataDir,{recursive:true});try{await readFile(this.file);}catch(error){if(error.code!=='ENOENT')throw error;await writeFile(this.file,'[]\n',{encoding:'utf8',flag:'wx'}).catch(e=>{if(e.code!=='EEXIST')throw e;});}}
   async #read(){await this.init();return JSON.parse(await readFile(this.file,'utf8'));}
   async #write(items){const temp=`${this.file}.${process.pid}.${randomUUID()}.tmp`;await writeFile(temp,JSON.stringify(items,null,2)+'\n','utf8');await rename(temp,this.file);}
+  #bounded(items){
+    if(items.length<=this.maxItems)return items;
+    const terminal=new Set(['completed','failed','rejected']);
+    const active=items.filter(item=>!terminal.has(item.status));
+    const finished=items.filter(item=>terminal.has(item.status)).sort((a,b)=>(b.updatedAt||b.createdAt).localeCompare(a.updatedAt||a.createdAt));
+    return [...active,...finished.slice(0,Math.max(0,this.maxItems-active.length))].sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
+  }
   async #locked(fn){const previous=this.queue;let release;this.queue=new Promise(resolve=>{release=resolve;});await previous;try{return await fn();}finally{release();}}
   async auditEvent(event){await this.init();await appendFile(this.audit,JSON.stringify({...event,at:new Date().toISOString()})+'\n','utf8');}
   async create(action,payload,source='local-user'){
-    return this.#locked(async()=>{const items=await this.#read();const createdAt=new Date().toISOString();const proposal={id:randomUUID(),action,payload,status:action==='read'?'approved':'proposed',source,createdAt,updatedAt:createdAt,expiresAt:new Date(Date.now()+30*60_000).toISOString()};proposal.digest=sha256(stableJSON({action,payload,createdAt}));items.push(proposal);await this.#write(items);await this.auditEvent({event:'proposal_created',id:proposal.id,action,digest:proposal.digest,source});return proposal;});
+    return this.#locked(async()=>{const items=await this.#read();const createdAt=new Date().toISOString();const proposal={id:randomUUID(),action,payload,status:action==='read'?'approved':'proposed',source,createdAt,updatedAt:createdAt,expiresAt:new Date(Date.now()+30*60_000).toISOString()};proposal.digest=sha256(stableJSON({action,payload,createdAt}));items.push(proposal);await this.#write(this.#bounded(items));await this.auditEvent({event:'proposal_created',id:proposal.id,action,digest:proposal.digest,source});return proposal;});
   }
   async importApproved(remote){
-    return this.#locked(async()=>{const items=await this.#read();const existing=items.find(item=>item.id===remote.id);if(existing)return existing;const proposal={id:remote.id,action:remote.action,payload:remote.payload||{},status:'approved',source:'cloud-approved',createdAt:remote.created_at||new Date().toISOString(),updatedAt:new Date().toISOString(),expiresAt:new Date(remote.expires_at).toISOString(),digest:sha256(stableJSON({action:remote.action,payload:remote.payload,remote_id:remote.id}))};items.push(proposal);await this.#write(items);await this.auditEvent({event:'cloud_action_imported',id:proposal.id,action:proposal.action,digest:proposal.digest});return proposal;});
+    return this.#locked(async()=>{const items=await this.#read();const existing=items.find(item=>item.id===remote.id);if(existing)return existing;const proposal={id:remote.id,action:remote.action,payload:remote.payload||{},status:'approved',source:'cloud-approved',createdAt:remote.created_at||new Date().toISOString(),updatedAt:new Date().toISOString(),expiresAt:new Date(remote.expires_at).toISOString(),digest:sha256(stableJSON({action:remote.action,payload:remote.payload,remote_id:remote.id}))};items.push(proposal);await this.#write(this.#bounded(items));await this.auditEvent({event:'cloud_action_imported',id:proposal.id,action:proposal.action,digest:proposal.digest});return proposal;});
   }
+  async recoverInterrupted(){
+    return this.#locked(async()=>{const items=await this.#read();const recovered=[];const now=new Date().toISOString();for(const item of items){if(item.status!=='executing')continue;item.status='failed';item.error='Lokálna brána sa reštartovala počas vykonávania; akcia nebola automaticky zopakovaná.';item.completedAt=now;item.updatedAt=now;recovered.push(item.id);}if(recovered.length){await this.#write(items);for(const id of recovered)await this.auditEvent({event:'proposal_failed',id,reason:'gateway-restart-recovery'});}return recovered;});
+  }
+  async stats(){const items=await this.#read();const byStatus={};for(const item of items)byStatus[item.status]=(byStatus[item.status]||0)+1;return {total:items.length,by_status:byStatus};}
   async list(){return (await this.#read()).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));}
   async get(id){return (await this.#read()).find(item=>item.id===id)||null;}
   async transition(id,allowed,status,extra={}){

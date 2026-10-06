@@ -13,6 +13,7 @@ export const PLUGINS=[
  {id:'artifacts',name:'Archív výstupov',icon:'↗',description:'Ukladá dokončené výstupy tímu do stiahnuteľných dokumentov.',tools:[],dependency:'Cloudflare R2',version:'1.0.0',required:true},
  {id:'skills',name:'Zručnosti Trinity',icon:'✳',description:'Poskytuje špecializované pracovné postupy pre vývoj, výskum, prevádzku a bezpečnosť.',tools:['list_skills','install_plugin'],dependency:'Zabudovaný katalóg zručností',version:'1.0.0'},
  {id:'connectors',name:'Konektory',icon:'↔',description:'Zobrazuje dostupné Cloudflare bindings a stav nakonfigurovaných služieb bez odhalenia tajomstiev.',tools:['list_connectors'],dependency:'Cloudflare service bindings',version:'1.0.0'}
+ ,{id:'trading',name:'Papierové portfólio',icon:'↗',description:'Číta simulované investičné portfólio, pozície, hotovosť a zisk alebo stratu. Nikdy nevykonáva reálne obchody.',tools:['portfolio_summary'],dependency:'Cloudflare D1',version:'1.0.0'}
 ];
 export async function pluginEnabled(env,id){
  const row=await env.DB.prepare('SELECT installed,enabled FROM ops_plugins WHERE id=?').bind(id).first();return row?.installed===1&&row?.enabled===1;

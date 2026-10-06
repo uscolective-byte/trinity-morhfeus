@@ -17,5 +17,5 @@ function New-ProtectedToken([string]$target) {
   $secure | ConvertFrom-SecureString | Set-Content -LiteralPath $target -Encoding UTF8 -NoNewline
   $plain = $null
 }
-New-ProtectedToken (Join-Path $credentials 'pc-bridge-key.dpapi')
-Write-Host 'Trinity Local Gateway je pripravená bez lokálneho tokenu. Cloud/PC bridge kľúče sú chránené účtom Windows.'
+New-ProtectedToken (Join-Path $credentials 'local-token.dpapi')
+Write-Host 'Trinity Local Gateway je pripravená. Lokálny prístupový token je chránený účtom Windows.'

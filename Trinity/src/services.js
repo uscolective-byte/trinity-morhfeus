@@ -54,7 +54,9 @@ export function extractModelText(result) {
 export async function callModel(env, provider, messages, maxTokens = 1200) {
   if(provider==='local'){
     if(!env.TRINITY_GATEWAY_KEY)throw new Error('Lokálna brána nie je nakonfigurovaná.');
-    const action=await createSystemAction(env,{action:'read',payload:{task:'local-inference',messages,max_tokens:maxTokens},rationale:'Lokálna AI odpoveď na používateľovu požiadavku'},'provider:local');
+    const recent=messages.filter(message=>message.role!=='system').slice(-6).map(message=>({role:message.role,content:message.content.slice(0,5000)}));
+    const localMessages=[{role:'system',content:'Si Trinity, súkromná lokálna AI asistentka. Odpovedaj prirodzene v jazyku používateľa. Nevymýšľaj vykonané akcie, prístup k súborom ani internet. Ak treba aktuálne dáta alebo externú akciu, jasne povedz, že sa má použiť cloudový režim Trinity.'},...recent];
+    const action=await createSystemAction(env,{action:'read',payload:{task:'local-inference',messages:localMessages,max_tokens:Math.min(maxTokens,320)},rationale:'Lokálna AI odpoveď na používateľovu požiadavku'},'provider:local');
     for(let attempt=0;attempt<180;attempt++){
       await new Promise(resolve=>setTimeout(resolve,1000));const current=await getSystemAction(env,action.id);
       if(current?.status==='completed')return {text:current.receipt.response,model:current.receipt.model,provider:'local',usage:current.receipt.usage||null};

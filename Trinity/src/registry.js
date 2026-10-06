@@ -31,7 +31,7 @@ const groups = [
     ['researcher', 'Výskumník', 'Vyhľadávaj zdroje a oddeľ fakty od neoverených informácií.'],
     ['fact-checker', 'Overovateľ faktov', 'Kontroluj tvrdenia podľa doložených zdrojov.'],
     ['technical-research', 'Technický výskumník', 'Vyhodnocuj technickú dokumentáciu a možnosti implementácie.'],
-    ['market-research', 'Trhový analytik', 'Porovnávaj ponuky podľa dostupných aktuálnych zdrojov.'],
+    ['market-research', 'Trhový a investičný analytik', 'Analyzuj trhy z aktuálnych zdrojov, posudzuj riziko, diverzifikáciu a papierové portfólio; nikdy negarantuj zisk ani nevykonávaj reálne obchody.'],
     ['document-analyst', 'Analytik dokumentov', 'Spracuj poskytnutý text, zhrň ho a uveď chýbajúce údaje.']
   ]],
   ['Tvorba', [
@@ -62,12 +62,14 @@ export const SKILLS=[
   {id:'cloud-operations',name:'Cloud prevádzka',description:'Over bindingy, build a health endpointy; nasadenie vyžaduje samostatné schválenie.',clusters:['Cloud a prevádzka']},
   {id:'evidence-research',name:'Výskum s dôkazmi',description:'Oddeľ zdroje, fakty, odhady a neoverené predpoklady.',clusters:['Výskum','Dáta a pamäť']},
   {id:'integration-design',name:'Návrh integrácií',description:'Najprv over dostupný konektor a jeho oprávnenia; tajomstvá nikdy nevypisuj.',clusters:['Dáta a pamäť','Cloud a prevádzka']},
-  {id:'quality-review',name:'Kontrola kvality',description:'Porovnaj výsledok s požiadavkami a uveď konkrétne zostávajúce riziká.',clusters:['Kvalita a bezpečnosť','Tvorba']}
+  {id:'quality-review',name:'Kontrola kvality',description:'Porovnaj výsledok s požiadavkami a uveď konkrétne zostávajúce riziká.',clusters:['Kvalita a bezpečnosť','Tvorba']},
+  {id:'paper-trading',name:'Papierové obchodovanie',description:'Vedie simulované portfólio, investičný denník a rizikové limity bez použitia reálnych peňazí.',clusters:['Výskum','Dáta a pamäť','Kvalita a bezpečnosť']}
 ];
 export const AGENTS = groups.flatMap(([cluster, roles]) => roles.map(([id, name, role]) => ({
   id, name, cluster, role,
   tools: ['search_memory','project_snapshot','calculate','analyze_text','current_time','list_capabilities','list_skills','list_connectors','install_plugin', ...(['Výskum'].includes(cluster)||id==='orchestrator' ? ['web_search'] : []),
     ...(['ui','writer','orchestrator'].includes(id)?['generate_image']:[]),
+    ...(['market-research','orchestrator'].includes(id)?['portfolio_summary']:[]),
     ...(['Riadenie','Cloud a prevádzka','Dáta a pamäť','Kvalita a bezpečnosť','Podpora a automatizácia'].includes(cluster) ? ['service_status'] : []),
     ...(id==='orchestrator'?['request_system_action','system_action_status']:[])]
 })));
@@ -83,6 +85,7 @@ export function selectTeam(task, mode = 'single', agent = 'auto') {
     const normalized = task.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     selected = /cloudflare|worker|binding|deploy/.test(normalized) ? 'cloudflare'
       : /kod|code|python|javascript|program|api/.test(normalized) ? 'backend'
+      : /obchod|invest|portfolio|akci|krypto|trh|trading|stock|crypto/.test(normalized) ? 'market-research'
       : /vyhlada|najdi|zdroj|research|vyskum/.test(normalized) ? 'researcher'
       : /text|napis|clanok|email/.test(normalized) ? 'writer'
       : /pamat|memory|databaz|sql/.test(normalized) ? 'database'

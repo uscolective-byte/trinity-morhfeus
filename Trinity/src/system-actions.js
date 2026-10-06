@@ -58,6 +58,9 @@ export async function rejectSystemAction(env,id,rejectedBy='user'){
 
 export async function claimSystemAction(env,gatewayId){
   const now=Date.now(),lease=now+90_000;
+  const expired=await env.DB.prepare(`UPDATE ops_system_actions SET status='failed',error='Platnosť systémovej akcie vypršala pred dokončením.',lease_until=NULL,completed_at=?,updated_at=datetime('now')
+    WHERE expires_at<=? AND status IN ('proposed','approved','claimed') RETURNING *`).bind(now,now).all();
+  for(const item of expired.results||[])await mirrorBridge(env,parseRow(item));
   const row=await env.DB.prepare(`UPDATE ops_system_actions SET status='claimed',claimed_by=?,lease_until=?,attempts=attempts+1,updated_at=datetime('now')
     WHERE id=(SELECT id FROM ops_system_actions WHERE expires_at>? AND (status='approved' OR (status='claimed' AND lease_until<?)) ORDER BY created_at LIMIT 1)
     RETURNING *`).bind(gatewayId,lease,now,now).first();

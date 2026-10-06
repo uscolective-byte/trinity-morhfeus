@@ -14,12 +14,13 @@ const workspaceRoot=path.resolve(process.env.MORHFEUS_ROOT||path.join(gatewayRoo
 const dataDir=path.resolve(process.env.TRINITY_GATEWAY_DATA||path.join(gatewayRoot,'data'));
 const token=process.env.TRINITY_LOCAL_TOKEN || '';
 const store=new ProposalStore(dataDir);await store.init();
+const recoveredInterrupted=await store.recoverInterrupted();
 let cloudState={status:process.env.TRINITY_GATEWAY_KEY?'connecting':'not-configured'};
 let pcBridgeState={status:process.env.TRINITY_PC_BRIDGE_KEY?'connecting':'not-configured'};
 
 const digest=value=>createHash('sha256').update(value||'').digest();
 const authorized=request=>{
-  if(!token) return true;
+  if(!token) return false;
   const supplied=request.headers.authorization?.replace(/^Bearer\s+/i,'')||'';
   return supplied.length>0&&timingSafeEqual(digest(supplied),digest(token));
 };
@@ -29,8 +30,9 @@ async function body(request,limit=1_100_000){let size=0,chunks=[];for await(cons
 const server=http.createServer(async(request,response)=>{
   try{
     const url=new URL(request.url,'http://127.0.0.1');
-    if(request.method==='GET'&&url.pathname==='/health')return send(response,200,{service:'Trinity Local Gateway',version:'1.2.0',status:'ready',binding:'127.0.0.1',cloud:cloudState.status,pc_bridge:pcBridgeState.status,desktop_control:'approval-required',local_model:'qwen3:4b-instruct'});
+    if(request.method==='GET'&&url.pathname==='/health')return send(response,200,{service:'Trinity Local Gateway',version:'1.3.0',status:'ready',synchronization:cloudState.status==='connected'&&pcBridgeState.status==='connected'?'connected':'degraded',binding:'127.0.0.1',local_auth:token?'required':'misconfigured',cloud:cloudState.status,cloud_last_success_at:cloudState.last_success_at||null,pc_bridge:pcBridgeState.status,pc_bridge_last_success_at:pcBridgeState.last_success_at||null,desktop_control:'approval-required',local_model:'qwen3:4b-instruct',recovered_interrupted:recoveredInterrupted.length});
     if(!authorized(request))return send(response,401,{error:'Neplatné lokálne oprávnenie.'});
+    if(request.method==='GET'&&url.pathname==='/api/sync/status')return send(response,200,{cloud:cloudState,pc_bridge:pcBridgeState,queue:await store.stats(),recovered_interrupted:recoveredInterrupted});
     if(request.method==='GET'&&url.pathname==='/api/capabilities')return send(response,200,{internal:true,capabilities:CAPABILITIES});
     if(request.method==='GET'&&url.pathname==='/api/proposals')return send(response,200,{items:await store.list()});
     if(request.method==='POST'&&url.pathname==='/api/read'){const input=await body(request);return send(response,200,await readWorkspaceFile(workspaceRoot,input.path));}
@@ -55,6 +57,10 @@ const server=http.createServer(async(request,response)=>{
 });
 
 const port=Number(process.env.TRINITY_LOCAL_PORT||8791);
-startCloudLink({baseUrl:(process.env.TRINITY_CLOUD_URL||'').replace(/\/$/,''),key:process.env.TRINITY_GATEWAY_KEY,store,workspaceRoot,dataDir,onState:state=>{cloudState=state;if(state.status!=='connected')console.log(JSON.stringify({event:'cloud_link',status:state.status,id:state.id}));}});
-startBridgeHeartbeat({baseUrl:process.env.TRINITY_PC_BRIDGE_URL,key:process.env.TRINITY_PC_BRIDGE_KEY,capabilities:CAPABILITIES.map(item=>item.id),onState:state=>{pcBridgeState=state;if(state.status!=='connected')console.log(JSON.stringify({event:'pc_bridge',status:state.status,error:state.error}));}});
+const stopCloudLink=startCloudLink({baseUrl:(process.env.TRINITY_CLOUD_URL||'').replace(/\/$/,''),key:process.env.TRINITY_GATEWAY_KEY,store,workspaceRoot,dataDir,onState:state=>{cloudState=state;if(state.status!=='connected')console.log(JSON.stringify({event:'cloud_link',status:state.status,id:state.id}));}});
+const stopBridgeHeartbeat=startBridgeHeartbeat({baseUrl:process.env.TRINITY_PC_BRIDGE_URL,key:process.env.TRINITY_PC_BRIDGE_KEY,capabilities:CAPABILITIES.map(item=>item.id),onState:state=>{pcBridgeState=state;if(state.status!=='connected')console.log(JSON.stringify({event:'pc_bridge',status:state.status,error:state.error}));}});
+server.requestTimeout=30_000;server.headersTimeout=10_000;server.keepAliveTimeout=5_000;server.maxHeadersCount=40;
 server.listen(port,'127.0.0.1',()=>console.log(JSON.stringify({event:'gateway_ready',host:'127.0.0.1',port,workspace:workspaceRoot,cloud:cloudState.status})));
+let shuttingDown=false;
+function shutdown(signal){if(shuttingDown)return;shuttingDown=true;console.log(JSON.stringify({event:'gateway_shutdown',signal}));stopCloudLink();stopBridgeHeartbeat();server.close(()=>process.exit(0));setTimeout(()=>process.exit(1),10_000).unref();}
+process.on('SIGINT',()=>shutdown('SIGINT'));process.on('SIGTERM',()=>shutdown('SIGTERM'));
