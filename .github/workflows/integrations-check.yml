@@ -25,3 +25,5 @@ jobs:
       - run: npm ci
       - run: node --test tests/integration-providers.test.mjs
       - run: npx wrangler deploy --config wrangler.integrations.jsonc --dry-run --outdir dist-integrations
+      - run: npm install --prefix ../Integrations-Worker
+      - run: npm run build --prefix ../Integrations-Worker
