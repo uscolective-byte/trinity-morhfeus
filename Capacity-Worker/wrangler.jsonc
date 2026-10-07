@@ -1,0 +1,14 @@
+{
+  "name": "trinity-capacity",
+  "main": "src/index.js",
+  "account_id": "b60342e5e52f5646fbd4e913bb409334",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": false,
+  "preview_urls": false,
+  "vars": { "DAILY_WORK_UNITS": "10000" },
+  "durable_objects": {
+    "bindings": [{ "name": "CAPACITY", "class_name": "CapacityLedger" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["CapacityLedger"] }],
+  "observability": { "enabled": true }
+}
