@@ -36,6 +36,7 @@ test('authenticated knowledge imports reach existing memory and respect emergenc
  const input={source_id:'project',title:'Project',text:'Integration milestone on Friday'};
  assert.equal((await req('/api/knowledge/import',input,true,{Origin:'https://evil.test'})).status,403);
  const imported=await req('/api/knowledge/import',input);assert.equal(imported.status,200,await imported.clone().text());
+ assert.equal((await req('/api/knowledge/search?q='+ 'x'.repeat(301))).status,400);
  const found=await(await req('/api/knowledge/search?q=milestone')).json();assert.equal(found.passages[0].source_id,'project');
  const recalled=await(await req('/api/ops/memory?q=milestone')).json();assert.ok(recalled.records.some(r=>r.key==='knowledge/project'&&r.source==='knowledge'));
  await req('/api/ops/control',{emergency_stop:true,reason:'test'});

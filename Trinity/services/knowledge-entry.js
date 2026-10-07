@@ -15,7 +15,11 @@ export default {async fetch(request,env,ctx){
     await rateLimit(env,`knowledge:${user.id}`,20);
     let result;
     if(request.method==='GET'&&url.pathname==='/api/knowledge/catalog')result=await env.KNOWLEDGE_SERVICE.getCatalog();
-    else if(request.method==='GET'&&url.pathname==='/api/knowledge/search')result=await env.KNOWLEDGE_SERVICE.search(url.searchParams.get('q')||'');
+    else if(request.method==='GET'&&url.pathname==='/api/knowledge/search'){
+      const query=url.searchParams.get('q')||'';
+      if(query.length>300)throw new HttpError(400,'Vyhľadávací dotaz môže mať najviac 300 znakov.');
+      result=await env.KNOWLEDGE_SERVICE.search(query);
+    }
     else if(request.method==='POST'&&['/api/knowledge/import','/api/knowledge/refresh'].includes(url.pathname)){
       assertRunning(await readControl(env));
       const input=await readJSON(request,110000);

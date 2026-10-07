@@ -45,7 +45,7 @@ rozhodnúť, čo má byť zdieľané a čo iba pre vlastníka, a otestovať izol
 
 ## Pridané bez prepisovania existujúcich súborov
 
-1. `Trinity/migrations/0017_personality_continuity.sql`: nový profil komunikačného
+1. `Trinity/migrations/0023_personality_continuity.sql`: nový profil komunikačného
    štýlu v existujúcej pamäti. Existujúci `recallMemory()` ho môže načítať,
    keď je plugin pamäte aktívny. Profil nie je systémové oprávnenie;
    konzistentné dodržiavanie štýlu treba overiť živým chatom.
