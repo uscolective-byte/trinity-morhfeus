@@ -117,6 +117,13 @@ let refreshSettingsNavigator=null;
     info.textContent=shown?shown+' sekcií zobrazených':'Žiadne výsledky. Skús iný výraz.';
   }
   search.addEventListener('input',render);
+  document.getElementById('settings-reset-search')?.addEventListener('click',()=>{
+    search.value='';
+    category='all';
+    view.querySelectorAll('[data-settings-category]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.settingsCategory==='all')));
+    render();
+    search.focus();
+  });
   view.querySelectorAll('[data-settings-category]').forEach(button=>{
     button.addEventListener('click',()=>{
       category=button.dataset.settingsCategory;
