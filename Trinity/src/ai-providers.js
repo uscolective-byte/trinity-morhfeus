@@ -9,18 +9,32 @@ export const aiProviderInputSchema=z.object({
 }).strict();
 
 const decodeVerification=value=>{try{return value?JSON.parse(value):null;}catch{return null;}};
+const safeError=value=>String(value||'Neznáma chyba').replace(/([?&](?:key|api_key)=)[^&\s]+/gi,'$1[redacted]').replace(/(x-goog-api-key\s*[:=]\s*)\S+/gi,'$1[redacted]').slice(0,500);
+const decodeChecks=rows=>{
+  const checks=new Map();
+  for(const row of rows){const item=decodeVerification(row.details);if(!item?.provider||checks.has(item.provider))continue;checks.set(item.provider,{status:item.status==='verified'?'verified':'failed',model:item.model||null,latency_ms:Number(item.latency_ms)||null,error:item.error||null,checked_at:row.created_at});}
+  return checks;
+};
+
+export async function recordAIProviderCheck(env,ownerId,input){
+  const check={owner_id:ownerId,provider:input.provider,status:input.status==='verified'?'verified':'failed',model:input.model||null,latency_ms:Math.max(0,Math.round(Number(input.latency_ms)||0)),error:input.error?safeError(input.error):null};
+  await env.DB.prepare("INSERT INTO ops_events(action,details) VALUES('ai_provider_test',?)").bind(JSON.stringify(check)).run();
+  return check;
+}
 
 export async function listAIProviders(env,ownerId){
-  const [settings,secrets]=await Promise.all([
+  const [settings,secrets,eventRows]=await Promise.all([
     env.DB.prepare('SELECT provider,secret_id,model,enabled,updated_at FROM ops_ai_provider_settings WHERE owner_id=?').bind(ownerId).all(),
-    listSecrets(env,ownerId)
+    listSecrets(env,ownerId),
+    env.DB.prepare("SELECT details,created_at FROM ops_events WHERE action='ai_provider_test' ORDER BY rowid DESC LIMIT 100").all()
   ]);
+  const checks=decodeChecks(eventRows.results.filter(row=>decodeVerification(row.details)?.owner_id===ownerId));
   const geminiSetting=settings.results.find(item=>item.provider==='gemini')||null;
   const geminiSecrets=secrets.filter(item=>item.provider==='gemini');
   const environmentGemini=typeof env.GEMINI_API_KEY==='string'&&env.GEMINI_API_KEY.length>=8;
   return {items:[
-    {id:'workers-ai',name:'Cloudflare Workers AI',configured:!!env.AI,enabled:true,model:env.AI_MODEL||'@cf/openai/gpt-oss-120b',managed_by:'cloudflare'},
-    {id:'gemini',name:'Google Gemini',configured:!!geminiSetting||environmentGemini,enabled:geminiSetting?geminiSetting.enabled===1:environmentGemini,model:geminiSetting?.model||env.GEMINI_MODEL||null,secret_id:geminiSetting?.secret_id||null,secret_source:geminiSetting?'encrypted-vault':environmentGemini?'worker-secret':null,credentials:geminiSecrets,updated_at:geminiSetting?.updated_at||null}
+    {id:'workers-ai',name:'Cloudflare Workers AI',configured:!!env.AI,enabled:true,model:env.AI_MODEL||'@cf/openai/gpt-oss-120b',managed_by:'cloudflare',last_check:checks.get('workers-ai')||null},
+    {id:'gemini',name:'Google Gemini',configured:!!geminiSetting||environmentGemini,enabled:geminiSetting?geminiSetting.enabled===1:environmentGemini,model:geminiSetting?.model||env.GEMINI_MODEL||null,secret_id:geminiSetting?.secret_id||null,secret_source:geminiSetting?'encrypted-vault':environmentGemini?'worker-secret':null,credentials:geminiSecrets,updated_at:geminiSetting?.updated_at||null,last_check:checks.get('gemini')||null}
   ]};
 }
 
