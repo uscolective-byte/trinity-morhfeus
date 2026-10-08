@@ -1,0 +1,36 @@
+name: Trinity UI checks
+on:
+  push:
+    branches:
+      - feature/trinity-settings-ui-20261008
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Static UI checks and Worker build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: Trinity
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: Trinity/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Test settings UI behavior
+        run: node --test tests/settings-ui.test.mjs
+      - name: Verify Worker build and existing tests
+        run: npm test

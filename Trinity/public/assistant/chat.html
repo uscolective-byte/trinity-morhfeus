@@ -32,11 +32,24 @@
     <section id="projects-view" class="view projects-view" hidden><div class="section-intro"><span class="eyebrow" data-i18n="workspace">PRACOVNÝ PRIESTOR</span><h1 data-i18n="projectsTitle">Projekty a rozpracované úlohy</h1><p data-i18n="projectsIntro">Prehľad uložený v spoločnej pamäti Trinity.</p></div><div id="project-list" class="project-grid"></div><section class="panel"><div class="panel-head"><h2 data-i18n="recentTasks">Posledné úlohy</h2></div><div id="task-list" class="task-list"></div></section></section>
     <section id="settings-view" class="view settings-view" hidden>
       <div class="section-intro"><span class="eyebrow" data-i18n="settingsLabel">TRINITY CONTROL CENTER</span><h1 data-i18n="settingsTitle">Nastavenia, dáta a integrácie</h1><p data-i18n="settingsIntro">Spravuj modely, internet, úložiská, moduly a bezpečný prístup pre ďalšie aplikácie.</p></div>
+      <div class="settings-control-bar" role="region" aria-label="Nastavenia: vyhľadávanie a filtre">
+        <div class="settings-search-wrap"><label for="settings-search">Vyhľadať nastavenie</label><div class="settings-search-row"><input id="settings-search" type="search" autocomplete="off" placeholder="Modely, integrácie, API, bezpečnosť…"><button id="settings-reset-search" type="button">Vymazať filtre</button><button id="settings-refresh" type="button">Obnoviť stav</button></div></div>
+        <div class="settings-category-tabs" role="group" aria-label="Kategória nastavení">
+          <button type="button" data-settings-category="all" aria-pressed="true">Všetko</button>
+          <button type="button" data-settings-category="system" aria-pressed="false">Systém</button>
+          <button type="button" data-settings-category="ai" aria-pressed="false">AI &amp; moduly</button>
+          <button type="button" data-settings-category="connections" aria-pressed="false">Pripojenia &amp; API</button>
+          <button type="button" data-settings-category="security" aria-pressed="false">Bezpečnosť</button>
+        </div>
+        <div class="settings-appearance"><label><input type="checkbox" id="settings-compact"> Kompaktné karty</label><label><input type="checkbox" id="settings-less-motion"> Menej animácií</label></div>
+        <p id="settings-filter-info" class="settings-filter-info" role="status" aria-live="polite"></p>
+      </div>
+      <div class="settings-resource-bar"><strong>Projekt Trinity</strong><span>Dokumentácia a vlastníctvo sú evidované oddelene od technických oprávnení.</span><a href="https://github.com/uscolective-byte/trinity-morhfeus/blob/feature/trinity-settings-ui-20261008/Dokumentacia/TRINITY-OFFICIAL-MASTER.md" target="_blank" rel="noopener noreferrer">Oficiálna dokumentácia ↗</a></div>
       <div class="settings-status-grid">
         <article class="settings-status account-card"><span>PRIHLÁSENIE</span><b id="settings-account-status">Prihlásený</b><small id="settings-account-detail">—</small></article>
         <article class="settings-status"><span>AI MODEL</span><b id="settings-model">—</b><small>Cloudflare Workers AI</small></article>
-        <article class="settings-status"><span>INTERNET</span><b id="settings-internet">—</b><small>Odchádzajúce spojenie bez otvorených portov</small></article>
-        <article class="settings-status"><span>PC GATEWAY</span><b id="settings-gateway">—</b><small id="settings-gateway-seen">Čakám na stav…</small></article>
+        <article class="settings-status"><span>WEBOVÝ VÝSKUM</span><b id="settings-internet">—</b><small>Nastavenie modulu; nie živý test internetu</small></article>
+        <article class="settings-status"><span>PC BRIDGE (CORE)</span><b id="settings-gateway">—</b><small id="settings-gateway-seen">Čakám na stav…</small></article>
         <article class="settings-status"><span>DATABÁZA</span><b id="settings-database">—</b><small>Indexovaná D1 + KV cache + R2 archív</small></article>
       </div>
       <div class="settings-grid wide-settings">
