@@ -1,4 +1,5 @@
 import {createSystemAction,getSystemAction} from './system-actions.js';
+import {getConfiguredAIProvider} from './ai-providers.js';
 
 export const SERVICES = {
   CORE: { name:'Jadro', path:'/health' }, BUILDER:{name:'Vývoj',path:'/health'},
@@ -32,6 +33,13 @@ export async function serviceStatus(env, requested) {
         note:'Dostupnosť endpointu; nepotvrdzuje vykonanie AI úlohy.'};
     } catch { return {binding,name:spec.name,status:'error',duration_ms:Date.now()-start}; }
   }));
+}
+export async function runScheduledHealth(env,cron){
+  const checks=await serviceStatus(env),reachable=checks.filter(item=>item.status==='reachable').length,
+    failed=checks.filter(item=>item.status==='error').map(item=>item.binding),summary={cron,reachable,total:checks.length,failed,checked_at:new Date().toISOString()};
+  await env.DB.prepare("INSERT INTO ops_events(action,details) VALUES('scheduled_health_check',?)").bind(JSON.stringify(summary)).run();
+  console.log(JSON.stringify({event:'scheduled_health_check',...summary}));
+  return summary;
 }
 export async function getOllamaKey(env) {
   const key = env.OLLAMA_API_KEY || (env.OLLAMA_SECRET ? await env.OLLAMA_SECRET.get() : '');
@@ -76,6 +84,24 @@ export async function callModel(env, provider, messages, maxTokens = 1200) {
     const data=JSON.parse(await boundedText(response,100000));
     if(!data.message?.content?.trim()) throw new Error('Ollama vrátila prázdnu odpoveď.');
     return {text:data.message.content,model,provider,usage:{input:data.prompt_eval_count||0,output:data.eval_count||0}};
+  }
+  if(provider==='gemini') {
+    const {apiKey,model}=await getConfiguredAIProvider(env,'gemini');
+    const system=messages.filter(message=>message.role==='system').map(message=>message.content).join('\n\n').slice(0,40000);
+    const contents=messages.filter(message=>message.role!=='system').slice(-12).map(message=>({
+      role:message.role==='assistant'?'model':'user',parts:[{text:String(message.content).slice(0,20000)}]
+    }));
+    const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/${model}:generateContent`,{
+      method:'POST',headers:{'x-goog-api-key':apiKey,'Content-Type':'application/json'},
+      body:JSON.stringify({contents,systemInstruction:system?{parts:[{text:system}]}:undefined,
+        generationConfig:{maxOutputTokens:Math.min(maxTokens,8192),temperature:0.25}}),
+      signal:AbortSignal.timeout(65000),redirect:'manual'
+    });
+    const data=JSON.parse(await boundedText(response,250000));
+    if(!response.ok)throw new Error(`Gemini HTTP ${response.status}: ${data.error?.message||'požiadavka zlyhala'}`);
+    const text=(data.candidates?.[0]?.content?.parts||[]).map(part=>part.text||'').join('\n').trim();
+    if(!text)throw new Error('Gemini vrátilo prázdnu odpoveď.');
+    return {text,model,provider,usage:{input:data.usageMetadata?.promptTokenCount||0,output:data.usageMetadata?.candidatesTokenCount||0}};
   }
   if(provider!=='workers-ai') throw new Error('Unknown provider');
   const model=env.AI_MODEL || '@cf/openai/gpt-oss-120b';

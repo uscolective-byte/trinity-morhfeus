@@ -23,8 +23,18 @@
       "zone_name": "auru.dev"
     }
   ],
+  "triggers": {
+    "crons": [
+      "*/30 * * * *",
+      "0 0 * * *",
+      "0 11 * * *"
+    ]
+  },
   "observability": {
     "enabled": true,
+    "issues": {
+      "enabled": true
+    },
     "logs": {
       "enabled": true,
       "invocation_logs": true
@@ -218,5 +228,5 @@
       "secret_name": "ollama"
     }
   ],
-  "preview_urls": false
+  "preview_urls": true
 }
