@@ -6,3 +6,21 @@
 .account-state{display:flex;align-items:center;gap:8px;max-width:260px;padding:6px 10px;border:1px solid #cceade;border-radius:12px;background:#f2fbf7}.account-state>span:last-child{display:grid;min-width:0}.account-state b{font-size:9px;color:#167861}.account-state small{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8px;color:var(--muted)}.account-dot{width:8px;height:8px;border-radius:50%;background:#20b98d;box-shadow:0 0 0 4px #20b98d1c}.account-card{border-color:#cceade;background:linear-gradient(145deg,#f4fcf8,#fff)}.account-card b{color:#167861}@media(max-width:900px){.account-state small{display:none}.account-state{padding:7px}.account-state b{font-size:8px}}@media(max-width:650px){.account-state{max-width:115px}.header-actions #memory-button,.header-actions #tools-button{display:none}#logout{padding:6px 7px}}
 
 .control-toggle{padding:10px 12px;border:1px solid #dce4f1;border-radius:11px;background:#f7f9fd}.control-toggle input{accent-color:var(--teal)}.control-help{display:block;margin-top:-4px}
+
+
+/* Trinity settings navigation v1: responsive and keyboard accessible */
+.settings-control-bar{display:grid;gap:12px;padding:18px;margin:0 0 16px;border:1px solid var(--line);border-radius:18px;background:var(--paper)}
+.settings-search-wrap{display:grid;gap:6px}.settings-search-wrap label{font-size:11px;font-weight:700;color:var(--ink)}
+#settings-search{width:100%;min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--canvas);color:var(--ink)}
+.settings-category-tabs{display:flex;flex-wrap:wrap;gap:7px}
+.settings-category-tabs button{padding:8px 12px;border-radius:999px;font-size:12px}
+.settings-category-tabs button[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.settings-appearance{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.settings-appearance label{display:flex;gap:7px;align-items:center;cursor:pointer}
+.settings-filter-info{margin:0;font-size:11px;color:var(--muted)}
+.settings-resource-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;margin-bottom:16px;border:1px solid var(--line);border-radius:14px;background:#f7f9fe;font-size:12px}
+.settings-resource-bar span{flex:1;color:var(--muted)}.settings-resource-bar a{color:var(--blue);font-weight:700;text-decoration:underline}
+#settings-view.settings-compact .settings-grid .panel{padding:14px}
+#settings-view.settings-compact .setting-row,#settings-view.settings-compact .integration-item{padding:7px 9px}
+#settings-view.settings-less-motion *,#settings-view.settings-less-motion *::before,#settings-view.settings-less-motion *::after{animation:none!important;transition:none!important}
+@media(max-width:650px){.settings-control-bar{padding:12px}.settings-category-tabs button{font-size:10px;padding:7px 9px}.settings-resource-bar{align-items:flex-start;flex-direction:column}}
