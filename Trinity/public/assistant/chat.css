@@ -24,3 +24,9 @@
 #settings-view.settings-compact .setting-row,#settings-view.settings-compact .integration-item{padding:7px 9px}
 #settings-view.settings-less-motion *,#settings-view.settings-less-motion *::before,#settings-view.settings-less-motion *::after{animation:none!important;transition:none!important}
 @media(max-width:650px){.settings-control-bar{padding:12px}.settings-category-tabs button{font-size:10px;padding:7px 9px}.settings-resource-bar{align-items:flex-start;flex-direction:column}}
+
+.settings-search-row{display:flex;align-items:center;gap:9px;min-width:0}
+.settings-search-row #settings-search{flex:1;min-width:0}
+#settings-reset-search{white-space:nowrap;background:var(--canvas);font-size:11px}
+.settings-category-tabs button:focus-visible,#settings-reset-search:focus-visible{outline:3px solid #8cb4ff88;outline-offset:2px}
+@media(max-width:650px){.settings-search-row{flex-wrap:wrap}#settings-reset-search{width:100%}}
