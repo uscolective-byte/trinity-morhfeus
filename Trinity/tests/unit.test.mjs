@@ -5,7 +5,7 @@ import {validKey,checkOrigin,readJSON} from '../src/security.js';
 import {jobSchema} from '../src/jobs.js';
 import {parseAction,runAgent} from '../src/engine.js';
 import {runTool} from '../src/tools.js';
-import {extractModelText,getOllamaKey,serviceStatus,runScheduledHealth} from '../src/services.js';
+import {extractModelText,extractGeminiInteractionText,getOllamaKey,serviceStatus,runScheduledHealth} from '../src/services.js';
 import {TRUTH_POLICY,findUnsupportedActionClaims,truthStatus} from '../src/truth.js';
 import {normalizeLanguage,languageDirective,tokenBudget} from '../src/cognition.js';
 import {planTask} from '../src/planner.js';
@@ -32,6 +32,7 @@ test('clear image request bypasses text inference and returns a real image',asyn
 test('actual inference result, not placeholder',async()=>{const result=await runAgent({AI:{run:async()=>({response:'Overená skúšobná odpoveď'})}},'writer','Napíš vetu');assert.equal(result.text,'Overená skúšobná odpoveď');assert.equal(result.agent_id,'writer');});
 test('structured Workers AI response is normalized',async()=>{const result=await runAgent({AI:{run:async()=>({response:{answer:'Štruktúrovaná odpoveď'}})}},'writer','Napíš vetu');assert.equal(result.text,'Štruktúrovaná odpoveď');});
 test('Workers AI Responses API output is normalized',()=>{assert.equal(extractModelText({output_text:'Trinity odpovedá.'}),'Trinity odpovedá.');assert.equal(extractModelText({output:[{content:[{type:'output_text',text:'Hotovo.'}]}]}),'Hotovo.');});
+test('Gemini Interactions API output is normalized',()=>assert.equal(extractGeminiInteractionText({output_text:'Interactions funguje.'}),'Interactions funguje.'));
 test('model failure propagates',async()=>assert.rejects(runAgent({AI:{run:async()=>{throw new Error('model unavailable')}}},'writer','hello'),/model unavailable/));
 test('tool requests parse safely',()=>{assert.equal(parseAction('plain text').answer,'plain text');assert.equal(parseAction('```json\n{"tool":"search_memory","arguments":{}}\n```').tool,'search_memory');});
 test('health check does not claim inference success',async()=>{const rows=await serviceStatus({CORE:{fetch:async()=>Response.json({ok:true})}},'CORE');assert.equal(rows[0].status,'reachable');assert.match(rows[0].note,/nepotvrdzuje/);});

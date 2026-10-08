@@ -59,6 +59,11 @@ export function extractModelText(result) {
   if(result?.response&&typeof result.response==='object')return JSON.stringify(result.response);
   return '';
 }
+export function extractGeminiInteractionText(result){
+  if(typeof result?.output_text==='string')return result.output_text.trim();
+  const blocks=(result?.steps||[]).flatMap(step=>Array.isArray(step?.content)?step.content:Array.isArray(step?.output)?step.output:[]);
+  return blocks.filter(block=>block?.type==='text'||typeof block?.text==='string').map(block=>block.text||'').join('\n').trim();
+}
 export async function callModel(env, provider, messages, maxTokens = 1200) {
   if(provider==='local'){
     if(!env.TRINITY_GATEWAY_KEY)throw new Error('Lokálna brána nie je nakonfigurovaná.');
@@ -88,18 +93,18 @@ export async function callModel(env, provider, messages, maxTokens = 1200) {
   if(provider==='gemini') {
     const {apiKey,model}=await getConfiguredAIProvider(env,'gemini');
     const system=messages.filter(message=>message.role==='system').map(message=>message.content).join('\n\n').slice(0,40000);
-    const contents=messages.filter(message=>message.role!=='system').slice(-12).map(message=>({
-      role:message.role==='assistant'?'model':'user',parts:[{text:String(message.content).slice(0,20000)}]
-    }));
-    const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/${model}:generateContent`,{
+    const input=messages.filter(message=>message.role!=='system').slice(-12)
+      .map(message=>`${message.role==='assistant'?'TRINITY':'POUŽÍVATEĽ'}:\n${String(message.content).slice(0,20000)}`).join('\n\n');
+    const interactionModel=String(model).replace(/^models\//,'');
+    const response=await fetch('https://generativelanguage.googleapis.com/v1beta/interactions',{
       method:'POST',headers:{'x-goog-api-key':apiKey,'Content-Type':'application/json'},
-      body:JSON.stringify({contents,systemInstruction:system?{parts:[{text:system}]}:undefined,
-        generationConfig:{maxOutputTokens:Math.min(maxTokens,8192),temperature:0.25}}),
+      body:JSON.stringify({model:interactionModel,input,system_instruction:system||undefined,store:false,
+        generation_config:{max_output_tokens:Math.min(maxTokens,8192),temperature:0.25}}),
       signal:AbortSignal.timeout(65000),redirect:'manual'
     });
     const data=JSON.parse(await boundedText(response,250000));
     if(!response.ok)throw new Error(`Gemini HTTP ${response.status}: ${data.error?.message||'požiadavka zlyhala'}`);
-    const text=(data.candidates?.[0]?.content?.parts||[]).map(part=>part.text||'').join('\n').trim();
+    const text=extractGeminiInteractionText(data);
     if(!text)throw new Error('Gemini vrátilo prázdnu odpoveď.');
     return {text,model,provider,usage:{input:data.usageMetadata?.promptTokenCount||0,output:data.usageMetadata?.candidatesTokenCount||0}};
   }
