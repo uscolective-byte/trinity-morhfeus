@@ -5,7 +5,8 @@ import {getSecretMaterial,listSecrets} from './secret-vault.js';
 export const aiProviderInputSchema=z.object({
   secret_id:z.string().uuid(),
   model:z.string().trim().regex(/^models\/gemini-[a-z0-9._-]+$/i).max(160),
-  enabled:z.boolean().default(true)
+  enabled:z.boolean().default(true),
+  project_control:z.boolean().default(false)
 }).strict();
 
 const decodeVerification=value=>{try{return value?JSON.parse(value):null;}catch{return null;}};
@@ -24,7 +25,7 @@ export async function recordAIProviderCheck(env,ownerId,input){
 
 export async function listAIProviders(env,ownerId){
   const [settings,secrets,eventRows]=await Promise.all([
-    env.DB.prepare('SELECT provider,secret_id,model,enabled,updated_at FROM ops_ai_provider_settings WHERE owner_id=?').bind(ownerId).all(),
+    env.DB.prepare('SELECT provider,secret_id,model,enabled,project_control,updated_at FROM ops_ai_provider_settings WHERE owner_id=?').bind(ownerId).all(),
     listSecrets(env,ownerId),
     env.DB.prepare("SELECT details,created_at FROM ops_events WHERE action='ai_provider_test' ORDER BY rowid DESC LIMIT 100").all()
   ]);
@@ -34,7 +35,7 @@ export async function listAIProviders(env,ownerId){
   const environmentGemini=typeof env.GEMINI_API_KEY==='string'&&env.GEMINI_API_KEY.length>=8;
   return {items:[
     {id:'workers-ai',name:'Cloudflare Workers AI',configured:!!env.AI,enabled:true,model:env.AI_MODEL||'@cf/openai/gpt-oss-120b',managed_by:'cloudflare',last_check:checks.get('workers-ai')||null},
-    {id:'gemini',name:'Google Gemini',configured:!!geminiSetting||environmentGemini,enabled:geminiSetting?geminiSetting.enabled===1:environmentGemini,model:geminiSetting?.model||env.GEMINI_MODEL||null,secret_id:geminiSetting?.secret_id||null,secret_source:geminiSetting?'encrypted-vault':environmentGemini?'worker-secret':null,credentials:geminiSecrets,updated_at:geminiSetting?.updated_at||null,last_check:checks.get('gemini')||null}
+    {id:'gemini',name:'Google Gemini',configured:!!geminiSetting||environmentGemini,enabled:geminiSetting?geminiSetting.enabled===1:environmentGemini,project_control:geminiSetting?.project_control===1,approval_policy:'owner-required',allowed_actions:['read','write','edit','selfwrite','run','deploy','share','upload','upgrade'],model:geminiSetting?.model||env.GEMINI_MODEL||null,secret_id:geminiSetting?.secret_id||null,secret_source:geminiSetting?'encrypted-vault':environmentGemini?'worker-secret':null,credentials:geminiSecrets,updated_at:geminiSetting?.updated_at||null,last_check:checks.get('gemini')||null}
   ]};
 }
 
@@ -46,13 +47,18 @@ export async function configureAIProvider(env,ownerId,provider,input){
   const verification=decodeVerification(material.verification_json);
   const allowed=verification?.models||[];
   if(allowed.length&&!allowed.includes(data.model))throw new HttpError(400,'Vybraný model nebol nájdený pri overení Gemini kľúča.');
-  const row=await env.DB.prepare(`INSERT INTO ops_ai_provider_settings(owner_id,provider,secret_id,model,enabled)
-    VALUES(?,?,?,?,?) ON CONFLICT(owner_id,provider) DO UPDATE SET secret_id=excluded.secret_id,model=excluded.model,
-    enabled=excluded.enabled,updated_at=datetime('now') RETURNING provider,secret_id,model,enabled,updated_at`)
-    .bind(ownerId,provider,data.secret_id,data.model,data.enabled?1:0).first();
+  const row=await env.DB.prepare(`INSERT INTO ops_ai_provider_settings(owner_id,provider,secret_id,model,enabled,project_control)
+    VALUES(?,?,?,?,?,?) ON CONFLICT(owner_id,provider) DO UPDATE SET secret_id=excluded.secret_id,model=excluded.model,
+    enabled=excluded.enabled,project_control=excluded.project_control,updated_at=datetime('now') RETURNING provider,secret_id,model,enabled,project_control,updated_at`)
+    .bind(ownerId,provider,data.secret_id,data.model,data.enabled?1:0,data.project_control?1:0).first();
   await env.DB.prepare("INSERT INTO ops_events(action,details) VALUES('ai_provider_configured',?)")
-    .bind(JSON.stringify({owner_id:ownerId,provider,model:data.model,enabled:data.enabled})).run();
-  return {...row,enabled:row.enabled===1};
+    .bind(JSON.stringify({owner_id:ownerId,provider,model:data.model,enabled:data.enabled,project_control:data.project_control,approval_policy:'owner-required'})).run();
+  return {...row,enabled:row.enabled===1,project_control:row.project_control===1,approval_policy:'owner-required'};
+}
+
+export async function geminiProjectControlEnabled(env,ownerId){
+  const row=await env.DB.prepare("SELECT project_control FROM ops_ai_provider_settings WHERE owner_id=? AND provider='gemini' AND enabled=1").bind(ownerId).first();
+  return row?.project_control===1;
 }
 
 export async function getConfiguredAIProvider(env,provider){

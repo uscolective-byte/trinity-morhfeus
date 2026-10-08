@@ -14,6 +14,11 @@ export const PLUGINS=[
  {id:'skills',name:'Zručnosti Trinity',icon:'✳',description:'Poskytuje špecializované pracovné postupy pre vývoj, výskum, prevádzku a bezpečnosť.',tools:['list_skills','install_plugin'],dependency:'Zabudovaný katalóg zručností',version:'1.0.0'},
  {id:'connectors',name:'Konektory',icon:'↔',description:'Zobrazuje dostupné Cloudflare bindings a stav nakonfigurovaných služieb bez odhalenia tajomstiev.',tools:['list_connectors'],dependency:'Cloudflare service bindings',version:'1.0.0'}
  ,{id:'trading',name:'Papierové portfólio',icon:'↗',description:'Číta simulované investičné portfólio, pozície, hotovosť a zisk alebo stratu. Nikdy nevykonáva reálne obchody.',tools:['portfolio_summary'],dependency:'Cloudflare D1',version:'1.0.0'}
+ ,{id:'json-data',name:'JSON a dáta',icon:'{}',description:'Bezpečne overuje, formátuje, zmenšuje a číta JSON bez spúšťania kódu.',tools:['json_tool'],dependency:'Worker runtime',version:'1.0.0'}
+ ,{id:'checksums',name:'Kontrolné súčty',icon:'#',description:'Vytvára SHA-256 odtlačky textu pre kontrolu integrity.',tools:['hash_text'],dependency:'Web Crypto',version:'1.0.0'}
+ ,{id:'units',name:'Prevody jednotiek',icon:'⇄',description:'Presne prevádza bežné jednotky dĺžky, hmotnosti a teploty.',tools:['convert_units'],dependency:'Lokálny výpočet vo Workeri',version:'1.0.0'}
+ ,{id:'entities',name:'Extrakcia údajov',icon:'⌕',description:'Vyhľadá v texte URL adresy, e-maily a dátumy bez odoslania dát tretej strane.',tools:['extract_entities'],dependency:'Worker runtime',version:'1.0.0'}
+ ,{id:'text-format',name:'Formátovanie textu',icon:'Aa',description:'Vytvára slug, snake_case, kebab-case a ďalšie bezpečné textové formáty.',tools:['format_text'],dependency:'Worker runtime',version:'1.0.0'}
 ];
 export async function pluginEnabled(env,id){
  const row=await env.DB.prepare('SELECT installed,enabled FROM ops_plugins WHERE id=?').bind(id).first();return row?.installed===1&&row?.enabled===1;

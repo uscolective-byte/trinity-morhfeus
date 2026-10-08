@@ -21,7 +21,15 @@ export const TOOL_SCHEMAS={
   ,request_system_action:z.object({action:z.enum(['read','write','edit','selfwrite','run','deploy','share','upload','upgrade']),payload:z.record(z.string(),z.unknown()).default({}),rationale:z.string().min(3).max(1000)}).strict()
   ,system_action_status:z.object({id:z.string().uuid()}).strict()
   ,portfolio_summary:z.object({portfolio_id:z.string().uuid().optional()}).strict()
+  ,json_tool:z.object({operation:z.enum(['validate','format','minify','get']),json:z.string().max(20000),path:z.string().max(200).optional()}).strict()
+  ,hash_text:z.object({text:z.string().max(100000),algorithm:z.literal('SHA-256').default('SHA-256')}).strict()
+  ,convert_units:z.object({value:z.number().finite(),from:z.enum(['mm','cm','m','km','in','ft','yd','mi','mg','g','kg','oz','lb','c','f','k']),to:z.enum(['mm','cm','m','km','in','ft','yd','mi','mg','g','kg','oz','lb','c','f','k'])}).strict()
+  ,extract_entities:z.object({text:z.string().max(50000)}).strict()
+  ,format_text:z.object({text:z.string().max(20000),mode:z.enum(['lower','upper','title','slug','snake','kebab'])}).strict()
 };
+const UNIT_GROUPS={length:{mm:.001,cm:.01,m:1,km:1000,in:.0254,ft:.3048,yd:.9144,mi:1609.344},mass:{mg:.000001,g:.001,kg:1,oz:.028349523125,lb:.45359237}};
+const unique=list=>[...new Set(list)].slice(0,50);
+const formatToken=value=>value.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 export async function searchMemory(env,query='') {
   const pattern=`%${query.replace(/[!%_]/g,'!$&')}%`;
   const own=await env.DB.prepare("SELECT key,substr(value,1,2500) AS value,source FROM ops_memory WHERE key LIKE ? ESCAPE '!' OR value LIKE ? ESCAPE '!' ORDER BY updated_at DESC LIMIT 8").bind(pattern,pattern).all();
@@ -33,6 +41,36 @@ export async function runTool(env, agent, name, input) {
   if(!INTERNAL_TOOLS.has(name)&&name!=='install_plugin')await ensureToolEnabled(env,name);
   if(name==='request_system_action'&&input&&typeof input==='object')input={action:input.action,payload:input.payload||(typeof input.resource==='string'?{path:input.resource}:{}),rationale:input.rationale||input.reason};
   const args=TOOL_SCHEMAS[name].parse(input);
+  if(name==='json_tool'){
+    let value;try{value=JSON.parse(args.json);}catch(error){return {valid:false,error:error.message.slice(0,300)};}
+    if(args.operation==='validate')return {valid:true,type:Array.isArray(value)?'array':value===null?'null':typeof value};
+    if(args.operation==='get'){
+      if(!args.path)throw new Error('Operácia get vyžaduje cestu.');let current=value;
+      for(const part of args.path.split('.')){if(['__proto__','prototype','constructor'].includes(part)||current===null||typeof current!=='object'||!Object.prototype.hasOwnProperty.call(current,part))throw new Error('JSON cesta neexistuje.');current=current[part];}
+      return {valid:true,path:args.path,value:current};
+    }
+    const output=JSON.stringify(value,null,args.operation==='format'?2:0);if(output.length>50000)throw new Error('Výsledný JSON je príliš veľký.');return {valid:true,output};
+  }
+  if(name==='hash_text'){
+    const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(args.text));
+    return {algorithm:'SHA-256',hex:[...new Uint8Array(digest)].map(byte=>byte.toString(16).padStart(2,'0')).join(''),bytes:new TextEncoder().encode(args.text).byteLength};
+  }
+  if(name==='convert_units'){
+    if(['c','f','k'].includes(args.from)||['c','f','k'].includes(args.to)){
+      if(!['c','f','k'].includes(args.from)||!['c','f','k'].includes(args.to))throw new Error('Nemožno miešať teplotu s iným typom jednotky.');
+      const c=args.from==='c'?args.value:args.from==='f'?(args.value-32)*5/9:args.value-273.15;
+      const result=args.to==='c'?c:args.to==='f'?c*9/5+32:c+273.15;if(args.to==='k'&&result<0)throw new Error('Teplota nemôže byť nižšia než absolútna nula.');return {value:args.value,from:args.from,to:args.to,result};
+    }
+    const group=Object.values(UNIT_GROUPS).find(item=>item[args.from]!==undefined&&item[args.to]!==undefined);if(!group)throw new Error('Jednotky patria do rozdielnych kategórií.');return {value:args.value,from:args.from,to:args.to,result:args.value*group[args.from]/group[args.to]};
+  }
+  if(name==='extract_entities'){
+    return {emails:unique(args.text.match(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g)||[]),urls:unique(args.text.match(/https?:\/\/[^\s<>()]+/g)||[]).map(url=>url.replace(/[.,;!?]+$/,'')),dates:unique(args.text.match(/\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}\.\s?\d{1,2}\.\s?\d{4})\b/g)||[])};
+  }
+  if(name==='format_text'){
+    if(args.mode==='lower')return {mode:args.mode,text:args.text.toLocaleLowerCase('sk')};if(args.mode==='upper')return {mode:args.mode,text:args.text.toLocaleUpperCase('sk')};
+    const clean=formatToken(args.text),words=clean.split(/\s+/).filter(Boolean);if(args.mode==='title')return {mode:args.mode,text:words.map(word=>word[0]?.toLocaleUpperCase('sk')+word.slice(1).toLocaleLowerCase('sk')).join(' ')};
+    const separator=args.mode==='snake'?'_':'-';return {mode:args.mode,text:words.join(separator).toLocaleLowerCase('sk')};
+  }
   if(name==='request_system_action'){
     const action=await createSystemAction(env,args,`agent:${agent.id||'trinity'}`);
     return {id:action.id,action:action.action,status:action.status,approval_required:action.status==='proposed',expires_at:action.expires_at,note:action.status==='proposed'?`Čaká na samostatné schválenie používateľa príkazom SCHVÁĽ ${action.id}.`:'Bezpečné čítanie čaká na lokálnu bránu.',_evidence:{effect:'proposal'}};
@@ -128,4 +166,4 @@ export async function recallMemory(env,task){
   return [...records.values()];
 }
 export const TOOL_HELP={search_memory:'Vyhľadá pamäť: {query:string}',project_snapshot:'Prečíta projekty a úlohy: {}',
-  service_status:'Overí služby: {binding?: názov služby}',web_search:'Vyhľadá aktuálne webové zdroje: {query:string}',generate_image:'Skutočne vytvorí obrázok a uloží ho do súkromného archívu: {prompt:string,seed?:integer}',portfolio_summary:'Prečíta simulované portfólio, pozície a zisk alebo stratu bez vykonania reálneho obchodu: {portfolio_id?:uuid}',calculate:'Presný výpočet {operation:add|subtract|multiply|divide|percentage|mean|power|sqrt|log10|sin|cos|tan,values:number[]}; trigonometria používa radiány',analyze_text:'Počet slov a znakov: {text:string}',current_time:'Skutočný čas a dátum: {timezone?: IANA názov}',list_capabilities:'Zoznam nainštalovaných verejných modulov Trinity: {query?: string}',list_skills:'Zoznam zabudovaných pracovných zručností Trinity: {query?: string}',list_connectors:'Skutočný stav nakonfigurovaných konektorov; nikdy nevracia tajomstvá: {}',install_plugin:'Nainštaluje alebo obnoví iba plugin z dôveryhodného katalógu Trinity: {id,reason}',request_system_action:'Vytvorí iba návrh internej akcie; zmeny čakajú na výslovné schválenie. Desktop používa action run a payload {task:"desktop-control",operation:"list|launch|focus|type",app?:"notepad|calculator|paint|explorer",text?:string}: {action, payload, rationale}',system_action_status:'Overí stav a potvrdenie internej akcie: {id}'};
+  service_status:'Overí služby: {binding?: názov služby}',web_search:'Vyhľadá aktuálne webové zdroje: {query:string}',generate_image:'Skutočne vytvorí obrázok a uloží ho do súkromného archívu: {prompt:string,seed?:integer}',portfolio_summary:'Prečíta simulované portfólio, pozície a zisk alebo stratu bez vykonania reálneho obchodu: {portfolio_id?:uuid}',calculate:'Presný výpočet {operation:add|subtract|multiply|divide|percentage|mean|power|sqrt|log10|sin|cos|tan,values:number[]}; trigonometria používa radiány',analyze_text:'Počet slov a znakov: {text:string}',current_time:'Skutočný čas a dátum: {timezone?: IANA názov}',json_tool:'Overí, formátuje, minifikuje alebo číta JSON: {operation, json, path?}',hash_text:'Vytvorí SHA-256 odtlačok textu: {text,algorithm?:"SHA-256"}',convert_units:'Prevádza jednotky dĺžky, hmotnosti a teploty: {value,from,to}',extract_entities:'Vyberie z textu e-maily, URL a dátumy: {text}',format_text:'Formátuje text: {text,mode:lower|upper|title|slug|snake|kebab}',list_capabilities:'Zoznam nainštalovaných verejných modulov Trinity: {query?: string}',list_skills:'Zoznam zabudovaných pracovných zručností Trinity: {query?: string}',list_connectors:'Skutočný stav nakonfigurovaných konektorov; nikdy nevracia tajomstvá: {}',install_plugin:'Nainštaluje alebo obnoví iba plugin z dôveryhodného katalógu Trinity: {id,reason}',request_system_action:'Vytvorí iba návrh internej akcie; zmeny čakajú na výslovné schválenie. Desktop používa action run a payload {task:"desktop-control",operation:"list|launch|focus|type",app?:"notepad|calculator|paint|explorer",text?:string}: {action, payload, rationale}',system_action_status:'Overí stav a potvrdenie internej akcie: {id}'};
