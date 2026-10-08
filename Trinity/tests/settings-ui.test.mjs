@@ -36,7 +36,7 @@ test('Settings filter cannot reveal restricted panels without API permissions', 
     const attrs = {};
     const active = new Set(classes);
     return {
-      id, textContent, hidden: false, dataset: {}, checked: false, value: '', attrs,
+      id, textContent, hidden: false, dataset: {}, checked: false, value: '', attrs, focus() {},
       classList: {
         contains: cls => active.has(cls),
         toggle: (cls, yes) => { if (yes) active.add(cls); else active.delete(cls); }
