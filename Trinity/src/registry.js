@@ -71,7 +71,8 @@ export const AGENTS = groups.flatMap(([cluster, roles]) => roles.map(([id, name,
     ...(['ui','writer','orchestrator'].includes(id)?['generate_image']:[]),
     ...(['market-research','orchestrator'].includes(id)?['portfolio_summary']:[]),
     ...(['Riadenie','Cloud a prevádzka','Dáta a pamäť','Kvalita a bezpečnosť','Podpora a automatizácia'].includes(cluster) ? ['service_status'] : []),
-    ...(id==='orchestrator'?['request_system_action','system_action_status']:[])]
+    ...(id==='orchestrator'?['request_system_action','system_action_status','pc_screenshot','pc_run','pc_file_read','pc_file_write','pc_open_app','pc_notify','pc_system_info','pc_scrape','pc_git_commit','pc_git_pr']:[]),
+    ...(['backend','release','cloudflare'].includes(id)?['pc_git_commit','pc_git_pr','pc_run']:[])]
 })));
 export function agentById(id) { return AGENTS.find(a => a.id === id); }
 export function shouldDelegate(task) {

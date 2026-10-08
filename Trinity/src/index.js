@@ -21,6 +21,7 @@ import {listSecrets,storeSecret,verifySecret,revokeSecret,promoteCustomSecretToG
 import {listAIProviders,configureAIProvider,recordAIProviderCheck,geminiProjectControlEnabled} from './ai-providers.js';
 import {createPortfolio,listPortfolios,getPortfolio,recordTrade,setQuote} from './trading.js';
 import {getWallet,transactWallet} from './wallet.js';
+import {handleInboundEmail} from './email.js';
 import html from '../public/index.html';
 import appJS from '../public/app.js.txt';
 import css from '../public/style.css';
@@ -245,7 +246,7 @@ async function route(request,env,ctx){
       return json({action:systemActionRoute[2]==='approve'?await approveSystemAction(env,id,`user:${user.id}`):await rejectSystemAction(env,id,`user:${user.id}`)});
     }
   }
-  if(path==='/api/assistant/status'&&request.method==='GET')return json({name:'Trinity',version:'8.4.2',mode:'cloud',model:env.AI_MODEL||'@cf/openai/gpt-oss-120b',available:true,cloud:true,local_available:!!env.TRINITY_GATEWAY_KEY&&['admin','owner'].includes(user.role),local_model:'qwen3:4b-instruct',pc_bridge:await getPCBridgeStatus(env),identity:'single',active_specializations:AGENTS.length,capability_registry:'extensible',personality:'persistent',consciousness:false,languages:'multilingual-auto',planning:{version:'1.0',intents:['conversation','research','build','creative','action','analysis'],approval_for_high_risk:true},decision_pipeline:'understand → classify → plan → reason privately → knowledge/tools → evidence check → response',truth_mode:'evidence-required',truth_policy_version:TRUTH_POLICY_VERSION,memory_location:'Cloudflare D1 · trinity-v03 · ops_memory + memory_long',media:mediaStatus(env),account:{email:user.email||null,role:user.role||null},tools:(await listPlugins(env)).filter(p=>p.enabled).flatMap(p=>p.tools)});
+  if(path==='/api/assistant/status'&&request.method==='GET')return json({name:'Trinity',version:'8.5.0',mode:'cloud',model:env.AI_MODEL||'@cf/openai/gpt-oss-120b',available:true,cloud:true,local_available:!!env.TRINITY_GATEWAY_KEY&&['admin','owner'].includes(user.role),local_model:'qwen3:4b-instruct',pc_bridge:await getPCBridgeStatus(env),identity:'single',active_specializations:AGENTS.length,capability_registry:'extensible',personality:'persistent',consciousness:false,languages:'multilingual-auto',planning:{version:'1.0',intents:['conversation','research','build','creative','action','analysis'],approval_for_high_risk:true},decision_pipeline:'understand → classify → plan → reason privately → knowledge/tools → evidence check → response',truth_mode:'evidence-required',truth_policy_version:TRUTH_POLICY_VERSION,memory_location:'Cloudflare D1 · trinity-v03 · ops_memory + memory_long',media:mediaStatus(env),account:{email:user.email||null,role:user.role||null},tools:(await listPlugins(env)).filter(p=>p.enabled).flatMap(p=>p.tools)});
   if(path==='/api/assistant/sessions'&&request.method==='GET')return json((await env.DB.prepare("SELECT session_id AS session,MIN(task) AS title,MAX(created_at) AS updated_at FROM ops_jobs WHERE task NOT LIKE 'Kontrolný test%' GROUP BY session_id ORDER BY updated_at DESC LIMIT 30").all()).results);
   if(path==='/api/assistant/history'&&request.method==='GET'){
     const id=uuid.parse(url.searchParams.get('session'));
@@ -385,5 +386,6 @@ export default {
       if(status===500)console.error(JSON.stringify({event:'request_failed',path:new URL(request.url).pathname}));
       return secure(json({error:status===500?'Interná chyba. Pozri záznamy služby.':e instanceof z.ZodError?'Neplatné údaje požiadavky.':e.message},status));}
   },
-  async scheduled(controller,env,ctx){ctx.waitUntil(runScheduledHealth(env,controller.cron));}
+  async scheduled(controller,env,ctx){ctx.waitUntil(runScheduledHealth(env,controller.cron));},
+  async email(message,env){await handleInboundEmail(message,env);}
 };

@@ -1,233 +1,240 @@
-{
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "trinity",
-  "main": "src/index.js",
-  "account_id": "b60342e5e52f5646fbd4e913bb409334",
-  "compatibility_date": "2026-10-01",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
-  "workers_dev": true,
-  "keep_vars": true,
-  "routes": [
-    {
-      "pattern": "auru.dev",
-      "custom_domain": true
-    },
-    {
-      "pattern": "auru.space",
-      "custom_domain": true
-    },
-    {
-      "pattern": "*.auru.dev/*",
-      "zone_name": "auru.dev"
-    }
-  ],
-  "triggers": {
-    "crons": [
-      "*/30 * * * *",
-      "0 0 * * *",
-      "0 11 * * *"
-    ]
-  },
-  "observability": {
-    "enabled": true,
-    "issues": {
-      "enabled": true
-    },
-    "logs": {
-      "enabled": true,
-      "invocation_logs": true
-    },
-    "traces": {
-      "enabled": true
-    }
-  },
-  "limits": {
-    "cpu_ms": 30000
-  },
-  "rules": [
-    {
-      "type": "Text",
-      "globs": [
-        "**/*.html",
-        "**/*.css",
-        "**/*.js.txt"
-      ],
-      "fallthrough": true
-    }
-  ],
-  "vars": {
-    "CF_ACCOUNT_ID": "b60342e5e52f5646fbd4e913bb409334",
-    "AI_MODEL": "@cf/openai/gpt-oss-120b",
-    "OPENAI_MODEL": "gpt-5.6-luna",
-    "IMAGE_MODEL": "@cf/black-forest-labs/flux-1-schnell",
-    "OLLAMA_MODEL": "gemma4:31b",
-    "TRINITY_ADMIN_EMAILS": "saboivan2008@gmail.com,usc31@auru.space,uscolective@gmail.com,delirium.trade12@gmail.com",
-    "TRINITY_OWNER_EMAIL": "saboivan2008@gmail.com",
-    "GOOGLE_REDIRECT_URI": "https://auru.dev/api/auth/google/callback"
-  },
-  "ai": {
-    "binding": "AI"
-  },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "trinity-v03",
-      "database_id": "ca8ea24e-f7db-431e-b8bf-97f713ae4533",
-      "migrations_dir": "migrations"
-    },
-    {
-      "binding": "rea",
-      "database_name": "trinity-db",
-      "database_id": "5b792055-97cf-4d8a-8145-d588c83c54df"
-    }
-  ],
-  "kv_namespaces": [
-    {
-      "binding": "Mastermind",
-      "id": "0b92ed2717d742daa860f1827797297f"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "ARTIFACTS",
-      "bucket_name": "trinity-artifacts"
-    }
-  ],
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "Brain",
-        "class_name": "TrinityAgent"
-      },
-      {
-        "name": "CHAT_AGENT",
-        "class_name": "ChatAgent"
-      },
-      {
-        "name": "GUARDIAN_AGENT",
-        "class_name": "GuardianAgent"
-      }
-    ]
-  },
-  "exports": {
-    "TrinityAgent": {
-      "type": "durable-object",
-      "storage": "sqlite"
-    },
-    "ChatAgent": {
-      "type": "durable-object",
-      "storage": "sqlite"
-    },
-    "GuardianAgent": {
-      "type": "durable-object",
-      "storage": "sqlite"
-    }
-  },
-  "workflows": [
-    {
-      "binding": "OPS_WORKFLOW",
-      "name": "trinity-operations",
-      "class_name": "TrinityOperations"
-    }
-  ],
-  "services": [
-    {
-      "binding": "PC_BRIDGE_SERVICE",
-      "service": "trinity-pc-bridge"
-    },
-    {
-      "binding": "CORE",
-      "service": "trinity-core"
-    },
-    {
-      "binding": "BUILDER",
-      "service": "trinity-builder"
-    },
-    {
-      "binding": "DISPATCHER",
-      "service": "trinity-dispatcher"
-    },
-    {
-      "binding": "CONNECTORS",
-      "service": "trinity-connectors"
-    },
-    {
-      "binding": "GUARDIAN",
-      "service": "trinity-guardian"
-    },
-    {
-      "binding": "MEMORY",
-      "service": "trinity-memory"
-    },
-    {
-      "binding": "SENTINEL",
-      "service": "trinity-sentinel"
-    },
-    {
-      "binding": "SKILLS",
-      "service": "trinity-skills"
-    },
-    {
-      "binding": "admin",
-      "service": "aura_sentinel"
-    },
-    {
-      "binding": "admino",
-      "service": "aura_architect"
-    },
-    {
-      "binding": "Trinity",
-      "service": "aura_deployer"
-    },
-    {
-      "binding": "AURA_ANALYZER",
-      "service": "aura_analyzer"
-    },
-    {
-      "binding": "AURA_ARCHITECT",
-      "service": "aura_architect"
-    },
-    {
-      "binding": "AURA_CODEGEN",
-      "service": "aura_codegen"
-    },
-    {
-      "binding": "AURA_DEPLOYER",
-      "service": "aura_deployer"
-    },
-    {
-      "binding": "AURA_EVOLVER",
-      "service": "aura_evolver"
-    },
-    {
-      "binding": "AURA_MEMORY",
-      "service": "aura_memory"
-    },
-    {
-      "binding": "AURA_OPTIMIZER",
-      "service": "aura_optimizer"
-    },
-    {
-      "binding": "AURA_PLANNER",
-      "service": "aura_planner"
-    },
-    {
-      "binding": "AURA_SENTINEL",
-      "service": "aura_sentinel"
-    },
-    {
-      "binding": "AURA_TESTER",
-      "service": "aura_tester"
-    }
-  ],
-  "secrets_store_secrets": [
-    {
-      "binding": "OLLAMA_SECRET",
-      "store_id": "5ba06ba934c343fa8c0dc5454ce67038",
-      "secret_name": "ollama"
-    }
-  ],
-  "preview_urls": true
+﻿{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "trinity",
+	"main": "src/index.js",
+	"account_id": "b60342e5e52f5646fbd4e913bb409334",
+	"compatibility_date": "2026-10-01",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"workers_dev": true,
+	"keep_vars": true,
+	"routes": [
+		{
+			"pattern": "auru.dev",
+			"custom_domain": true
+		},
+		{
+			"pattern": "auru.space",
+			"custom_domain": true
+		},
+		{
+			"pattern": "*.auru.dev/*",
+			"zone_name": "auru.dev"
+		}
+	],
+	"triggers": {
+		"crons": [
+			"*/30 * * * *",
+			"0 0 * * *",
+			"0 11 * * *"
+		]
+	},
+	"observability": {
+		"enabled": true,
+		"issues": {
+			"enabled": true
+		},
+		"logs": {
+			"enabled": true,
+			"invocation_logs": true
+		},
+		"traces": {
+			"enabled": true
+		}
+	},
+	"limits": {
+		"cpu_ms": 30000
+	},
+	"rules": [
+		{
+			"type": "Text",
+			"globs": [
+				"**/*.html",
+				"**/*.css",
+				"**/*.js.txt"
+			],
+			"fallthrough": true
+		}
+	],
+	"vars": {
+		"CF_ACCOUNT_ID": "b60342e5e52f5646fbd4e913bb409334",
+		"AI_MODEL": "@cf/openai/gpt-oss-120b",
+		"OPENAI_MODEL": "gpt-5.6-luna",
+		"IMAGE_MODEL": "@cf/black-forest-labs/flux-1-schnell",
+		"OLLAMA_MODEL": "gemma4:31b",
+		"TRINITY_ADMIN_EMAILS": "saboivan2008@gmail.com,usc31@auru.space,uscolective@gmail.com,delirium.trade12@gmail.com",
+		"TRINITY_OWNER_EMAIL": "saboivan2008@gmail.com",
+		"GOOGLE_REDIRECT_URI": "https://auru.dev/api/auth/google/callback"
+	},
+	"ai": {
+		"binding": "AI"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "trinity-v03",
+			"database_id": "ca8ea24e-f7db-431e-b8bf-97f713ae4533",
+			"migrations_dir": "migrations"
+		},
+		{
+			"binding": "rea",
+			"database_name": "trinity-db",
+			"database_id": "5b792055-97cf-4d8a-8145-d588c83c54df"
+		},
+		{
+			"binding": "trinity_basterix",
+			"database_name": "trinity-pc-bridge",
+			"database_id": "ba94b9f2-5376-4ef8-92c4-7035df7cacb7",
+			"remote": true
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "Mastermind",
+			"id": "0b92ed2717d742daa860f1827797297f"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "ARTIFACTS",
+			"bucket_name": "trinity-artifacts"
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "Brain",
+				"class_name": "TrinityAgent"
+			},
+			{
+				"name": "CHAT_AGENT",
+				"class_name": "ChatAgent"
+			},
+			{
+				"name": "GUARDIAN_AGENT",
+				"class_name": "GuardianAgent"
+			}
+		]
+	},
+	"exports": {
+		"TrinityAgent": {
+			"type": "durable-object",
+			"storage": "sqlite"
+		},
+		"ChatAgent": {
+			"type": "durable-object",
+			"storage": "sqlite"
+		},
+		"GuardianAgent": {
+			"type": "durable-object",
+			"storage": "sqlite"
+		}
+	},
+	"workflows": [
+		{
+			"binding": "OPS_WORKFLOW",
+			"name": "trinity-operations",
+			"class_name": "TrinityOperations"
+		}
+	],
+	"services": [
+    {"binding":"PC_BRIDGE_V2","service":"trinity-pc-bridge-v2"},
+		{
+			"binding": "PC_BRIDGE_SERVICE",
+			"service": "trinity-pc-bridge"
+		},
+		{
+			"binding": "CORE",
+			"service": "trinity-core"
+		},
+		{
+			"binding": "BUILDER",
+			"service": "trinity-builder"
+		},
+		{
+			"binding": "DISPATCHER",
+			"service": "trinity-dispatcher"
+		},
+		{
+			"binding": "CONNECTORS",
+			"service": "trinity-connectors"
+		},
+		{
+			"binding": "GUARDIAN",
+			"service": "trinity-guardian"
+		},
+		{
+			"binding": "MEMORY",
+			"service": "trinity-memory"
+		},
+		{
+			"binding": "SENTINEL",
+			"service": "trinity-sentinel"
+		},
+		{
+			"binding": "SKILLS",
+			"service": "trinity-skills"
+		},
+		{
+			"binding": "admin",
+			"service": "aura_sentinel"
+		},
+		{
+			"binding": "admino",
+			"service": "aura_architect"
+		},
+		{
+			"binding": "Trinity",
+			"service": "aura_deployer"
+		},
+		{
+			"binding": "AURA_ANALYZER",
+			"service": "aura_analyzer"
+		},
+		{
+			"binding": "AURA_ARCHITECT",
+			"service": "aura_architect"
+		},
+		{
+			"binding": "AURA_CODEGEN",
+			"service": "aura_codegen"
+		},
+		{
+			"binding": "AURA_DEPLOYER",
+			"service": "aura_deployer"
+		},
+		{
+			"binding": "AURA_EVOLVER",
+			"service": "aura_evolver"
+		},
+		{
+			"binding": "AURA_MEMORY",
+			"service": "aura_memory"
+		},
+		{
+			"binding": "AURA_OPTIMIZER",
+			"service": "aura_optimizer"
+		},
+		{
+			"binding": "AURA_PLANNER",
+			"service": "aura_planner"
+		},
+		{
+			"binding": "AURA_SENTINEL",
+			"service": "aura_sentinel"
+		},
+		{
+			"binding": "AURA_TESTER",
+			"service": "aura_tester"
+		}
+	],
+	"secrets_store_secrets": [
+		{
+			"binding": "OLLAMA_SECRET",
+			"store_id": "5ba06ba934c343fa8c0dc5454ce67038",
+			"secret_name": "ollama"
+		}
+	],
+	"preview_urls": true
 }

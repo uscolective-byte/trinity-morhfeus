@@ -18,7 +18,7 @@ export const TOOL_SCHEMAS={
   ,list_skills:z.object({query:z.string().max(80).default('')}).strict()
   ,list_connectors:z.object({}).strict()
   ,install_plugin:z.object({id:z.string().regex(/^[a-z-]{1,40}$/),reason:z.string().min(3).max(300)}).strict()
-  ,request_system_action:z.object({action:z.enum(['read','write','edit','selfwrite','run','deploy','share','upload','upgrade']),payload:z.record(z.string(),z.unknown()).default({}),rationale:z.string().min(3).max(1000)}).strict()
+  ,request_system_action:z.object({action:z.enum(['read','write','edit','selfwrite','run','deploy','share','upload','upgrade','screenshot','open_app','notify','system_info','scrape','git_commit','git_pr']),payload:z.record(z.string(),z.unknown()).default({}),rationale:z.string().min(3).max(1000)}).strict()
   ,system_action_status:z.object({id:z.string().uuid()}).strict()
   ,portfolio_summary:z.object({portfolio_id:z.string().uuid().optional()}).strict()
   ,json_tool:z.object({operation:z.enum(['validate','format','minify','get']),json:z.string().max(20000),path:z.string().max(200).optional()}).strict()
@@ -147,6 +147,46 @@ export async function runTool(env, agent, name, input) {
     const result=await getPortfolio(env,owner,id);
     return {...result,_evidence:{effect:'read',receipt_id:`portfolio:${id}`}};
   }
+  // ── PC Bridge nástroje ──
+  if(['pc_screenshot','pc_run','pc_file_read','pc_file_write','pc_open_app','pc_notify','pc_system_info','pc_scrape','pc_git_commit','pc_git_pr'].includes(name)){
+    const pcActionMap={
+      pc_screenshot:'screenshot', pc_run:'run', pc_file_read:'read', pc_file_write:'write',
+      pc_open_app:'open_app', pc_notify:'notify', pc_system_info:'system_info',
+      pc_scrape:'scrape', pc_git_commit:'git_commit', pc_git_pr:'git_pr',
+    };
+    const pcAction=pcActionMap[name];
+    const pcSchema={
+      pc_screenshot:z.object({}).strict(),
+      pc_run:z.object({command:z.string().min(1).max(4000),cwd:z.string().optional(),timeout:z.number().int().min(1000).max(120000).optional(),allowNonZero:z.boolean().optional()}).strict(),
+      pc_file_read:z.object({path:z.string().min(1).max(2000),depth:z.number().int().min(1).max(3).optional()}).strict(),
+      pc_file_write:z.object({path:z.string().min(1).max(2000),content:z.string().max(500000)}).strict(),
+      pc_open_app:z.object({target:z.string().min(1).max(500),args:z.string().max(500).optional()}).strict(),
+      pc_notify:z.object({message:z.string().min(1).max(256),title:z.string().max(80).optional(),duration:z.number().int().min(1).max(30).optional()}).strict(),
+      pc_system_info:z.object({detail:z.boolean().optional()}).strict(),
+      pc_scrape:z.object({url:z.string().url(),formats:z.array(z.string()).optional(),onlyMainContent:z.boolean().optional()}).strict(),
+      pc_git_commit:z.object({message:z.string().min(3).max(200),cwd:z.string().optional(),files:z.array(z.string()).optional(),push:z.boolean().optional()}).strict(),
+      pc_git_pr:z.object({title:z.string().min(3).max(200),head:z.string().min(1),body:z.string().max(4000).optional(),base:z.string().optional()}).strict(),
+    };
+    const parsedArgs=pcSchema[name].parse(input);
+    let payload=parsedArgs;
+    if(name==='pc_file_read')payload={path:parsedArgs.path,depth:parsedArgs.depth};
+    if(name==='pc_file_write')payload={path:parsedArgs.path,content:parsedArgs.content};
+    const rationale=`Trinity tool: ${name}`;
+    const action=await createSystemAction(env,{action:pcAction,payload,rationale},'agent:trinity');
+    if(['pc_screenshot','pc_file_read','pc_notify','pc_system_info','pc_scrape'].includes(name)){
+      // Auto-schválené akcie (risk:'read') — počkáme na výsledok
+      for(let i=0;i<120;i++){
+        await new Promise(r=>setTimeout(r,1500));
+        const current=await getSystemAction(env,action.id);
+        if(current?.status==='completed')return{...current.receipt,_evidence:{effect:'read',receipt_id:action.id}};
+        if(current?.status==='failed')throw new Error(current.error || "PC Bridge: zlyhal.");
+        if(current?.status==='proposed')break; // vyžaduje schválenie
+      }
+    }
+    return {id:action.id,action:pcAction,status:action.status,approval_required:action.status==='proposed',
+      note:action.status==='proposed'?`Čaká na schválenie príkazom SCHVÁĽ ${action.id}.`:'Spracováva PC Bridge.',
+      _evidence:{effect:'proposal'}};
+  }
   if(name==='web_search') {
     const key=await getOllamaKey(env);
     const r=await fetch('https://ollama.com/api/web_search',{method:'POST',
@@ -165,5 +205,18 @@ export async function recallMemory(env,task){
   for(const word of words){for(const r of (await searchMemory(env,word)).records){if(records.size<8)records.set(r.key,r);}}
   return [...records.values()];
 }
-export const TOOL_HELP={search_memory:'Vyhľadá pamäť: {query:string}',project_snapshot:'Prečíta projekty a úlohy: {}',
+export const TOOL_HELP={
+  // ── PC Bridge nástroje ──
+  pc_screenshot:'Spraví screenshot obrazovky a vráti base64 PNG + rozlíšenie: {}',
+  pc_run:'Spustí PowerShell príkaz na PC a vráti stdout/stderr: {command:string,cwd?:string,timeout?:ms,allowNonZero?:bool}',
+  pc_file_read:'Prečíta súbor alebo vypíše adresár z PC: {path:string,depth?:1-3}',
+  pc_file_write:'Zapíše súbor na PC (vyžaduje schválenie): {path:string,content:string}',
+  pc_open_app:'Otvorí aplikáciu alebo URL na PC (vyžaduje schválenie): {target:string,args?:string}',
+  pc_notify:'Zobrazí Windows toast notifikáciu: {title?:string,message:string,duration?:sek}',
+  pc_system_info:'Vráti CPU/RAM/disk/procesy z PC: {detail?:bool}',
+  pc_scrape:'Hĺbkový scraping URL cez Firecrawl z PC: {url:string,formats?:[]}',
+  pc_git_commit:'Auto-commit + push na GitHub z PC (vyžaduje schválenie): {message:string,cwd?:string,files?:[],push?:bool}',
+  pc_git_pr:'Vytvorí Pull Request na GitHub (vyžaduje schválenie): {title:string,head:string,body?:string,base?:string}',
+  // ── Existujúce nástroje ──
+  search_memory:'Vyhľadá pamäť: {query:string}',project_snapshot:'Prečíta projekty a úlohy: {}',
   service_status:'Overí služby: {binding?: názov služby}',web_search:'Vyhľadá aktuálne webové zdroje: {query:string}',generate_image:'Skutočne vytvorí obrázok a uloží ho do súkromného archívu: {prompt:string,seed?:integer}',portfolio_summary:'Prečíta simulované portfólio, pozície a zisk alebo stratu bez vykonania reálneho obchodu: {portfolio_id?:uuid}',calculate:'Presný výpočet {operation:add|subtract|multiply|divide|percentage|mean|power|sqrt|log10|sin|cos|tan,values:number[]}; trigonometria používa radiány',analyze_text:'Počet slov a znakov: {text:string}',current_time:'Skutočný čas a dátum: {timezone?: IANA názov}',json_tool:'Overí, formátuje, minifikuje alebo číta JSON: {operation, json, path?}',hash_text:'Vytvorí SHA-256 odtlačok textu: {text,algorithm?:"SHA-256"}',convert_units:'Prevádza jednotky dĺžky, hmotnosti a teploty: {value,from,to}',extract_entities:'Vyberie z textu e-maily, URL a dátumy: {text}',format_text:'Formátuje text: {text,mode:lower|upper|title|slug|snake|kebab}',list_capabilities:'Zoznam nainštalovaných verejných modulov Trinity: {query?: string}',list_skills:'Zoznam zabudovaných pracovných zručností Trinity: {query?: string}',list_connectors:'Skutočný stav nakonfigurovaných konektorov; nikdy nevracia tajomstvá: {}',install_plugin:'Nainštaluje alebo obnoví iba plugin z dôveryhodného katalógu Trinity: {id,reason}',request_system_action:'Vytvorí iba návrh internej akcie; zmeny čakajú na výslovné schválenie. Desktop používa action run a payload {task:"desktop-control",operation:"list|launch|focus|type",app?:"notepad|calculator|paint|explorer",text?:string}: {action, payload, rationale}',system_action_status:'Overí stav a potvrdenie internej akcie: {id}'};

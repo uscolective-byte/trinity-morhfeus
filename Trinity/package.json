@@ -12,13 +12,17 @@
     "test:truth-live": "node scripts/live-truth-test.mjs"
   },
   "dependencies": {
-    "agents": "0.24.0",
     "@modelcontextprotocol/server": "2.0.0",
+    "agents": "0.24.0",
+    "chatgpt": "^5.2.5",
+    "codex": "^0.2.3",
+    "gemini": "^7.5.2",
+    "ollama": "^0.6.4",
     "zod": "4.6.5"
   },
   "devDependencies": {
-    "wrangler": "4.145.0",
-    "miniflare": "5.20260930.0-alpha"
+    "miniflare": "5.20260930.0-alpha",
+    "wrangler": "4.145.0"
   },
   "allowScripts": {
     "core-js-pure@3.50.0": true,

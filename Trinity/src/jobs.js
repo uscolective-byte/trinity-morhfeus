@@ -30,3 +30,9 @@ export async function getJob(env,id) {
   const steps=await env.DB.prepare('SELECT * FROM ops_steps WHERE job_id=? ORDER BY position').bind(id).all();
   return {...job,team:JSON.parse(job.team),plan:JSON.parse(job.plan_json||'{}'),context_summary:JSON.parse(job.context_summary||'null'),steps:steps.results.map(s=>({...s,tool_log:JSON.parse(s.tool_log||'[]')}))};
 }
+
+export async function listJobs(env,limit=20){
+  const bounded=Math.max(1,Math.min(50,Number.isInteger(limit)?limit:20));
+  const rows=await env.DB.prepare('SELECT id,session_id,task,team,status,provider,intent,risk_level,created_at,updated_at FROM ops_jobs ORDER BY created_at DESC,rowid DESC LIMIT ?').bind(bounded).all();
+  return (rows.results||[]).map(row=>({...row,team:JSON.parse(row.team||'[]')}));
+}

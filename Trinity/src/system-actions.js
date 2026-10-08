@@ -1,16 +1,24 @@
-import {z} from 'zod';
+﻿import {z} from 'zod';
 import {hash,equal,HttpError} from './security.js';
 
 export const SYSTEM_CAPABILITIES=Object.freeze([
-  {id:'read',approval:false,risk:'read'},
-  {id:'write',approval:true,risk:'change'},
-  {id:'edit',approval:true,risk:'change'},
-  {id:'selfwrite',approval:true,risk:'high'},
-  {id:'run',approval:true,risk:'change'},
-  {id:'deploy',approval:true,risk:'critical'},
-  {id:'share',approval:true,risk:'critical'},
-  {id:'upload',approval:true,risk:'critical'},
-  {id:'upgrade',approval:true,risk:'critical'}
+  {id:'read',      approval:false, risk:'read'},
+  {id:'write',     approval:true,  risk:'change'},
+  {id:'edit',      approval:true,  risk:'change'},
+  {id:'selfwrite', approval:true,  risk:'high'},
+  {id:'run',       approval:true,  risk:'change'},
+  {id:'deploy',    approval:true,  risk:'critical'},
+  {id:'share',     approval:true,  risk:'critical'},
+  {id:'upload',    approval:true,  risk:'critical'},
+  {id:'upgrade',   approval:true,  risk:'critical'},
+  // ── NextGen PC akcie ──
+  {id:'screenshot', approval:false, risk:'read'},
+  {id:'open_app',   approval:true,  risk:'change'},
+  {id:'notify',     approval:false, risk:'read'},
+  {id:'system_info',approval:false, risk:'read'},
+  {id:'scrape',     approval:false, risk:'read'},
+  {id:'git_commit', approval:true,  risk:'change'},
+  {id:'git_pr',     approval:true,  risk:'change'},
 ]);
 const actionNames=SYSTEM_CAPABILITIES.map(item=>item.id);
 export const systemActionSchema=z.object({
@@ -22,14 +30,28 @@ export const systemActionSchema=z.object({
 const parseRow=row=>row?{...row,payload:JSON.parse(row.payload_json),receipt:row.receipt_json?JSON.parse(row.receipt_json):null,payload_json:undefined,receipt_json:undefined}:null;
 
 async function mirrorBridge(env,row){
-  if(!row||!env.PC_BRIDGE_SERVICE?.recordAction)return;
-  try{await env.PC_BRIDGE_SERVICE.recordAction({id:row.id,action:row.action,status:row.status,requested_by:row.requested_by||'trinity',updated_at:Date.now()});}
+  // Action execution already uses the authenticated claim/receipt API below.
+  // Only mirror to an explicitly compatible HTTP endpoint; service-binding
+  // property checks are unreliable because RPC proxies expose unknown methods.
+  if(!row||env.PC_BRIDGE_MIRROR_ACTIONS!=='true'||!env.PC_BRIDGE_V2?.fetch)return;
+  try{
+    const response=await env.PC_BRIDGE_V2.fetch(new Request('https://pc-bridge.internal/v1/actions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:row.id,action:row.action,status:row.status,requested_by:row.requested_by||'trinity',updated_at:Date.now()})}));
+    if(!response.ok)throw new Error(`HTTP ${response.status}`);
+  }
   catch(error){console.error(JSON.stringify({event:'pc_bridge_mirror_failed',action_id:row.id,message:error instanceof Error?error.message:String(error)}));}
 }
 
 export async function getPCBridgeStatus(env){
-  if(!env.PC_BRIDGE_SERVICE?.getStatus)return {connected:false,status:'not-configured'};
-  try{return {status:'available',...await env.PC_BRIDGE_SERVICE.getStatus()};}
+  const bridge=env.PC_BRIDGE_V2||env.PC_BRIDGE_SERVICE;
+  if(!bridge?.fetch)return {connected:false,status:'not-configured'};
+  try{
+    const path=env.PC_BRIDGE_V2?'/v1/status':'/health';
+    const response=await bridge.fetch(new Request(`https://pc-bridge.internal${path}`));
+    if(!response.ok)throw new Error(`HTTP ${response.status}`);
+    const data=await response.json();
+    const connected=typeof data.online==='boolean'?data.online:data.connected===true||data.status==='ready'||data.status==='serving';
+    return {...data,connected,status:connected?'available':'offline'};
+  }
   catch(error){console.error(JSON.stringify({event:'pc_bridge_status_failed',message:error instanceof Error?error.message:String(error)}));return {connected:false,status:'unavailable'};}
 }
 
@@ -85,6 +107,11 @@ export async function authenticateGateway(request,env){
 }
 
 export function actionEvidence(action){
-  const claims={read:['verify'],write:['change','create_file'],edit:['change'],selfwrite:['change'],run:['execute'],deploy:['deploy'],share:['send','publish'],upload:['publish'],upgrade:['install','change']};
+  const claims={
+    read:['verify'],write:['change','create_file'],edit:['change'],selfwrite:['change'],
+    run:['execute'],deploy:['deploy'],share:['send','publish'],upload:['publish'],upgrade:['install','change'],
+    screenshot:['verify'],open_app:['execute'],notify:['send'],system_info:['verify'],
+    scrape:['verify'],git_commit:['change','publish'],git_pr:['change','publish'],
+  };
   return claims[action]||[];
 }
