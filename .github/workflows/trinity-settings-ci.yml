@@ -1,0 +1,35 @@
+name: Trinity Settings CI
+on:
+  pull_request:
+    paths:
+      - 'Trinity/**'
+      - '.github/workflows/trinity-settings-ci.yml'
+  push:
+    branches:
+      - 'feature/trinity-settings-ui-20261008'
+    paths:
+      - 'Trinity/**'
+      - '.github/workflows/trinity-settings-ci.yml'
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Trinity
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: Trinity/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Check settings script syntax
+        run: node --check public/assistant/chat.js.txt
+      - name: Wrangler dry-run build
+        run: npm run build
+      - name: Unit tests
+        run: node --test tests/*.test.mjs
