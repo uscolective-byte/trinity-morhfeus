@@ -82,3 +82,60 @@ document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.c
 $('login-form').onsubmit=safe(async()=>{const r=await fetch('/api/ops/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:$('key').value})});if(!r.ok)throw new Error('Sign in failed');$('key').value='';await init();});
 localize();
 (async()=>{await configureGoogleLogin();const ticket=location.hash.startsWith('#login=')?location.hash.slice(7):null;if(ticket){window.history.replaceState(null,'',location.pathname);await fetch('/api/ops/redeem',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticket})});}else{await fetch('/api/ops/dev-login',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).catch(()=>{});}await init();})();
+
+
+/* Settings navigator: client-only filters, no API writes or permission changes. */
+(function initSettingsNavigator(){
+  const view=document.getElementById('settings-view');
+  const search=document.getElementById('settings-search');
+  const info=document.getElementById('settings-filter-info');
+  if(!view||!search||!info)return;
+  const groups={
+    system:['.settings-status-grid','.info-settings','#settings-wallet-panel'],
+    ai:['#settings-ai-provider-panel','.settings-grid > .panel:has(#settings-modules)'],
+    connections:['.integration-panel','#settings-api-key-panel','.api-project-panel'],
+    security:['#settings-secret-panel','#settings-users-panel']
+  };
+  const cards=[...view.querySelectorAll('.settings-grid > .panel')];
+  const status=view.querySelector('.settings-status-grid');
+  const modules=view.querySelector('#settings-modules')?.closest('.panel');
+  const groupOf=el=>{
+    if(el===status||el.classList.contains('info-settings')||el.id==='settings-wallet-panel')return 'system';
+    if(el.id==='settings-ai-provider-panel'||el===modules)return 'ai';
+    if(el.classList.contains('integration-panel')||el.id==='settings-api-key-panel'||el.classList.contains('api-project-panel'))return 'connections';
+    return 'security';
+  };
+  let category='all';
+  function render(){
+    const term=search.value.trim().toLocaleLowerCase();
+    let shown=0;
+    for(const card of [status,...cards]){
+      if(!card)continue;
+      const text=(card.textContent||'').toLocaleLowerCase();
+      const pass=(category==='all'||groupOf(card)===category)&&(!term||text.includes(term));
+      card.hidden=!pass;
+      if(pass)shown++;
+    }
+    info.textContent=shown?shown+' sekcií zobrazených':'Žiadne výsledky. Skús iný výraz.';
+  }
+  search.addEventListener('input',render);
+  view.querySelectorAll('[data-settings-category]').forEach(button=>{
+    button.addEventListener('click',()=>{
+      category=button.dataset.settingsCategory;
+      view.querySelectorAll('[data-settings-category]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
+      render();
+    });
+  });
+  const compact=document.getElementById('settings-compact');
+  const motion=document.getElementById('settings-less-motion');
+  for(const [el,key,cls] of [[compact,'trinity-settings-compact','settings-compact'],[motion,'trinity-settings-less-motion','settings-less-motion']]){
+    if(!el)continue;
+    el.checked=localStorage.getItem(key)==='1';
+    view.classList.toggle(cls,el.checked);
+    el.addEventListener('change',()=>{
+      localStorage.setItem(key,el.checked?'1':'0');
+      view.classList.toggle(cls,el.checked);
+    });
+  }
+  render();
+})();
