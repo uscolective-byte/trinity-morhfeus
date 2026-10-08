@@ -5,6 +5,7 @@ import {SKILLS} from './registry.js';
 import {createSystemAction,getSystemAction,actionEvidence} from './system-actions.js';
 import {getPortfolio} from './trading.js';
 export const INTERNAL_TOOLS=new Set(['request_system_action','system_action_status']);
+export const PC_TOOLS=new Set(['pc_screenshot','pc_run','pc_file_read','pc_file_write','pc_file_append','pc_file_edit','pc_directory_create','pc_open_app','pc_app_control','pc_notify','pc_system_info','pc_scrape','pc_web_fetch','pc_download','pc_git_commit','pc_git_pr']);
 export const TOOL_SCHEMAS={
   search_memory:z.object({query:z.string().max(200).default('')}).strict(),
   project_snapshot:z.object({}).strict(),
@@ -37,7 +38,8 @@ export async function searchMemory(env,query='') {
   return {records:[...own.results,...older.results],scope:'ops_memory + existujúca memory_long'};
 }
 export async function runTool(env, agent, name, input, executionContext={}) {
-  if(!agent.tools.includes(name)||!TOOL_SCHEMAS[name]) throw new Error('Tool not allowed');
+  if(!agent.tools.includes(name)||(!TOOL_SCHEMAS[name]&&!PC_TOOLS.has(name))) throw new Error('Tool not allowed');
+  if(PC_TOOLS.has(name)&&executionContext.adminAuthorized!==true)throw new Error('PC nástroje sú dostupné iba v serverom overenom admin režime.');
   if(!INTERNAL_TOOLS.has(name)&&name!=='install_plugin')await ensureToolEnabled(env,name);
   if(name==='request_system_action'&&input&&typeof input==='object')input={action:input.action,payload:input.payload||(typeof input.resource==='string'?{path:input.resource}:{}),rationale:input.rationale||input.reason};
   const args=TOOL_SCHEMAS[name].parse(input);

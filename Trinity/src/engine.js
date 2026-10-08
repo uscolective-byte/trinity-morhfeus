@@ -1,6 +1,6 @@
 import {agentById,SKILLS} from './registry.js';
 import {callModel} from './services.js';
-import {runTool,TOOL_HELP,INTERNAL_TOOLS} from './tools.js';
+import {runTool,TOOL_HELP,INTERNAL_TOOLS,PC_TOOLS} from './tools.js';
 import {listPlugins} from './plugins.js';
 import {TRUTH_POLICY,findUnsupportedActionClaims,safeTruthResponse,truthStatus} from './truth.js';
 import {approveSystemAction} from './system-actions.js';
@@ -27,7 +27,7 @@ export async function runAgent(env, id, task, context='', provider='workers-ai',
     return {text,model:'deterministic-policy',provider:'internal',agent_id:id,tool_log:[receipt],truth:truthStatus(text,[receipt]),duration_ms:0};
   }
   const enabled=env.DB?(await listPlugins(env)).filter(p=>p.enabled).flatMap(p=>p.tools):agent.tools;
-  const activeTools=agent.tools.filter(t=>enabled.includes(t)&&(!INTERNAL_TOOLS.has(t)||ownerMode));
+  const activeTools=agent.tools.filter(t=>enabled.includes(t)&&(!INTERNAL_TOOLS.has(t)||ownerMode)&&(!PC_TOOLS.has(t)||ownerMode));
   const activeSkills=SKILLS.filter(skill=>skill.clusters.includes(agent.cluster)||skill.clusters.includes('Riadenie')&&id==='orchestrator');
   if(id==='orchestrator'&&activeTools.includes('generate_image')&&isImageRequest(task)){
     const prompt=/\b(teba|trinity)\b/i.test(task)

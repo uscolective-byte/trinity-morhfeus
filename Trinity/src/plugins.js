@@ -19,6 +19,10 @@ export const PLUGINS=[
  ,{id:'units',name:'Prevody jednotiek',icon:'⇄',description:'Presne prevádza bežné jednotky dĺžky, hmotnosti a teploty.',tools:['convert_units'],dependency:'Lokálny výpočet vo Workeri',version:'1.0.0'}
  ,{id:'entities',name:'Extrakcia údajov',icon:'⌕',description:'Vyhľadá v texte URL adresy, e-maily a dátumy bez odoslania dát tretej strane.',tools:['extract_entities'],dependency:'Worker runtime',version:'1.0.0'}
  ,{id:'text-format',name:'Formátovanie textu',icon:'Aa',description:'Vytvára slug, snake_case, kebab-case a ďalšie bezpečné textové formáty.',tools:['format_text'],dependency:'Worker runtime',version:'1.0.0'}
+ ,{id:'computer-control',name:'Ovládanie počítača',icon:'⌨',description:'Adminovi umožňuje screenshot, systémové informácie, notifikácie a ovládanie povolených aplikácií cez zabezpečený PC Bridge.',tools:['pc_screenshot','pc_open_app','pc_app_control','pc_notify','pc_system_info'],dependency:'Trinity PC Bridge 2.0',version:'1.0.0',required:true}
+ ,{id:'workspace-files',name:'Súbory a pracovný priestor',icon:'▣',description:'Adminovi umožňuje čítať, vytvárať, dopĺňať a upravovať súbory alebo priečinky v povolenom workspace.',tools:['pc_file_read','pc_file_write','pc_file_append','pc_file_edit','pc_directory_create','pc_download'],dependency:'Trinity PC Bridge 2.0',version:'1.0.0',required:true}
+ ,{id:'internet-operator',name:'Internetový operátor',icon:'◌',description:'Bezpečne načítava a spracúva verejné HTTP/HTTPS zdroje; blokuje lokálne siete a obmedzuje veľkosť odpovedí.',tools:['pc_web_fetch','pc_scrape'],dependency:'Trinity PC Bridge 2.0 + voliteľný Firecrawl',version:'1.0.0',required:true}
+ ,{id:'developer-operator',name:'Vývoj a Git',icon:'</>',description:'Adminovi umožňuje spúšťať príkazy, testy, Git commit a pull request cez auditovaný lokálny Bridge.',tools:['pc_run','pc_git_commit','pc_git_pr'],dependency:'Trinity PC Bridge 2.0 + Git',version:'1.0.0',required:true}
 ];
 export async function pluginEnabled(env,id){
  const row=await env.DB.prepare('SELECT installed,enabled FROM ops_plugins WHERE id=?').bind(id).first();return row?.installed===1&&row?.enabled===1;
