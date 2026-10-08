@@ -17,6 +17,8 @@ export const SYSTEM_CAPABILITIES=Object.freeze([
   {id:'notify',     approval:false, risk:'read'},
   {id:'system_info',approval:false, risk:'read'},
   {id:'scrape',     approval:false, risk:'read'},
+  {id:'web_fetch',  approval:false, risk:'read'},
+  {id:'download',   approval:true,  risk:'change'},
   {id:'git_commit', approval:true,  risk:'change'},
   {id:'git_pr',     approval:true,  risk:'change'},
 ]);
@@ -111,7 +113,7 @@ export function actionEvidence(action){
     read:['verify'],write:['change','create_file'],edit:['change'],selfwrite:['change'],
     run:['execute'],deploy:['deploy'],share:['send','publish'],upload:['publish'],upgrade:['install','change'],
     screenshot:['verify'],open_app:['execute'],notify:['send'],system_info:['verify'],
-    scrape:['verify'],git_commit:['change','publish'],git_pr:['change','publish'],
+    scrape:['verify'],web_fetch:['verify'],download:['change','create_file'],git_commit:['change','publish'],git_pr:['change','publish'],
   };
   return claims[action]||[];
 }

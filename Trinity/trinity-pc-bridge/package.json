@@ -1,0 +1,15 @@
+{
+  "name": "trinity-pc-bridge",
+  "version": "2.0.0",
+  "description": "Lokálny klient pre Trinity PC Bridge — pripojenie na Cloudflare Worker, GitHub, Supabase, Firebase, Firecrawl",
+  "type": "module",
+  "main": "bridge.mjs",
+  "scripts": {
+    "start": "node bridge.mjs",
+    "dev": "node --watch bridge.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

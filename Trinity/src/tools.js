@@ -148,11 +148,12 @@ export async function runTool(env, agent, name, input) {
     return {...result,_evidence:{effect:'read',receipt_id:`portfolio:${id}`}};
   }
   // ── PC Bridge nástroje ──
-  if(['pc_screenshot','pc_run','pc_file_read','pc_file_write','pc_open_app','pc_notify','pc_system_info','pc_scrape','pc_git_commit','pc_git_pr'].includes(name)){
+  if(['pc_screenshot','pc_run','pc_file_read','pc_file_write','pc_file_append','pc_file_edit','pc_directory_create','pc_open_app','pc_app_control','pc_notify','pc_system_info','pc_scrape','pc_web_fetch','pc_download','pc_git_commit','pc_git_pr'].includes(name)){
     const pcActionMap={
       pc_screenshot:'screenshot', pc_run:'run', pc_file_read:'read', pc_file_write:'write',
-      pc_open_app:'open_app', pc_notify:'notify', pc_system_info:'system_info',
-      pc_scrape:'scrape', pc_git_commit:'git_commit', pc_git_pr:'git_pr',
+      pc_file_append:'write',pc_file_edit:'edit',pc_directory_create:'write',
+      pc_open_app:'open_app',pc_app_control:'open_app', pc_notify:'notify', pc_system_info:'system_info',
+      pc_scrape:'scrape',pc_web_fetch:'web_fetch',pc_download:'download', pc_git_commit:'git_commit', pc_git_pr:'git_pr',
     };
     const pcAction=pcActionMap[name];
     const pcSchema={
@@ -160,10 +161,16 @@ export async function runTool(env, agent, name, input) {
       pc_run:z.object({command:z.string().min(1).max(4000),cwd:z.string().optional(),timeout:z.number().int().min(1000).max(120000).optional(),allowNonZero:z.boolean().optional()}).strict(),
       pc_file_read:z.object({path:z.string().min(1).max(2000),depth:z.number().int().min(1).max(3).optional()}).strict(),
       pc_file_write:z.object({path:z.string().min(1).max(2000),content:z.string().max(500000)}).strict(),
-      pc_open_app:z.object({target:z.string().min(1).max(500),args:z.string().max(500).optional()}).strict(),
+      pc_file_append:z.object({path:z.string().min(1).max(2000),content:z.string().max(500000)}).strict(),
+      pc_file_edit:z.object({path:z.string().min(1).max(2000),find:z.string().min(1).max(200000),replace:z.string().max(200000)}).strict(),
+      pc_directory_create:z.object({path:z.string().min(1).max(2000)}).strict(),
+      pc_open_app:z.object({target:z.enum(['notepad','calculator','paint','explorer','chrome','edge'])}).strict(),
+      pc_app_control:z.object({operation:z.enum(['list','launch','type']),app:z.enum(['notepad','calculator','paint','explorer','chrome','edge']).optional(),text:z.string().min(1).max(500).optional()}).strict(),
       pc_notify:z.object({message:z.string().min(1).max(256),title:z.string().max(80).optional(),duration:z.number().int().min(1).max(30).optional()}).strict(),
       pc_system_info:z.object({detail:z.boolean().optional()}).strict(),
       pc_scrape:z.object({url:z.string().url(),formats:z.array(z.string()).optional(),onlyMainContent:z.boolean().optional()}).strict(),
+      pc_web_fetch:z.object({url:z.string().url()}).strict(),
+      pc_download:z.object({url:z.string().url(),path:z.string().min(1).max(2000)}).strict(),
       pc_git_commit:z.object({message:z.string().min(3).max(200),cwd:z.string().optional(),files:z.array(z.string()).optional(),push:z.boolean().optional()}).strict(),
       pc_git_pr:z.object({title:z.string().min(3).max(200),head:z.string().min(1),body:z.string().max(4000).optional(),base:z.string().optional()}).strict(),
     };
@@ -171,9 +178,11 @@ export async function runTool(env, agent, name, input) {
     let payload=parsedArgs;
     if(name==='pc_file_read')payload={path:parsedArgs.path,depth:parsedArgs.depth};
     if(name==='pc_file_write')payload={path:parsedArgs.path,content:parsedArgs.content};
+    if(name==='pc_file_append')payload={path:parsedArgs.path,content:parsedArgs.content,operation:'append'};
+    if(name==='pc_directory_create')payload={path:parsedArgs.path,operation:'mkdir'};
     const rationale=`Trinity tool: ${name}`;
     const action=await createSystemAction(env,{action:pcAction,payload,rationale},'agent:trinity');
-    if(['pc_screenshot','pc_file_read','pc_notify','pc_system_info','pc_scrape'].includes(name)){
+    if(['pc_screenshot','pc_file_read','pc_notify','pc_system_info','pc_scrape','pc_web_fetch'].includes(name)){
       // Auto-schválené akcie (risk:'read') — počkáme na výsledok
       for(let i=0;i<120;i++){
         await new Promise(r=>setTimeout(r,1500));
@@ -211,10 +220,16 @@ export const TOOL_HELP={
   pc_run:'Spustí PowerShell príkaz na PC a vráti stdout/stderr: {command:string,cwd?:string,timeout?:ms,allowNonZero?:bool}',
   pc_file_read:'Prečíta súbor alebo vypíše adresár z PC: {path:string,depth?:1-3}',
   pc_file_write:'Zapíše súbor na PC (vyžaduje schválenie): {path:string,content:string}',
-  pc_open_app:'Otvorí aplikáciu alebo URL na PC (vyžaduje schválenie): {target:string,args?:string}',
+  pc_file_append:'Pridá obsah na koniec súboru v povolenom pracovnom priečinku (vyžaduje schválenie): {path:string,content:string}',
+  pc_file_edit:'Nahradí text v súbore v povolenom pracovnom priečinku (vyžaduje schválenie): {path:string,find:string,replace:string}',
+  pc_directory_create:'Vytvorí adresár v povolenom pracovnom priečinku (vyžaduje schválenie): {path:string}',
+  pc_open_app:'Otvorí povolenú aplikáciu na PC (vyžaduje schválenie): {target:notepad|calculator|paint|explorer|chrome|edge}',
+  pc_app_control:'Vypíše okná alebo po schválení otvorí aplikáciu či napíše text do aktívneho okna: {operation:list|launch|type,app?:alias,text?:string}',
   pc_notify:'Zobrazí Windows toast notifikáciu: {title?:string,message:string,duration?:sek}',
   pc_system_info:'Vráti CPU/RAM/disk/procesy z PC: {detail?:bool}',
   pc_scrape:'Hĺbkový scraping URL cez Firecrawl z PC: {url:string,formats?:[]}',
+  pc_web_fetch:'Bezpečne načíta verejnú HTTP/HTTPS URL cez PC; blokuje lokálne siete a limity veľkosti: {url:string}',
+  pc_download:'Stiahne verejnú URL do povoleného pracovného priečinka (vyžaduje schválenie): {url:string,path:string}',
   pc_git_commit:'Auto-commit + push na GitHub z PC (vyžaduje schválenie): {message:string,cwd?:string,files?:[],push?:bool}',
   pc_git_pr:'Vytvorí Pull Request na GitHub (vyžaduje schválenie): {title:string,head:string,body?:string,base?:string}',
   // ── Existujúce nástroje ──
