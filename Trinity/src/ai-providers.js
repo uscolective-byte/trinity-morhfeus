@@ -35,6 +35,7 @@ export async function listAIProviders(env,ownerId){
   const environmentGemini=typeof env.GEMINI_API_KEY==='string'&&env.GEMINI_API_KEY.length>=8;
   return {items:[
     {id:'workers-ai',name:'Cloudflare Workers AI',configured:!!env.AI,enabled:true,model:env.AI_MODEL||'@cf/openai/gpt-oss-120b',managed_by:'cloudflare',last_check:checks.get('workers-ai')||null},
+    {id:'openai',name:'OpenAI / ChatGPT API',configured:typeof env.OPENAI_API_KEY==='string'&&env.OPENAI_API_KEY.length>=20,enabled:typeof env.OPENAI_API_KEY==='string'&&env.OPENAI_API_KEY.length>=20,model:env.OPENAI_MODEL||'gpt-5.6-luna',managed_by:'worker-secret',secret_source:'worker-secret',last_check:checks.get('openai')||null},
     {id:'gemini',name:'Google Gemini',configured:!!geminiSetting||environmentGemini,enabled:geminiSetting?geminiSetting.enabled===1:environmentGemini,project_control:geminiSetting?.project_control===1,approval_policy:'owner-required',allowed_actions:['read','write','edit','selfwrite','run','deploy','share','upload','upgrade'],model:geminiSetting?.model||env.GEMINI_MODEL||null,secret_id:geminiSetting?.secret_id||null,secret_source:geminiSetting?'encrypted-vault':environmentGemini?'worker-secret':null,credentials:geminiSecrets,updated_at:geminiSetting?.updated_at||null,last_check:checks.get('gemini')||null}
   ]};
 }

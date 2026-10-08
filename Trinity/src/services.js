@@ -108,6 +108,25 @@ export async function callModel(env, provider, messages, maxTokens = 1200) {
     if(!text)throw new Error('Gemini vrátilo prázdnu odpoveď.');
     return {text,model,provider,usage:{input:data.usageMetadata?.promptTokenCount||0,output:data.usageMetadata?.candidatesTokenCount||0}};
   }
+  if(provider==='openai') {
+    const apiKey=typeof env.OPENAI_API_KEY==='string'?env.OPENAI_API_KEY.trim():'';
+    if(!apiKey)throw new Error('OpenAI API nie je nakonfigurované.');
+    const model=env.OPENAI_MODEL||'gpt-5.6-luna';
+    const input=messages.slice(-16).map(message=>({
+      role:message.role==='system'?'developer':message.role,
+      content:String(message.content).slice(0,40000)
+    }));
+    const response=await fetch('https://api.openai.com/v1/responses',{
+      method:'POST',headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},
+      body:JSON.stringify({model,input,store:false,max_output_tokens:Math.min(maxTokens,8192)}),
+      signal:AbortSignal.timeout(65000),redirect:'manual'
+    });
+    const data=JSON.parse(await boundedText(response,250000));
+    if(!response.ok)throw new Error(`OpenAI HTTP ${response.status}: ${String(data.error?.message||'požiadavka zlyhala').slice(0,400)}`);
+    const text=extractModelText(data);
+    if(!text.trim())throw new Error('OpenAI vrátilo prázdnu odpoveď.');
+    return {text,model:data.model||model,provider,usage:{input:data.usage?.input_tokens||0,output:data.usage?.output_tokens||0}};
+  }
   if(provider!=='workers-ai') throw new Error('Unknown provider');
   const model=env.AI_MODEL || '@cf/openai/gpt-oss-120b';
   let timer,result;

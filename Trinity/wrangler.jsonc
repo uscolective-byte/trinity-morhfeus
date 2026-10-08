@@ -60,6 +60,7 @@
   "vars": {
     "CF_ACCOUNT_ID": "b60342e5e52f5646fbd4e913bb409334",
     "AI_MODEL": "@cf/openai/gpt-oss-120b",
+    "OPENAI_MODEL": "gpt-5.6-luna",
     "IMAGE_MODEL": "@cf/black-forest-labs/flux-1-schnell",
     "OLLAMA_MODEL": "gemma4:31b",
     "TRINITY_ADMIN_EMAILS": "saboivan2008@gmail.com,usc31@auru.space,uscolective@gmail.com,delirium.trade12@gmail.com",
