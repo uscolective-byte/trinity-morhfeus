@@ -9,15 +9,15 @@ OVERENÉ V ZDROJI A TESTOCH:
 - Výstupné objekty a médiá používa Cloudflare R2 bucket trinity-artifacts.
 - Odolné úlohy používa Cloudflare Workflow trinity-operations.
 - PC Bridge je samostatný Cloudflare Worker binding trinity-pc-bridge, ktorý eviduje heartbeat a stav lokálneho gateway.
-- Lokálny gateway je Node.js služba trinity-local-gateway verzie 1.3.0 na 127.0.0.1:8791. Má allowlist akcií, DPAPI chránené tajomstvá, návrh → schválenie → vykonanie → doklad, bezpečné zotavenie po reštarte a núdzové zastavenie lokálnych akcií.
+- Lokálny PC Bridge 2.0 používa allowlist pracovných priečinkov a aplikácií, chránený gateway secret, auditovanú akciu a doklad o výsledku. Serverom overený admin môže konkrétny príkaz v aktuálnej požiadavke autorizovať priamo; ostatné zdroje vytvárajú iba návrh.
 - Na počítači je Ollama s modelmi qwen3:4b-instruct, trinity-local:4b a qwen3:4b. Lokálny model je dostupný cez schválenú bránu, nie ako verejný endpoint.
-- Overené lokálne testy: Trinity 67/67, Local Gateway 10/10, PC Bridge Worker 2/2.
+- Overené lokálne testy: Trinity 79/79 a bezpečnostné jadro PC Bridge 4/4.
 - Overený lokálny stav pri poslednej kontrole: gateway ready, cloud connected, pc_bridge connected. Tento stav je časový a nesmie sa tvrdiť ako trvalý bez nového health checku.
 - Implementované moduly v kóde zahŕňajú chat, workflow, D1 pamäť, projekty, AI Studio, pluginy/nástroje, obrázky cez Workers AI, autentifikáciu, role, schvaľované systémové akcie a emergency stop.
 
 KONFIGUROVANÉ, ALE V TOMTO DOKUMENTE NEPREHLASUJ ZA PLNÚ PRODUKČNÚ GARANCIU:
 - lokálny provider cez gateway a Ollama,
-- PC akcie iba cez allowlist a samostatné schválenie,
+- PC akcie iba cez allowlist, audit a receipt; pri admin relácii bez druhého textu SCHVÁĽ,
 - všetky voliteľné konektory a pluginy podľa ich aktuálneho bindingu.
 
 NEUVÁDZAJ AKO SÚČASŤ TRINITY, POKIAĽ SA NEOBJAVÍ NOVÝ DÔKAZ V ZDROJI:

@@ -57,11 +57,17 @@ export async function getPCBridgeStatus(env){
   catch(error){console.error(JSON.stringify({event:'pc_bridge_status_failed',message:error instanceof Error?error.message:String(error)}));return {connected:false,status:'unavailable'};}
 }
 
-export async function createSystemAction(env,input,requestedBy='trinity'){
-  const data=systemActionSchema.parse(input);const definition=SYSTEM_CAPABILITIES.find(item=>item.id===data.action);const id=crypto.randomUUID();const now=Date.now();const status=definition.approval?'proposed':'approved';
+export async function createSystemAction(env,input,requestedBy='trinity',options={}){
+  const data=systemActionSchema.parse(input);const definition=SYSTEM_CAPABILITIES.find(item=>item.id===data.action);const id=crypto.randomUUID();const now=Date.now();
+  // Auto-approval is deliberately impossible for generic agents, MCP clients,
+  // providers and gateways. The caller must carry server-verified admin context
+  // and use the reserved admin requester namespace.
+  const adminAuthorized=options.adminAuthorized===true&&requestedBy.startsWith('admin:');
+  const status=!definition.approval||adminAuthorized?'approved':'proposed';
+  const approvedBy=adminAuthorized?requestedBy:definition.approval?null:'policy:auto-read';
   await env.DB.prepare(`INSERT INTO ops_system_actions(id,action,payload_json,rationale,status,requested_by,approved_by,approved_at,expires_at,created_at,updated_at)
-    VALUES(?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))`).bind(id,data.action,JSON.stringify(data.payload),data.rationale,status,requestedBy,definition.approval?null:'policy:auto-read',definition.approval?null:now,now+30*60_000).run();
-  await env.DB.prepare("INSERT INTO ops_events(action,details) VALUES('system_action_proposed',?)").bind(JSON.stringify({id,action:data.action,status,requested_by:requestedBy})).run();
+    VALUES(?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))`).bind(id,data.action,JSON.stringify(data.payload),data.rationale,status,requestedBy,approvedBy,status==='approved'?now:null,now+30*60_000).run();
+  await env.DB.prepare("INSERT INTO ops_events(action,details) VALUES(?,?)").bind(adminAuthorized?'system_action_admin_authorized':'system_action_proposed',JSON.stringify({id,action:data.action,status,requested_by:requestedBy,admin_authorized:adminAuthorized})).run();
   const row=await getSystemAction(env,id);await mirrorBridge(env,row);return row;
 }
 

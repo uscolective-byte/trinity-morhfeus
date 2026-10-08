@@ -12,7 +12,7 @@ const result=data=>({content:[{type:'text',text:JSON.stringify(data,null,2)}]});
 
 export function handleMcp(request,env,ctx){
   return createMcpHandler(()=>{
-const server=new McpServer({name:'trinity',version:'8.6.0'});
+const server=new McpServer({name:'trinity',version:'8.7.0'});
 
     // ── Pôvodné nástroje ──
     server.registerTool('list_agents',{description:'Zoznam 40 špecialistov Trinity.',inputSchema:{}},

@@ -36,7 +36,7 @@ export async function searchMemory(env,query='') {
   const older=await env.DB.prepare("SELECT key,substr(value,1,2000) AS value,category AS source FROM memory_long WHERE key LIKE ? ESCAPE '!' OR value LIKE ? ESCAPE '!' ORDER BY importance DESC LIMIT 5").bind(pattern,pattern).all();
   return {records:[...own.results,...older.results],scope:'ops_memory + existujúca memory_long'};
 }
-export async function runTool(env, agent, name, input) {
+export async function runTool(env, agent, name, input, executionContext={}) {
   if(!agent.tools.includes(name)||!TOOL_SCHEMAS[name]) throw new Error('Tool not allowed');
   if(!INTERNAL_TOOLS.has(name)&&name!=='install_plugin')await ensureToolEnabled(env,name);
   if(name==='request_system_action'&&input&&typeof input==='object')input={action:input.action,payload:input.payload||(typeof input.resource==='string'?{path:input.resource}:{}),rationale:input.rationale||input.reason};
@@ -72,8 +72,10 @@ export async function runTool(env, agent, name, input) {
     const separator=args.mode==='snake'?'_':'-';return {mode:args.mode,text:words.join(separator).toLocaleLowerCase('sk')};
   }
   if(name==='request_system_action'){
-    const action=await createSystemAction(env,args,`agent:${agent.id||'trinity'}`);
-    return {id:action.id,action:action.action,status:action.status,approval_required:action.status==='proposed',expires_at:action.expires_at,note:action.status==='proposed'?`Čaká na samostatné schválenie používateľa príkazom SCHVÁĽ ${action.id}.`:'Bezpečné čítanie čaká na lokálnu bránu.',_evidence:{effect:'proposal'}};
+    const adminAuthorized=executionContext.adminAuthorized===true;
+    const requester=adminAuthorized?`admin:agent:${agent.id||'trinity'}`:`agent:${agent.id||'trinity'}`;
+    const action=await createSystemAction(env,args,requester,{adminAuthorized});
+    return {id:action.id,action:action.action,status:action.status,approval_required:action.status==='proposed',expires_at:action.expires_at,note:action.status==='proposed'?`Čaká na samostatné schválenie používateľa príkazom SCHVÁĽ ${action.id}.`:'Admin príkaz bol autorizovaný a čaká na lokálnu bránu.',_evidence:{effect:'proposal'}};
   }
   if(name==='system_action_status'){
     const action=await getSystemAction(env,args.id);if(!action)throw new Error('Systémová akcia neexistuje.');
@@ -181,19 +183,21 @@ export async function runTool(env, agent, name, input) {
     if(name==='pc_file_append')payload={path:parsedArgs.path,content:parsedArgs.content,operation:'append'};
     if(name==='pc_directory_create')payload={path:parsedArgs.path,operation:'mkdir'};
     const rationale=`Trinity tool: ${name}`;
-    const action=await createSystemAction(env,{action:pcAction,payload,rationale},'agent:trinity');
-    if(['pc_screenshot','pc_file_read','pc_notify','pc_system_info','pc_scrape','pc_web_fetch'].includes(name)){
-      // Auto-schválené akcie (risk:'read') — počkáme na výsledok
+    const adminAuthorized=executionContext.adminAuthorized===true;
+    const requester=adminAuthorized?'admin:agent:trinity':'agent:trinity';
+    const action=await createSystemAction(env,{action:pcAction,payload,rationale},requester,{adminAuthorized});
+    if(action.status==='approved'){
+      // Autorizovaný admin príkaz aj bezpečné čítanie čakajú na reálny receipt.
       for(let i=0;i<120;i++){
         await new Promise(r=>setTimeout(r,1500));
         const current=await getSystemAction(env,action.id);
         if(current?.status==='completed')return{...current.receipt,_evidence:{effect:'read',receipt_id:action.id}};
         if(current?.status==='failed')throw new Error(current.error || "PC Bridge: zlyhal.");
-        if(current?.status==='proposed')break; // vyžaduje schválenie
+        if(current?.status==='proposed')break;
       }
     }
     return {id:action.id,action:pcAction,status:action.status,approval_required:action.status==='proposed',
-      note:action.status==='proposed'?`Čaká na schválenie príkazom SCHVÁĽ ${action.id}.`:'Spracováva PC Bridge.',
+      note:action.status==='proposed'?`Čaká na schválenie príkazom SCHVÁĽ ${action.id}.`:'Admin príkaz vykonáva PC Bridge.',
       _evidence:{effect:'proposal'}};
   }
   if(name==='web_search') {
@@ -217,7 +221,7 @@ export async function recallMemory(env,task){
 export const TOOL_HELP={
   // ── PC Bridge nástroje ──
   pc_screenshot:'Spraví screenshot obrazovky a vráti base64 PNG + rozlíšenie: {}',
-  pc_run:'Spustí PowerShell príkaz na PC a vráti stdout/stderr: {command:string,cwd?:string,timeout?:ms,allowNonZero?:bool}',
+  pc_run:'Spustí adminom autorizovaný PowerShell príkaz v povolenom workspace a vráti stdout/stderr: {command:string,cwd?:string,timeout?:ms,allowNonZero?:bool}',
   pc_file_read:'Prečíta súbor alebo vypíše adresár z PC: {path:string,depth?:1-3}',
   pc_file_write:'Zapíše súbor na PC (vyžaduje schválenie): {path:string,content:string}',
   pc_file_append:'Pridá obsah na koniec súboru v povolenom pracovnom priečinku (vyžaduje schválenie): {path:string,content:string}',
@@ -234,4 +238,4 @@ export const TOOL_HELP={
   pc_git_pr:'Vytvorí Pull Request na GitHub (vyžaduje schválenie): {title:string,head:string,body?:string,base?:string}',
   // ── Existujúce nástroje ──
   search_memory:'Vyhľadá pamäť: {query:string}',project_snapshot:'Prečíta projekty a úlohy: {}',
-  service_status:'Overí služby: {binding?: názov služby}',web_search:'Vyhľadá aktuálne webové zdroje: {query:string}',generate_image:'Skutočne vytvorí obrázok a uloží ho do súkromného archívu: {prompt:string,seed?:integer}',portfolio_summary:'Prečíta simulované portfólio, pozície a zisk alebo stratu bez vykonania reálneho obchodu: {portfolio_id?:uuid}',calculate:'Presný výpočet {operation:add|subtract|multiply|divide|percentage|mean|power|sqrt|log10|sin|cos|tan,values:number[]}; trigonometria používa radiány',analyze_text:'Počet slov a znakov: {text:string}',current_time:'Skutočný čas a dátum: {timezone?: IANA názov}',json_tool:'Overí, formátuje, minifikuje alebo číta JSON: {operation, json, path?}',hash_text:'Vytvorí SHA-256 odtlačok textu: {text,algorithm?:"SHA-256"}',convert_units:'Prevádza jednotky dĺžky, hmotnosti a teploty: {value,from,to}',extract_entities:'Vyberie z textu e-maily, URL a dátumy: {text}',format_text:'Formátuje text: {text,mode:lower|upper|title|slug|snake|kebab}',list_capabilities:'Zoznam nainštalovaných verejných modulov Trinity: {query?: string}',list_skills:'Zoznam zabudovaných pracovných zručností Trinity: {query?: string}',list_connectors:'Skutočný stav nakonfigurovaných konektorov; nikdy nevracia tajomstvá: {}',install_plugin:'Nainštaluje alebo obnoví iba plugin z dôveryhodného katalógu Trinity: {id,reason}',request_system_action:'Vytvorí iba návrh internej akcie; zmeny čakajú na výslovné schválenie. Desktop používa action run a payload {task:"desktop-control",operation:"list|launch|focus|type",app?:"notepad|calculator|paint|explorer",text?:string}: {action, payload, rationale}',system_action_status:'Overí stav a potvrdenie internej akcie: {id}'};
+  service_status:'Overí služby: {binding?: názov služby}',web_search:'Vyhľadá aktuálne webové zdroje: {query:string}',generate_image:'Skutočne vytvorí obrázok a uloží ho do súkromného archívu: {prompt:string,seed?:integer}',portfolio_summary:'Prečíta simulované portfólio, pozície a zisk alebo stratu bez vykonania reálneho obchodu: {portfolio_id?:uuid}',calculate:'Presný výpočet {operation:add|subtract|multiply|divide|percentage|mean|power|sqrt|log10|sin|cos|tan,values:number[]}; trigonometria používa radiány',analyze_text:'Počet slov a znakov: {text:string}',current_time:'Skutočný čas a dátum: {timezone?: IANA názov}',json_tool:'Overí, formátuje, minifikuje alebo číta JSON: {operation, json, path?}',hash_text:'Vytvorí SHA-256 odtlačok textu: {text,algorithm?:"SHA-256"}',convert_units:'Prevádza jednotky dĺžky, hmotnosti a teploty: {value,from,to}',extract_entities:'Vyberie z textu e-maily, URL a dátumy: {text}',format_text:'Formátuje text: {text,mode:lower|upper|title|slug|snake|kebab}',list_capabilities:'Zoznam nainštalovaných verejných modulov Trinity: {query?: string}',list_skills:'Zoznam zabudovaných pracovných zručností Trinity: {query?: string}',list_connectors:'Skutočný stav nakonfigurovaných konektorov; nikdy nevracia tajomstvá: {}',install_plugin:'Nainštaluje alebo obnoví iba plugin z dôveryhodného katalógu Trinity: {id,reason}',request_system_action:'Vytvorí auditovanú internú akciu; v overenej admin relácii sa konkrétny príkaz autorizuje priamo, inak zostane návrhom: {action, payload, rationale}',system_action_status:'Overí stav a potvrdenie internej akcie: {id}'};

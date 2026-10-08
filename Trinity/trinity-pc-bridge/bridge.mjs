@@ -215,7 +215,7 @@ async function createGitHubPR(title, body, head, base='main') {
 }
 
 async function executeAction(action) {
-  const { id, action: type, payload={}, rationale='' } = action;
+  const { id, action: type, payload={}, rationale='', approved_by='' } = action;
   console.log(`\n⚡ ${type} (${id.slice(0,8)}) — ${rationale}`);
   try {
     let receipt = {};
@@ -270,6 +270,7 @@ async function executeAction(action) {
       }
 
       case 'run': {
+        if(!String(approved_by).startsWith('admin:'))throw new Error('Shell vyžaduje priamu autorizáciu overeného admina.');
         if (payload.task==='desktop-control') {
           const op=payload.operation||'list';
           if (op==='list') {
