@@ -203,14 +203,20 @@ async function route(request,env,ctx){
     if(request.method==='POST'){await rateLimit(env,`wallet-sandbox:${user.id}`,30,300);return json(await transactWallet(env,ownerId,await readJSON(request,8000)));}
   }
   if(path==='/api/assistant/dashboard'&&request.method==='GET'){
-    const [today,memory,projects,recent]=await Promise.all([
+    const isAdmin=['admin','owner'].includes(user.role);
+    const [today,memory,projects,recent,activeJobs,failedToday,pendingUsers,pcBridge]=await Promise.all([
       env.DB.prepare("SELECT COUNT(*) AS count FROM ops_jobs WHERE status='completed' AND date(updated_at)=date('now')").first(),
       env.DB.prepare('SELECT (SELECT COUNT(*) FROM ops_memory)+(SELECT COUNT(*) FROM memory_long) AS count').first(),
       env.DB.prepare("SELECT COUNT(*) AS count FROM projects WHERE status IS NULL OR status NOT IN ('archived','deleted')").first(),
-      env.DB.prepare("SELECT id,session_id,substr(task,1,120) AS task,status,updated_at FROM ops_jobs WHERE task NOT LIKE 'Kontrolný test%' ORDER BY updated_at DESC LIMIT 6").all()
+      env.DB.prepare("SELECT id,session_id,substr(task,1,120) AS task,status,updated_at FROM ops_jobs WHERE task NOT LIKE 'Kontrolný test%' ORDER BY updated_at DESC LIMIT 6").all(),
+      isAdmin?env.DB.prepare("SELECT COUNT(*) AS count FROM ops_jobs WHERE status IN ('queued','running')").first():Promise.resolve({count:0}),
+      isAdmin?env.DB.prepare("SELECT COUNT(*) AS count FROM ops_jobs WHERE status='failed' AND date(updated_at)=date('now')").first():Promise.resolve({count:0}),
+      isAdmin?env.DB.prepare("SELECT COUNT(*) AS count FROM ops_users WHERE status='pending' AND role='user'").first():Promise.resolve({count:0}),
+      getPCBridgeStatus(env)
     ]);
     const services=[env.AI,env.OPENAI_API_KEY,env.DB,env.ARTIFACTS,env.Mastermind,env.OPS_WORKFLOW,env.PC_BRIDGE_SERVICE,env.OLLAMA_SECRET||env.OLLAMA_API_KEY];
-    return json({today_completed:today.count||0,memory_count:memory.count||0,project_count:projects.count||0,available_services:services.filter(Boolean).length,total_services:services.length,pc_bridge:await getPCBridgeStatus(env),recent_jobs:recent.results});
+    return json({dashboard_mode:isAdmin?'admin':'user',today_completed:today.count||0,memory_count:memory.count||0,project_count:projects.count||0,available_services:services.filter(Boolean).length,total_services:services.length,pc_bridge:pcBridge,recent_jobs:recent.results,
+      admin:isAdmin?{active_jobs:activeJobs.count||0,failed_today:failedToday.count||0,pending_users:pendingUsers.count||0,emergency_stop:control.emergency_stop===true}:null});
   }
   if(path==='/api/assistant/projects'&&request.method==='GET'){
     const [projects,tasks]=await Promise.all([env.DB.prepare('SELECT id,name,description,status FROM projects ORDER BY updated_at DESC LIMIT 30').all(),env.DB.prepare('SELECT id,title,status,assigned_agent FROM tasks ORDER BY updated_at DESC LIMIT 50').all()]);
