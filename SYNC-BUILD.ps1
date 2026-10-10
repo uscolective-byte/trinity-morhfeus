@@ -96,7 +96,16 @@ function Sync-Repository {
             if ($remoteBranches -contains 'origin/main') { $defaultRemote = 'origin/main' }
             elseif ($remoteBranches -contains 'origin/master') { $defaultRemote = 'origin/master' }
         }
-        if (-not $defaultRemote -or $defaultRemote -notmatch '^origin/(main|master)
+
+        if (-not $defaultRemote -or $defaultRemote -notmatch '^origin/(main|master)$') {
+            throw "Unable to safely determine origin default branch; no pull was attempted."
+        }
+
+        $defaultBranch = $defaultRemote.Substring(7)
+        & git pull --ff-only origin $defaultBranch 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "git pull --ff-only origin $defaultBranch failed" }
+
+        Log "Git sync successful from origin/$defaultBranch" "SUCCESS"
         Pop-Location
         return $true
     }
