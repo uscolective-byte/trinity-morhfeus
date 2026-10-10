@@ -91,6 +91,23 @@ export function handleMcp(request,env,ctx){
           note:`Čaká na schválenie príkazom SCHVÁĽ ${action.id}.`});
       });
 
+    server.registerTool('request_project_action',{description:'Navrhne ohraničenú akciu Gemini Operatora. Zmeny sa nikdy nevykonajú bez samostatného schválenia vlastníka.',
+      inputSchema:{action:z.enum(['read','write','edit','selfwrite','run','deploy','share','upload','upgrade','screenshot','open_app','notify','system_info','scrape','web_fetch','download','git_commit','git_pr']),payload:z.record(z.string(),z.unknown()).default({}),rationale:z.string().min(5).max(1000)}},
+      async({action,payload,rationale})=>{
+        const enabled=await geminiProjectControlEnabled(env,env.TRINITY_OWNER_EMAIL||'');
+        if(!enabled)return result({error:'Gemini project_control nie je zapnutý.'});
+        const proposed=await createSystemAction(env,{action,payload,rationale:`Gemini MCP: ${rationale}`},'mcp:gemini');
+        return result({id:proposed.id,action:proposed.action,status:proposed.status,approval_required:proposed.status==='proposed',
+          next_step:proposed.status==='proposed'?`Vlastník musí v Trinity chate odoslať SCHVÁĽ ${proposed.id}.`:'Akcia čaká na PC bránu.'});
+      });
+
+    server.registerTool('get_project_action',{description:'Vráti stav a overený doklad Gemini Operator akcie.',
+      inputSchema:{id:z.string().uuid()}},
+      async({id})=>{
+        const action=await getSystemAction(env,id);
+        return result(action?{id:action.id,action:action.action,status:action.status,receipt:action.receipt||null,error:action.error||null}:{error:'Akcia neexistuje.'});
+      });
+
     server.registerTool('list_system_actions',{description:'Zoznam posledných systémových akcií a ich stavov.',
       inputSchema:{}},
       async()=>result(await listSystemActions(env)));

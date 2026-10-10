@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {AGENTS,SKILLS,selectTeam,shouldDelegate} from '../src/registry.js';
 import {validKey,checkOrigin,readJSON} from '../src/security.js';
 import {jobSchema} from '../src/jobs.js';
-import {parseAction,runAgent} from '../src/engine.js';
+import {parseAction,runAgent,executionPolicyForProvider} from '../src/engine.js';
 import {runTool} from '../src/tools.js';
 import {extractModelText,extractGeminiInteractionText,getOllamaKey,serviceStatus,runScheduledHealth} from '../src/services.js';
 import {TRUTH_POLICY,findUnsupportedActionClaims,truthStatus} from '../src/truth.js';
@@ -24,6 +24,8 @@ test('cross-origin blocked',()=>assert.throws(()=>checkOrigin(new Request('https
 test('bad JSON and oversized bodies rejected',async()=>{await assert.rejects(readJSON(new Request('http://localhost',{method:'POST',headers:{'Content-Type':'application/json'},body:'{'})),{status:400});await assert.rejects(readJSON(new Request('http://localhost',{method:'POST',headers:{'Content-Type':'application/json'},body:'x'.repeat(25000)})),{status:413});});
 test('job input rejects empty task and excessive teams',()=>{assert.equal(jobSchema.safeParse({task:' '}).success,false);assert.equal(jobSchema.safeParse({task:'hello',team:Array(6).fill('qa')}).success,false);});
 test('Gemini is accepted as a bounded job provider',()=>assert.equal(jobSchema.parse({task:'hello',provider:'gemini'}).provider,'gemini'));
+test('Gemini operator can propose actions but cannot directly execute PC tools',()=>{const policy=executionPolicyForProvider('gemini',true);assert.equal(policy.geminiOperator,true);assert.equal(policy.allowInternal,true);assert.equal(policy.allowDirectPC,false);assert.equal(policy.directAdmin,false);assert.equal(policy.approvalRequired,true);});
+test('non-Gemini admin keeps direct bounded PC execution',()=>{const policy=executionPolicyForProvider('workers-ai',true);assert.equal(policy.directAdmin,true);assert.equal(policy.allowDirectPC,true);assert.equal(policy.approvalRequired,false);});
 test('OpenAI is accepted as a bounded job provider',()=>assert.equal(jobSchema.parse({task:'hello',provider:'openai'}).provider,'openai'));
 test('chat accepts world language tags and automatic language detection',()=>{assert.equal(jobSchema.parse({task:'こんにちは',language:'ja'}).language,'ja');assert.equal(jobSchema.parse({task:'مرحبا'}).language,'auto');assert.throws(()=>normalizeLanguage('../../bad'));assert.match(languageDirective('auto'),/jazyk/);});
 test('complex scientific work receives a larger reasoning budget',()=>{assert.ok(tokenBudget('orchestrator','Analyzuj kvantovú fyziku')>tokenBudget('writer','Ahoj'));});
