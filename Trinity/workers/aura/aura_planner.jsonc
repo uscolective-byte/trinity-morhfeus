@@ -1,0 +1,43 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "aura_planner",
+  "main": "../../services/aura-entry.js",
+  "account_id": "b60342e5e52f5646fbd4e913bb409334",
+  "compatibility_date": "2026-10-10",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
+  "keep_vars": true,
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.1
+    }
+  },
+  "vars": {
+    "WORKER_ROLE": "aura_planner"
+  },
+  "ai": {
+    "binding": "AI"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "trinity-v03",
+      "database_id": "ca8ea24e-f7db-431e-b8bf-97f713ae4533"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "IDEMPOTENCY",
+      "id": "0b92ed2717d742daa860f1827797297f"
+    }
+  ]
+}
