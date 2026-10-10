@@ -23,6 +23,7 @@ export const PLUGINS=[
  ,{id:'workspace-files',name:'Súbory a pracovný priestor',icon:'▣',description:'Adminovi umožňuje čítať, vytvárať, dopĺňať a upravovať súbory alebo priečinky v povolenom workspace.',tools:['pc_file_read','pc_file_write','pc_file_append','pc_file_edit','pc_directory_create','pc_download'],dependency:'Trinity PC Bridge 2.0',version:'1.0.0',required:true}
  ,{id:'internet-operator',name:'Internetový operátor',icon:'◌',description:'Bezpečne načítava a spracúva verejné HTTP/HTTPS zdroje; blokuje lokálne siete a obmedzuje veľkosť odpovedí.',tools:['pc_web_fetch','pc_scrape'],dependency:'Trinity PC Bridge 2.0 + voliteľný Firecrawl',version:'1.0.0',required:true}
  ,{id:'developer-operator',name:'Vývoj a Git',icon:'</>',description:'Adminovi umožňuje spúšťať príkazy, testy, Git commit a pull request cez auditovaný lokálny Bridge.',tools:['pc_run','pc_git_commit','pc_git_pr'],dependency:'Trinity PC Bridge 2.0 + Git',version:'1.0.0',required:true}
+ ,{id:'morpheus-core',name:'Trinity Morpheus Core',icon:'✦',description:'Koordinuje existujúcich agentov Trinity, pripravuje plány úloh a zobrazuje bezpečný stav jadra bez vykonania externých akcií.',tools:['morpheus_core_plan','morpheus_core_status'],dependency:'Trinity orchestrator + agent registry + Cloudflare D1',version:'0.1.0'}
 ];
 export async function pluginEnabled(env,id){
  const row=await env.DB.prepare('SELECT installed,enabled FROM ops_plugins WHERE id=?').bind(id).first();return row?.installed===1&&row?.enabled===1;
