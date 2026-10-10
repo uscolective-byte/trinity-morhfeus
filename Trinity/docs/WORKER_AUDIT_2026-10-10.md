@@ -19,9 +19,9 @@ This is an evidence-based inventory of the Cloudflare account and the checked-ou
 | `aura_sentinel` | Aura security analysis | AI, D1, idempotency KV | Added strict action/input controls and observability; deployed. |
 | `aura_tester` | Endpoint/code testing | AI, D1, idempotency KV | Added approval gate and HTTPS Trinity-domain SSRF restriction; deployed. |
 | `trinity-core` | Reasoning, reflection, personality and state | AI, D1; secret name preserved | Source and bindings inspected. Legacy runtime remains; mutation validation/approval still needs a dedicated compatibility pass. |
-| `trinity-builder` | Generate/store/list code artifacts | AI, D1 | Source and bindings inspected. Legacy runtime remains. |
+| `trinity-builder` | Generate/store/list code artifacts | AI, D1, idempotency KV | Reconciled with the live D1 schema, added validation/idempotency/health/safe errors and deployed. |
 | `trinity-dispatcher` | Jobs/tasks and dispatch | D1 | Source inspected. `route_aura` references a missing `TRINITY` binding; not changed because adding a circular service path needs an integration test first. |
-| `trinity-connectors` | Connector registry and tests | D1 | Source and bindings inspected. Legacy runtime remains. |
+| `trinity-connectors` | Connector registry and tests | D1, idempotency KV | Reconciled with the live D1 schema; added approval, idempotency and SSRF controls and deployed. |
 | `trinity-guardian` | Security scans, approvals and audit | D1; secret names preserved | Source and bindings inspected. Main orchestrator now probes its real action contract. |
 | `trinity-memory` | Dedicated memory API | dedicated D1 (`TRINITY_DB`) | Source and binding inspected; already on a current compatibility date. No data migration was applied. |
 | `trinity-sentinel` | Monitoring and token/event views | D1 | Source and binding inspected. Legacy runtime remains. |
@@ -60,7 +60,7 @@ but is not deployed under this account.
   `e0a785c1`, `a1ddeb90`, `5c551ab4`, `674602de`, `b72c92ae`, `bb9d6800`.
 - `https://auru.dev/health` and `https://auru.space/health`: HTTP 200, version 9.0.0.
 - `https://auru.dev/ready` and `https://auru.space/ready`: HTTP 200, bindings/schema/cache ready.
-- Local build and test suite: 97 passed, 0 failed.
+- Local build and test suite: 101 passed, 0 failed.
 - Aura configuration dry runs: 10 passed.
 - `git diff --check`: passed.
 - Dependency audit: 3 high findings in the Agents SDK MCP dependency chain.
@@ -69,7 +69,7 @@ but is not deployed under this account.
 
 ## Follow-up priority
 
-1. Add compatibility tests and role-specific guards to the eight legacy
+1. Add compatibility tests and role-specific guards to the remaining legacy
    `trinity-*` API workers before replacing their live scripts.
 2. Repair `trinity-dispatcher`'s missing `TRINITY` integration without creating
    an unbounded service-binding loop.
