@@ -5,6 +5,8 @@ on:
       - 'Trinity/services/integration*.js'
       - 'Trinity/wrangler.integrations.jsonc'
       - 'Trinity/tests/integration-providers.test.mjs'
+      - 'Trinity/tests/integrations.runtime.mjs'
+      - 'Integrations-Worker/**'
       - '.github/workflows/integrations-check.yml'
   workflow_dispatch:
 permissions:
@@ -25,5 +27,8 @@ jobs:
       - run: npm ci
       - run: node --test tests/integration-providers.test.mjs
       - run: npx wrangler deploy --config wrangler.integrations.jsonc --dry-run --outdir dist-integrations
-      - run: npm install --prefix ../Integrations-Worker
+      - run: npm ci --prefix ../Integrations-Worker
       - run: npm run build --prefix ../Integrations-Worker
+      - run: npm ci --prefix ../Knowledge-Worker
+      - run: npm run build --prefix ../Knowledge-Worker
+      - run: node --test tests/integrations.runtime.mjs

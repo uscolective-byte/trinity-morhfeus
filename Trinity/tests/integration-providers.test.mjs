@@ -24,3 +24,25 @@ test('provider failure and excessive content propagate without truncation',async
  await assert.rejects(scrape(env,input,async()=>new Response('',{status:429})),e=>e.status===429);
  await assert.rejects(scrape(env,input,async()=>Response.json({success:true,data:{markdown:'x'.repeat(100001)}})),e=>e.status===413);
 });
+
+test('Firebase signs a verifiable assertion and publishes only service status',async()=>{
+ const {generateKeyPairSync,verify}=await import('node:crypto');
+ const {privateKey,publicKey}=generateKeyPairSync('rsa',{modulusLength:2048});
+ const env={FIREBASE_PROJECT_ID:'morfeus-ac7ed',FIREBASE_SERVICE_ACCOUNT_JSON:JSON.stringify({project_id:'morfeus-ac7ed',client_email:'test@morfeus-ac7ed.iam.gserviceaccount.com',private_key:privateKey.export({type:'pkcs8',format:'pem'})})};
+ let calls=0;
+ const result=await publishFirebase(env,{version:'8.0.0',status:'serving',private_chat:'must never export'},async(url,options)=>{
+  calls++;
+  if(calls===1){
+   assert.equal(url,'https://oauth2.googleapis.com/token');
+   const jwt=new URLSearchParams(options.body).get('assertion');const [header,payload,signature]=jwt.split('.');
+   assert.ok(verify('RSA-SHA256',Buffer.from(header+'.'+payload),publicKey,Buffer.from(signature,'base64url')));
+   const claims=JSON.parse(Buffer.from(payload,'base64url'));assert.equal(claims.aud,'https://oauth2.googleapis.com/token');assert.equal(claims.scope,'https://www.googleapis.com/auth/datastore');assert.equal(claims.exp-claims.iat,3600);
+   return Response.json({access_token:'test-only-access-token'});
+  }
+  assert.equal(url,'https://firestore.googleapis.com/v1/projects/morfeus-ac7ed/databases/(default)/documents/trinity_status/current');
+  assert.equal(options.method,'PATCH');assert.equal(options.headers.Authorization,'Bearer test-only-access-token');
+  const fields=JSON.parse(options.body).fields;assert.deepEqual(Object.keys(fields).sort(),['service','status','updated_at','version']);
+  return Response.json({name:'test-document'});
+ });
+ assert.equal(calls,2);assert.equal(result.published,true);
+});
