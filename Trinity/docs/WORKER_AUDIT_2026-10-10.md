@@ -58,6 +58,9 @@ but is not deployed under this account.
 - Main deployment: version `2765bcd6-4305-453a-ae36-c86406d006a1`.
 - Aura deployments: versions `0a385f32`, `ced62a1d`, `aedf1fff`, `c2db07a1`,
   `e0a785c1`, `a1ddeb90`, `5c551ab4`, `674602de`, `b72c92ae`, `bb9d6800`.
+- Builder and connectors deployments: versions `c44e2511` and `a209e71d`.
+- A local Wrangler probe using remote production service bindings returned HTTP
+  200 and `ok: true` from both repaired workers.
 - `https://auru.dev/health` and `https://auru.space/health`: HTTP 200, version 9.0.0.
 - `https://auru.dev/ready` and `https://auru.space/ready`: HTTP 200, bindings/schema/cache ready.
 - Local build and test suite: 101 passed, 0 failed.
