@@ -8,6 +8,12 @@ This module is integrated into the existing Trinity Worker and uses its current 
 - `morpheus_core_status`: reports core availability, agent/skill counts, plugin registration, and service-binding status without exposing credentials.
 - The existing orchestrator remains the central coordinator. This module does not claim agents are autonomous services unless their configured bindings and health checks confirm that.
 
+## Private assistant workflow catalog
+
+The existing Worker catalog now references these private ChatGPT workflow plugins: AI Developer, Architecture Orchestrator, Repository Investigator, Build Repair, Security Guardian, Integration Manager, Quality Gate, Agent Coordinator, Observability Incident, Release Manager, and Business Automation. Morpheus Core remains registered separately.
+
+These entries are workflow references and metadata only. They do not import or execute private ChatGPT plugin instructions inside the Worker, and they do not activate third-party connectors. The catalog exposes the plugin links and integration mode so the UI can distinguish a private assistant workflow from a Worker-native tool. Real external operations continue to use Trinity's existing authorization and approval path.
+
 ## Safety
 
 - External changes, deployment, sharing, account changes, and other sensitive operations require the existing approval workflow.
