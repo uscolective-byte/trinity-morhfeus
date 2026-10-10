@@ -133,7 +133,7 @@ export async function runTool(env, agent, name, input, executionContext={}) {
   }
   if(name==='list_capabilities'){
     const query=args.query.toLocaleLowerCase('sk');const plugins=await listPlugins(env);
-    return {identity:'Trinity',plugins:plugins.filter(p=>!query||`${p.name} ${p.description} ${p.tools.join(' ')}`.toLocaleLowerCase('sk').includes(query)).map(({id,name,description,tools,version,installed,enabled})=>({id,name,description,tools,version,installed,enabled}))};
+    return {identity:'Trinity',plugins:plugins.filter(p=>!query||`${p.name} ${p.description} ${p.tools.join(' ')}`.toLocaleLowerCase('sk').includes(query)).map(({id,name,description,tools,version,installed,enabled,assistantPluginId,assistantPluginUrl,integrationMode,dependency})=>({id,name,description,tools,version,installed,enabled,assistantPluginId,assistantPluginUrl,integrationMode,dependency}))};
   }
   if(name==='list_skills'){
     const query=args.query.toLocaleLowerCase('sk');
