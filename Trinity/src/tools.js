@@ -1,7 +1,8 @@
 import {z} from 'zod';
 import {boundedText,getOllamaKey,serviceStatus,SERVICES} from './services.js';
 import {ensureToolEnabled,pluginEnabled,listPlugins,installPlugin} from './plugins.js';
-import {SKILLS} from './registry.js';
+import {AGENTS,SKILLS,selectTeam} from './registry.js';
+import {planTask} from './planner.js';
 import {createSystemAction,getSystemAction,actionEvidence} from './system-actions.js';
 import {getPortfolio} from './trading.js';
 export const INTERNAL_TOOLS=new Set(['request_system_action','system_action_status']);
@@ -9,6 +10,8 @@ export const PC_TOOLS=new Set(['pc_screenshot','pc_run','pc_file_read','pc_file_
 export const TOOL_SCHEMAS={
   search_memory:z.object({query:z.string().max(200).default('')}).strict(),
   project_snapshot:z.object({}).strict(),
+  morpheus_core_plan:z.object({task:z.string().trim().min(1).max(12000),mode:z.enum(['single','team']).default('team')}).strict(),
+  morpheus_core_status:z.object({}).strict(),
   service_status:z.object({binding:z.enum(Object.keys(SERVICES)).optional()}).strict(),
   web_search:z.object({query:z.string().min(3).max(500)}).strict()
   ,generate_image:z.object({prompt:z.string().min(3).max(2048),seed:z.number().int().min(1).max(9999999999).optional()}).strict()
@@ -119,9 +122,18 @@ export async function runTool(env, agent, name, input, executionContext={}) {
     let localized;try{localized=new Intl.DateTimeFormat('sk-SK',{dateStyle:'full',timeStyle:'long',timeZone:args.timezone}).format(new Date());}catch{throw new Error('Neplatné časové pásmo. Použi názov napríklad Europe/Bratislava.');}
     return {timezone:args.timezone,localized,utc:new Date().toISOString()};
   }
+  if(name==='morpheus_core_plan'){
+    const plan=planTask(args.task);
+    const team=selectTeam(args.task,args.mode,'auto');
+    return {core:'Trinity Morpheus Core',mode:args.mode,team,plan,external_actions_executed:false,approval_policy:'Citlivé externé operácie a nasadenie vyžadujú samostatné schválenie; tento plán sám nič nevykonáva.'};
+  }
+  if(name==='morpheus_core_status'){
+    const [plugins,services]=await Promise.all([listPlugins(env),serviceStatus(env)]);
+    return {core:'Trinity Morpheus Core',status:'available',orchestrator:'orchestrator',agent_count:AGENTS.length,skill_count:SKILLS.length,plugin:plugins.find(p=>p.id==='morpheus-core')||null,services,external_actions_executed:false};
+  }
   if(name==='list_capabilities'){
     const query=args.query.toLocaleLowerCase('sk');const plugins=await listPlugins(env);
-    return {identity:'Trinity',plugins:plugins.filter(p=>!query||`${p.name} ${p.description} ${p.tools.join(' ')}`.toLocaleLowerCase('sk').includes(query)).map(({id,name,description,tools,version,installed,enabled})=>({id,name,description,tools,version,installed,enabled}))};
+    return {identity:'Trinity',plugins:plugins.filter(p=>!query||`${p.name} ${p.description} ${p.tools.join(' ')}`.toLocaleLowerCase('sk').includes(query)).map(({id,name,description,tools,version,installed,enabled,assistantPluginId,assistantPluginUrl,integrationMode,dependency})=>({id,name,description,tools,version,installed,enabled,assistantPluginId,assistantPluginUrl,integrationMode,dependency}))};
   }
   if(name==='list_skills'){
     const query=args.query.toLocaleLowerCase('sk');

@@ -1,6 +1,10 @@
 name: Trinity CI
 
 on:
+  push:
+    branches: [main, 'fix/**', 'feature/**', 'codex/**']
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
