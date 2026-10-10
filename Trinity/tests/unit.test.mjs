@@ -5,7 +5,7 @@ import {validKey,checkOrigin,readJSON} from '../src/security.js';
 import {jobSchema} from '../src/jobs.js';
 import {parseAction,runAgent,executionPolicyForProvider} from '../src/engine.js';
 import {runTool} from '../src/tools.js';
-import {extractModelText,extractGeminiInteractionText,getOllamaKey,serviceStatus,runScheduledHealth} from '../src/services.js';
+import {extractModelText,extractGeminiInteractionText,getOllamaKey,serviceStatus,runScheduledHealth,readiness} from '../src/services.js';
 import {TRUTH_POLICY,findUnsupportedActionClaims,truthStatus} from '../src/truth.js';
 import {normalizeLanguage,languageDirective,tokenBudget} from '../src/cognition.js';
 import {planTask} from '../src/planner.js';
@@ -42,6 +42,8 @@ test('Gemini Interactions API output is normalized',()=>assert.equal(extractGemi
 test('model failure propagates',async()=>assert.rejects(runAgent({AI:{run:async()=>{throw new Error('model unavailable')}}},'writer','hello'),/model unavailable/));
 test('tool requests parse safely',()=>{assert.equal(parseAction('plain text').answer,'plain text');assert.equal(parseAction('```json\n{"tool":"search_memory","arguments":{}}\n```').tool,'search_memory');});
 test('health check does not claim inference success',async()=>{const rows=await serviceStatus({CORE:{fetch:async()=>Response.json({ok:true})}},'CORE');assert.equal(rows[0].status,'reachable');assert.match(rows[0].note,/nepotvrdzuje/);});
+test('service health uses each worker role contract',async()=>{let method,body;const rows=await serviceStatus({AURA_ANALYZER:{fetch:async(_url,init)=>{method=init.method;body=JSON.parse(init.body);return Response.json({ok:true,result:{status:'active'}});}}},'AURA_ANALYZER');assert.equal(method,'POST');assert.equal(body.action,'aura.status');assert.equal(rows[0].probe,'aura.status');assert.equal(rows[0].status,'reachable');});
+test('readiness verifies the historical message_count schema',async()=>{const database=columns=>({prepare:sql=>({all:async()=>sql.startsWith('SELECT name')?{results:[{name:'conversations'}]}:{results:columns.map(name=>({name}))}})});const env={DB:database(['id','message_count']),Mastermind:{},ARTIFACTS:{},OPS_WORKFLOW:{}};assert.equal((await readiness(env)).ready,true);const broken={...env,DB:database(['id'])};assert.deepEqual((await readiness(broken)).missing,['DB.schema']);});
 test('scheduled health stores a structured receipt',async()=>{let stored='';const env={CORE:{fetch:async()=>Response.json({ok:true})},DB:{prepare:()=>({bind(value){stored=value;return this;},run:async()=>({success:true})})}};const summary=await runScheduledHealth(env,'*/30 * * * *');assert.equal(summary.reachable,1);assert.match(stored,/scheduled|reachable|checked_at/);});
 test('truth policy rejects consciousness claims and requires evidence',()=>{assert.match(TRUTH_POLICY,/Nemáš preukázané vedomie/);assert.match(TRUTH_POLICY,/potvrdená dôveryhodným systémovým záznamom/);});
 test('unsupported external action claims are detected',()=>{assert.deepEqual(findUnsupportedActionClaims('Nasadila som nový Worker.',[]),['deploy']);assert.deepEqual(findUnsupportedActionClaims('I uploaded the file.',[]),['publish']);assert.equal(truthStatus('Pripravila som návrh.',[]).status,'passed');});

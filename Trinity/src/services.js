@@ -2,15 +2,16 @@ import {createSystemAction,getSystemAction} from './system-actions.js';
 import {getConfiguredAIProvider} from './ai-providers.js';
 
 export const SERVICES = {
-  CORE: { name:'Jadro', path:'/health' }, BUILDER:{name:'Vývoj',path:'/health'},
-  DISPATCHER:{name:'Dispatcher',path:'/health'}, MEMORY:{name:'Pamäť',path:'/api/stats'},
-  CONNECTORS:{name:'Konektory',path:'/health'}, GUARDIAN:{name:'Guardian',path:'/health'},
-  SENTINEL:{name:'Monitoring',path:'/api/health'}, SKILLS:{name:'Zručnosti',path:'/health'},
-  AURA_ANALYZER:{name:'Analýza',path:'/health'}, AURA_ARCHITECT:{name:'Architektúra',path:'/health'},
-  AURA_CODEGEN:{name:'Generovanie kódu',path:'/health'}, AURA_DEPLOYER:{name:'Návrh nasadenia',path:'/health'},
-  AURA_EVOLVER:{name:'Zlepšovanie',path:'/health'}, AURA_MEMORY:{name:'Pamäťový špecialista',path:'/health'},
-  AURA_OPTIMIZER:{name:'Optimalizácia',path:'/health'}, AURA_PLANNER:{name:'Plánovanie',path:'/health'},
-  AURA_SENTINEL:{name:'Bezpečnostný špecialista',path:'/health'}, AURA_TESTER:{name:'Testovanie',path:'/health'}
+  CORE: {name:'Jadro',action:'core.state.get'}, BUILDER:{name:'Vývoj',action:'build.list'},
+  DISPATCHER:{name:'Dispatcher',action:'job.list'},
+  MEMORY:{name:'Pamäť',path:'/memory?key=__trinity_health__',expected:[404]},
+  CONNECTORS:{name:'Konektory',action:'connect.list'}, GUARDIAN:{name:'Guardian',action:'audit.list'},
+  SENTINEL:{name:'Monitoring',action:'monitor.health'}, SKILLS:{name:'Zručnosti',action:'skill.list'},
+  AURA_ANALYZER:{name:'Analýza',action:'aura.status'}, AURA_ARCHITECT:{name:'Architektúra',action:'aura.status'},
+  AURA_CODEGEN:{name:'Generovanie kódu',action:'aura.status'}, AURA_DEPLOYER:{name:'Návrh nasadenia',action:'aura.status'},
+  AURA_EVOLVER:{name:'Zlepšovanie',action:'aura.status'}, AURA_MEMORY:{name:'Pamäťový špecialista',action:'aura.status'},
+  AURA_OPTIMIZER:{name:'Optimalizácia',action:'aura.status'}, AURA_PLANNER:{name:'Plánovanie',action:'aura.status'},
+  AURA_SENTINEL:{name:'Bezpečnostný špecialista',action:'aura.status'}, AURA_TESTER:{name:'Testovanie',action:'aura.status'}
 };
 export async function boundedText(response, limit = 40000) {
   if (!response.body) return '';
@@ -26,13 +27,33 @@ export async function serviceStatus(env, requested) {
     if(!env[binding]) return {binding,name:spec.name,status:'not_configured'};
     const start=Date.now();
     try {
-      const response=await env[binding].fetch(`https://trinity.internal${spec.path}`,{signal:AbortSignal.timeout(12000)});
+      const path=spec.path||'/';
+      const init={method:spec.action?'POST':'GET',signal:AbortSignal.timeout(12000)};
+      if(spec.action){init.headers={'Content-Type':'application/json'};init.body=JSON.stringify({action:spec.action,data:{limit:1},traceId:crypto.randomUUID()});}
+      const response=await env[binding].fetch(`https://trinity.internal${path}`,init);
       const text=await boundedText(response); let data;
       try{data=JSON.parse(text);}catch{throw new Error('Invalid JSON response');}
-      return {binding,name:spec.name,status:response.ok&&!data.error?'reachable':'error',http:response.status,duration_ms:Date.now()-start,
-        note:'Dostupnosť endpointu; nepotvrdzuje vykonanie AI úlohy.'};
+      const accepted=spec.expected?.includes(response.status)||(response.ok&&data.ok!==false&&!data.error);
+      return {binding,name:spec.name,status:accepted?'reachable':'error',http:response.status,duration_ms:Date.now()-start,
+        probe:spec.action||path,note:'Dostupnosť role a jej úložiska; nepotvrdzuje vykonanie AI úlohy.'};
     } catch { return {binding,name:spec.name,status:'error',duration_ms:Date.now()-start}; }
   }));
+}
+export async function readiness(env) {
+  const missing=[];
+  const criticalBindings=['DB','ARTIFACTS','OPS_WORKFLOW'];
+  for(const binding of criticalBindings)if(!env[binding])missing.push(binding);
+  let schema=false;
+  try {
+    const tables=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('conversations','ops_jobs')").all();
+    const names=new Set((tables.results||[]).map(row=>row.name));
+    if(names.has('conversations')){
+      const result=await env.DB.prepare("PRAGMA table_info('conversations')").all();
+      schema=Array.isArray(result.results)&&result.results.some(column=>column.name==='message_count');
+    } else schema=names.has('ops_jobs');
+  } catch {}
+  if(!schema)missing.push('DB.schema');
+  return {ready:missing.length===0,status:missing.length===0?'ready':'degraded',checks:{bindings:criticalBindings.every(binding=>!!env[binding]),schema,cache:!!env.Mastermind},missing};
 }
 export async function runScheduledHealth(env,cron){
   const checks=await serviceStatus(env),reachable=checks.filter(item=>item.status==='reachable').length,

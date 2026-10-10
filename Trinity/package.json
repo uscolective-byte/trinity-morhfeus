@@ -1,6 +1,6 @@
 {
   "name": "trinity-operational-center",
-  "version": "8.9.0",
+  "version": "9.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,10 +14,6 @@
   "dependencies": {
     "@modelcontextprotocol/server": "2.0.0",
     "agents": "0.24.0",
-    "chatgpt": "^5.2.5",
-    "codex": "^0.2.3",
-    "gemini": "^7.5.2",
-    "ollama": "^0.6.4",
     "zod": "4.6.5"
   },
   "devDependencies": {
