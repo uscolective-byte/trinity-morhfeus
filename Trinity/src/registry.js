@@ -58,6 +58,7 @@ const groups = [
 ];
 export const SKILLS=[
   {id:'planning',name:'Plánovanie úloh',description:'Rozdeľ požiadavku na kroky, závislosti a overiteľné výsledky.',clusters:['Riadenie','Podpora a automatizácia']},
+  {id:'morpheus-core',name:'Trinity Morpheus Core',description:'Koordinuj existujúcich agentov, rozdeľ úlohy, skontroluj riziká a vyžaduj samostatné schválenie citlivých externých akcií.',clusters:['Riadenie','Cloud a prevádzka','Kvalita a bezpečnosť']},
   {id:'secure-development',name:'Bezpečný vývoj',description:'Validuj vstupy, minimalizuj oprávnenia a pokrývaj hraničné prípady testami.',clusters:['Vývoj','Kvalita a bezpečnosť']},
   {id:'cloud-operations',name:'Cloud prevádzka',description:'Over bindingy, build a health endpointy; nasadenie vyžaduje samostatné schválenie.',clusters:['Cloud a prevádzka']},
   {id:'evidence-research',name:'Výskum s dôkazmi',description:'Oddeľ zdroje, fakty, odhady a neoverené predpoklady.',clusters:['Výskum','Dáta a pamäť']},
@@ -71,7 +72,7 @@ export const AGENTS = groups.flatMap(([cluster, roles]) => roles.map(([id, name,
     ...(['ui','writer','orchestrator'].includes(id)?['generate_image']:[]),
     ...(['market-research','orchestrator'].includes(id)?['portfolio_summary']:[]),
     ...(['Riadenie','Cloud a prevádzka','Dáta a pamäť','Kvalita a bezpečnosť','Podpora a automatizácia'].includes(cluster) ? ['service_status'] : []),
-    ...(id==='orchestrator'?['request_system_action','system_action_status','pc_screenshot','pc_run','pc_file_read','pc_file_write','pc_file_append','pc_file_edit','pc_directory_create','pc_open_app','pc_app_control','pc_notify','pc_system_info','pc_scrape','pc_web_fetch','pc_download','pc_git_commit','pc_git_pr']:[]),
+    ...(id==='orchestrator'?['request_system_action','system_action_status','pc_screenshot','pc_run','pc_file_read','pc_file_write','pc_file_append','pc_file_edit','pc_directory_create','pc_open_app','pc_app_control','pc_notify','pc_system_info','pc_scrape','pc_web_fetch','pc_download','pc_git_commit','pc_git_pr','morpheus_core_plan','morpheus_core_status']:[]),
     ...(['backend','release','cloudflare'].includes(id)?['pc_git_commit','pc_git_pr','pc_run']:[])]
 })));
 export function agentById(id) { return AGENTS.find(a => a.id === id); }
