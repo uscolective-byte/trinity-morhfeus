@@ -5,7 +5,7 @@
     "version": "8.0.0",
     "cloudflare_version_id": "33df385a-5ae4-4fc0-b71d-58140de7e14a",
     "worker_url": "https://trinity.saboivan2008.workers.dev/",
-    "primary_url": "https://auru.dev/",
+    "primary_url": "https://auru.space/",
     "live_studio_check": "passed",
     "automated_tests": "52/52 Trinity, 8/8 Gateway, 2/2 PC Bridge"
   },

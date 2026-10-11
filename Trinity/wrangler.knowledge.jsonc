@@ -10,19 +10,19 @@
   "workers_dev": true,
   "keep_vars": true,
   "routes": [
-    {
-      "pattern": "auru.dev",
-      "custom_domain": true
-    },
-    {
-      "pattern": "auru.space",
-      "custom_domain": true
-    },
-    {
-      "pattern": "*.auru.dev/*",
-      "zone_name": "auru.dev"
-    }
-  ],
+  {
+    "pattern": "auru.dev",
+    "custom_domain": true
+  },
+  {
+    "pattern": "auru.space",
+    "custom_domain": true
+  },
+  {
+    "pattern": "*.auru.dev/*",
+    "zone_name": "auru.dev"
+  }
+],
   "observability": {
     "enabled": true,
     "logs": {
@@ -54,7 +54,7 @@
     "OLLAMA_MODEL": "gemma4:31b",
     "TRINITY_ADMIN_EMAILS": "saboivan2008@gmail.com,usc31@auru.space,uscolective@gmail.com,delirium.trade12@gmail.com",
     "TRINITY_OWNER_EMAIL": "saboivan2008@gmail.com",
-    "GOOGLE_REDIRECT_URI": "https://auru.dev/api/auth/google/callback"
+    "GOOGLE_REDIRECT_URI": "https://auru.space/api/auth/google/callback"
   },
   "ai": {
     "binding": "AI"

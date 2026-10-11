@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - 'Trinity/**'
+      - 'Local-Gateway/**'
       - '.github/workflows/webpack.yml'
   pull_request:
     branches: [main]
     paths:
       - 'Trinity/**'
+      - 'Local-Gateway/**'
       - '.github/workflows/webpack.yml'
   workflow_dispatch:
 
@@ -42,6 +44,10 @@ jobs:
     - name: Audit production and development dependencies
       working-directory: Trinity
       run: npm audit --audit-level=high
+
+    - name: Test local gateway and canonical domain
+      working-directory: Local-Gateway
+      run: npm test
 
     - name: Build and test Trinity
       working-directory: Trinity

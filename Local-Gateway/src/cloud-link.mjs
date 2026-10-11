@@ -1,9 +1,9 @@
 import {executeProposal} from './executor.mjs';
+import {readCloudJSON} from './cloud-response.mjs';
 
 async function request(url,key,options={}){
   const response=await fetch(url,{...options,headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json',...(options.headers||{})},signal:AbortSignal.timeout(25_000)});
-  const text=await response.text();let data={};try{data=text?JSON.parse(text):{};}catch{}
-  if(!response.ok)throw new Error(data.error||`Cloud HTTP ${response.status}`);return data;
+  return readCloudJSON(response,'Cloud');
 }
 
 export function startCloudLink({baseUrl,key,store,workspaceRoot,dataDir,intervalMs=5000,maxBackoffMs=60_000,onState=()=>{}}){
@@ -16,7 +16,9 @@ export function startCloudLink({baseUrl,key,store,workspaceRoot,dataDir,interval
   async function poll(){
     if(stopped||busy)return;busy=true;
     try{
-      const {action}=await request(`${baseUrl}/api/system/actions/claim`,key,{method:'POST',body:'{}'});failures=0;if(!action){report({status:'connected',last_success_at:new Date().toISOString()});return;}
+      const data=await request(`${baseUrl}/api/system/actions/claim`,key,{method:'POST',body:'{}'});
+      if(!Object.hasOwn(data,'action')||(data.action!==null&&(typeof data.action!=='object'||Array.isArray(data.action))))throw new Error('Cloud: odpoveď neobsahuje platný výsledok action.');
+      const {action}=data;failures=0;if(action===null){report({status:'connected',last_success_at:new Date().toISOString()});return;}
       let local=await store.importApproved(action);
       if(['completed','failed'].includes(local.status)){await sendReceipt(action.id,local.status,local.receipt,local.error);report({status:'receipt-replayed',id:action.id,last_success_at:new Date().toISOString()});return;}
       local=await store.transition(action.id,['approved'],'executing',{executionStartedAt:new Date().toISOString()});

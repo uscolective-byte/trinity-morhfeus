@@ -10,9 +10,9 @@ Po nakonfigurovaní Google OAuth sa ostatné overené Google účty môžu zareg
 
 Pred prepnutím produkcie na Google-only režim:
 
-1. V Google Cloud vytvor OAuth Client typu Web application a pridaj autorizovaný redirect URI `https://auru.dev/api/auth/google/callback`.
+1. V Google Cloud vytvor OAuth Client typu Web application a pridaj autorizovaný redirect URI `https://auru.space/api/auth/google/callback`.
 2. Nastav `GOOGLE_CLIENT_ID` ako Worker variable a ulož iba `GOOGLE_CLIENT_SECRET` cez `npx wrangler secret put GOOGLE_CLIENT_SECRET` v priečinku `Trinity`; secret nevkladaj do repozitára.
-3. Skontroluj `GOOGLE_REDIRECT_URI=https://auru.dev/api/auth/google/callback` a až po otestovaní nastav `TRINITY_AUTH_MODE=google` ako Worker variable.
+3. Skontroluj `GOOGLE_REDIRECT_URI=https://auru.space/api/auth/google/callback` a až po otestovaní nastav `TRINITY_AUTH_MODE=google` ako Worker variable.
 4. Najprv otestuj Google login a admin účet na stagingu. V Google-only režime sa prístupový kľúč a jednorazové legacy linky odmietnu.
 
 Bez týchto credentials zostáva Google tlačidlo skryté a doterajší prihlasovací režim sa nemení.
@@ -45,7 +45,7 @@ Token je lokálne uložený iba zašifrovaný Windows DPAPI v ignorovanom prieč
 5. Stav a konverzácia sa ukladajú do D1; úplný výstup pracovnej úlohy sa archivuje v R2.
 
 ```text
-auru.dev chat
+auru.space chat
     -> Worker trinity
         -> autentifikácia + limity
         -> D1 pamäť a história

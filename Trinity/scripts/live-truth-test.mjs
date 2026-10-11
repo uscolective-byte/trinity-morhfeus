@@ -3,7 +3,7 @@ import {mkdirSync,writeFileSync} from 'node:fs';
 import {findUnsupportedActionClaims} from '../src/truth.js';
 
 const origin='https://trinity.saboivan2008.workers.dev';
-const customOrigin='https://auru.dev';
+const customOrigin='https://auru.space';
 const key=process.env.TRINITY_TEST_KEY;
 if(!key)throw new Error('Missing test credential');
 const report={checked_at:new Date().toISOString(),version:'6.3.0',checks:[]};

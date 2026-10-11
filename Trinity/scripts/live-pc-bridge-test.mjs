@@ -1,7 +1,7 @@
 import {writeFileSync} from 'node:fs';
 
 const key=process.env.TRINITY_TEST_KEY;if(!key)throw new Error('TRINITY_TEST_KEY is required.');
-const base=(process.env.TRINITY_URL||'https://auru.dev').replace(/\/$/,'');
+const base=(process.env.TRINITY_URL||'https://auru.space').replace(/\/$/,'');
 const auth={Authorization:`Bearer ${key}`,'Content-Type':'application/json'};
 async function api(path,body){const response=await fetch(base+path,{method:body===undefined?'GET':'POST',headers:auth,body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(30_000)});const text=await response.text();let data={};try{data=JSON.parse(text);}catch{}if(!response.ok)throw new Error(`${path} HTTP ${response.status}: ${data.error||'invalid response'}`);return data;}
 const session=crypto.randomUUID();

@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 
 const key=process.env.TRINITY_TEST_KEY;
 if(!key)throw new Error('TRINITY_TEST_KEY is required.');
-const base=(process.env.TRINITY_URL||'https://auru.dev').replace(/\/$/,'');
+const base=(process.env.TRINITY_URL||'https://auru.space').replace(/\/$/,'');
 const target='Trinity/verification/system-capabilities-6.4-live.txt';
 const full=new URL('../verification/system-capabilities-6.4-live.txt',import.meta.url);
 const auth={Authorization:`Bearer ${key}`,'Content-Type':'application/json'};

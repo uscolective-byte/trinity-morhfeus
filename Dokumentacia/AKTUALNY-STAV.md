@@ -4,7 +4,7 @@ Aktualizované: 1. októbra 2026
 
 ## Produkcia
 
-- Hlavná adresa: <https://auru.dev/>
+- Hlavná adresa: <https://auru.space/>
 - Worker: <https://trinity.saboivan2008.workers.dev/>
 - Produkčná verzia: `6.7.0`
 - Cloudflare Version ID: `1b3f0e9a-5034-4246-b501-dd35cb0f861e`

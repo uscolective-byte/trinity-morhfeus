@@ -1,6 +1,10 @@
+param([string]$CloudUrl = 'https://auru.space')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $env:MORHFEUS_ROOT = (Resolve-Path (Join-Path $root '..')).Path
+$allowedCloudUrls = @('https://auru.space', 'https://auru.dev', 'https://trinity.saboivan2008.workers.dev')
+$CloudUrl = $CloudUrl.TrimEnd('/')
+if ($CloudUrl -notin $allowedCloudUrls) { throw 'Nepovolená cloudová adresa. Použi overenú HTTPS adresu Trinity.' }
 function Read-ProtectedToken([string]$path) {
   if (-not (Test-Path -LiteralPath $path)) { return $null }
   $secure = ConvertTo-SecureString ((Get-Content -LiteralPath $path -Raw).Trim())
@@ -14,11 +18,11 @@ if (-not $env:TRINITY_LOCAL_TOKEN) { throw 'Chýba chránený lokálny token. Sp
 $cloudKeyPath = Join-Path $root '.credentials\gateway-key.dpapi'
 if (Test-Path -LiteralPath $cloudKeyPath) {
   $env:TRINITY_GATEWAY_KEY = Read-ProtectedToken $cloudKeyPath
-  $env:TRINITY_CLOUD_URL = 'https://auru.dev'
+  $env:TRINITY_CLOUD_URL = $CloudUrl
 }
 if ($env:TRINITY_GATEWAY_KEY) {
   $env:TRINITY_PC_BRIDGE_KEY = $env:TRINITY_GATEWAY_KEY
-  $env:TRINITY_PC_BRIDGE_URL = 'https://auru.dev/api/system/pc-bridge'
+  $env:TRINITY_PC_BRIDGE_URL = "$CloudUrl/api/system/pc-bridge"
 }
 Set-Location $root
 try {

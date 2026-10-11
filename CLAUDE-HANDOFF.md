@@ -10,7 +10,7 @@ Trinity is one Slovak/English AI assistant running as a Cloudflare Worker, backe
 
 - GitHub repository: `uscolective-byte/trinity-morhfeus` (Private).
 - Git default branch: `master`.
-- Main Worker: `trinity`, normally reached through `https://auru.dev` and `https://trinity.saboivan2008.workers.dev`.
+- Main Worker: `trinity`, normally reached through `https://auru.space` and `https://trinity.saboivan2008.workers.dev`.
 - Local Gateway: `127.0.0.1:8791`; it has previously verified `cloud: connected` and `pc_bridge: connected` using a DPAPI-protected local credential.
 - PC Bridge Worker: `trinity-pc-bridge`.
 - Firebase status bridge: `https://trinity-morhfeus-20261001.web.app`.
@@ -40,7 +40,7 @@ Those addresses receive `admin` only after logging in through Google with the ma
 
 D1 migration `0013_google_auth.sql` adds session email, user roles/status, and short-lived OAuth state storage. It still needs to be applied to production before deployment.
 
-Google OAuth is intentionally dormant until configured. Cloudflare currently has no `GOOGLE_CLIENT_ID` or `GOOGLE_CLIENT_SECRET`; do **not** set `TRINITY_AUTH_MODE=google` until the OAuth client is tested, otherwise existing login methods will be rejected. The redirect URI is `https://auru.dev/api/auth/google/callback`.
+Google OAuth is intentionally dormant until configured. Cloudflare currently has no `GOOGLE_CLIENT_ID` or `GOOGLE_CLIENT_SECRET`; do **not** set `TRINITY_AUTH_MODE=google` until the OAuth client is tested, otherwise existing login methods will be rejected. The redirect URI is `https://auru.space/api/auth/google/callback`.
 
 Required activation sequence:
 1. Create a Google OAuth Web application and register the redirect URI above.

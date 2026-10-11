@@ -3,7 +3,7 @@ ZDROJ PRAVDY ARCHITEKTÚRY TRINITY — používaj iba tieto údaje:
 
 OVERENÉ V ZDROJI A TESTOCH:
 - Hlavný verejný backend je Cloudflare Worker „trinity“, verzia aplikácie 8.0.0.
-- Verejné domény sú auru.dev a auru.space; Worker má aj adresu trinity.saboivan2008.workers.dev.
+- Predvolená verejná doména je auru.space, alternatívna adresa je auru.dev; Worker má aj adresu trinity.saboivan2008.workers.dev.
 - Primárny AI provider je Cloudflare Workers AI s modelom @cf/openai/gpt-oss-120b.
 - Stavové a aplikačné dáta používa Cloudflare D1 databáza trinity-v03.
 - Výstupné objekty a médiá používa Cloudflare R2 bucket trinity-artifacts.

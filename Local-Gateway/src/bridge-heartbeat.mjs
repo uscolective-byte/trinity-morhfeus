@@ -1,11 +1,11 @@
+import {readCloudJSON} from './cloud-response.mjs';
+
 async function postHeartbeat(baseUrl,key,body){
   const response=await fetch(`${baseUrl.replace(/\/$/,'')}/v1/heartbeat`,{
     method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},
     body:JSON.stringify(body),signal:AbortSignal.timeout(15_000)
   });
-  const text=await response.text();let data={};try{data=text?JSON.parse(text):{};}catch{}
-  if(!response.ok)throw new Error(data.error||`PC Bridge HTTP ${response.status}`);
-  return data;
+  return readCloudJSON(response,'PC Bridge');
 }
 
 export function startBridgeHeartbeat({baseUrl,key,gatewayId='gateway:morhfeus-windows',version='1.3.0',capabilities=[],intervalMs=15_000,maxBackoffMs=120_000,onState=()=>{}}){
