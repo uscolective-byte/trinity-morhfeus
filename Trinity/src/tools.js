@@ -24,7 +24,7 @@ export const TOOL_SCHEMAS={
   ,list_capabilities:z.object({query:z.string().max(80).default('')}).strict()
   ,list_skills:z.object({query:z.string().max(80).default('')}).strict()
   ,list_connectors:z.object({}).strict()
-  ,install_plugin:z.object({id:z.string().regex(/^[a-z-]{1,40}$/),reason:z.string().min(3).max(300)}).strict()
+  ,install_plugin:z.object({id:z.string().regex(/^[a-z0-9-]{1,40}$/),reason:z.string().min(3).max(300)}).strict()
   ,request_system_action:z.object({action:z.enum(['read','write','edit','selfwrite','run','deploy','share','upload','upgrade','screenshot','open_app','notify','system_info','scrape','web_fetch','download','git_commit','git_pr']),payload:z.record(z.string(),z.unknown()).default({}),rationale:z.string().min(3).max(1000)}).strict()
   ,system_action_status:z.object({id:z.string().uuid()}).strict()
   ,portfolio_summary:z.object({portfolio_id:z.string().uuid().optional()}).strict()
