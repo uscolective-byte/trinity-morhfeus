@@ -80,3 +80,19 @@ but is not deployed under this account.
    API surface and rerunning all 97+ tests.
 4. Reconcile the two local-only Worker projects with an explicit product owner
    decision before creating any new production Worker.
+
+## 2026-10-11 branch consolidation and redeploy
+
+- Verified that the former remote `master` commit was already an ancestor of
+  `main`; no source commit was omitted.
+- Renamed the local branch to `main`, configured it to track `origin/main`, and
+  deleted the obsolete remote `master` branch after `main` was confirmed as the
+  default branch.
+- Rebuilt the production package and reran 101 tests: 101 passed, 0 failed.
+- Redeployed the `trinity` control centre as Cloudflare version
+  `a36ea233-99b6-44c1-8a34-5cd5e8f55e6c`.
+- `trinity.saboivan2008.workers.dev` and `auru.space` returned HTTP 200 for both
+  `/health` and `/ready`, with Trinity 9.0.0 ready.
+- `auru.dev` resolved to Cloudflare Registrar's suspended-domain page rather
+  than the Worker response. This is a domain/registrar state and was not hidden
+  as a successful Worker health check.
