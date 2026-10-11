@@ -18,6 +18,7 @@ import {getPCBridgeStatus} from '../src/system-actions.js';
 import {handleInboundEmail} from '../src/email.js';
 import {PLUGINS} from '../src/plugins.js';
 import {PRACTICAL_TOOL_NAMES,PRACTICAL_TOOL_SCHEMAS,runPracticalTool} from '../src/practical-skills.js';
+import {studioGenerationPlan} from '../src/studio.js';
 test('40 unique agents in eight departments',()=>{assert.equal(AGENTS.length,40);assert.equal(new Set(AGENTS.map(a=>a.id)).size,40);assert.equal(new Set(AGENTS.map(a=>a.cluster)).size,8);});
 test('20 practical skills are installed as real tools for every Trinity role',()=>{assert.equal(PRACTICAL_TOOL_NAMES.length,20);assert.equal(new Set(PRACTICAL_TOOL_NAMES).size,20);assert.ok(PRACTICAL_TOOL_NAMES.every(name=>PLUGINS.some(plugin=>plugin.tools.includes(name))));assert.ok(AGENTS.every(agent=>PRACTICAL_TOOL_NAMES.every(name=>agent.tools.includes(name))));});
 test('all 20 practical skill implementations execute real bounded work',()=>{
@@ -46,6 +47,7 @@ test('all 20 practical skill implementations execute real bounded work',()=>{
   assert.equal(cases.length,20);
   for(const [name,input,verify] of cases)verify(runPracticalTool(name,PRACTICAL_TOOL_SCHEMAS[name].parse(input)));
 });
+test('AI Studio settings create real provider fallback and quality plans',()=>{assert.deepEqual(studioGenerationPlan('gemini','fast',{}),{maxTokens:3600,directive:'Uprednostni čistú menšiu stránku a rýchle vytvorenie.',providers:['gemini','workers-ai']});const high=studioGenerationPlan('auto','high',{OLLAMA_SECRET:{}});assert.equal(high.maxTokens,8000);assert.deepEqual(high.providers,['ollama','workers-ai']);});
 test('routing and team deduplication',()=>{assert.deepEqual(selectTeam('Cloudflare binding','team'),['planner','cloudflare','qa','orchestrator']);assert.equal(selectTeam('test','team','orchestrator').length,3);});
 test('work requests delegate while ordinary conversation stays direct',()=>{assert.equal(shouldDelegate('Ahoj Trinity'),false);assert.equal(shouldDelegate('Oprav a otestuj Cloudflare Worker'),true);assert.ok(AGENTS.find(a=>a.id==='orchestrator').tools.includes('web_search'));});
 test('fail closed and exact secret comparison',async()=>{assert.equal(await validKey('x',{}),false);assert.equal(await validKey('a'.repeat(32),{TRINITY_OPS_KEY:'b'.repeat(32)}),false);assert.equal(await validKey('a'.repeat(32),{TRINITY_OPS_KEY:'a'.repeat(32)}),true);});
