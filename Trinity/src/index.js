@@ -32,6 +32,9 @@ import assistantHTML from '../public/assistant/chat.html';
 import assistantCSS from '../public/assistant/chat.css';
 import builderCSS from '../public/assistant/builder.css';
 import assistantJS from '../public/assistant/chat.js.txt';
+import workspaceJS from '../public/assistant/workspace.js.txt';
+import workspaceCSS from '../public/assistant/workspace.css';
+import {developerStatus} from './developer-status.js';
 export {TrinityAgent,ChatAgent,GuardianAgent,TrinityOperations};
 const TRINITY_VERSION='9.4.0';
 const json=(data,status=200)=>Response.json(data,{status});
@@ -57,8 +60,9 @@ async function route(request,env,ctx){
     'Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"}});
   if(request.method==='GET'&&path==='/app.js')return new Response(appJS,{headers:{'Content-Type':'application/javascript; charset=utf-8'}});
   if(request.method==='GET'&&path==='/style.css')return new Response(css+'\n'+refreshCSS,{headers:{'Content-Type':'text/css; charset=utf-8'}});
-  if(request.method==='GET'&&path==='/chat.js')return new Response(assistantJS,{headers:{'Content-Type':'application/javascript; charset=utf-8'}});
+  if(request.method==='GET'&&path==='/chat.js')return new Response(assistantJS+'\n'+workspaceJS,{headers:{'Content-Type':'application/javascript; charset=utf-8'}});
   if(request.method==='GET'&&path==='/chat.css')return new Response(assistantCSS,{headers:{'Content-Type':'text/css; charset=utf-8'}});
+  if(request.method==='GET'&&path==='/workspace.css')return new Response(workspaceCSS,{headers:{'Content-Type':'text/css; charset=utf-8'}});
   if(request.method==='GET'&&path==='/builder.css')return new Response(builderCSS,{headers:{'Content-Type':'text/css; charset=utf-8'}});
   if(request.method==='GET'&&path==='/theme.css')return new Response('',{headers:{'Content-Type':'text/css'}});
   if(path==='/health'||path==='/api/health'){
@@ -142,7 +146,7 @@ async function route(request,env,ctx){
     }
   }
   const control=await readControl(env);
-  if(control.emergency_stop&&!['/api/ops/status','/api/ops/control','/api/ops/logout'].includes(path))assertRunning(control);
+  if(control.emergency_stop&&!['/api/ops/status','/api/ops/control','/api/ops/logout','/api/assistant/developer','/api/assistant/status'].includes(path))assertRunning(control);
   if(path==='/api/ops/users/pending'&&request.method==='GET'){
     requireAdmin(user);
     const rows=await env.DB.prepare("SELECT email,display_name,created_at FROM ops_users WHERE status='pending' AND role='user' ORDER BY created_at").all();
@@ -276,7 +280,7 @@ async function route(request,env,ctx){
       return json({action:systemActionRoute[2]==='approve'?await approveSystemAction(env,id,`user:${user.id}`):await rejectSystemAction(env,id,`user:${user.id}`)});
     }
   }
-  if(path==='/api/assistant/status'&&request.method==='GET')return json({name:'Trinity',version:TRINITY_VERSION,mode:'cloud',model:env.AI_MODEL||'@cf/openai/gpt-oss-120b',available:true,cloud:true,local_available:!!env.TRINITY_GATEWAY_KEY&&['admin','owner'].includes(user.role),local_model:'qwen3:4b-instruct',pc_bridge:await getPCBridgeStatus(env),identity:'single',active_specializations:AGENTS.length,capability_registry:'extensible',personality:'persistent',consciousness:false,languages:'multilingual-auto',planning:{version:'1.1',intents:['conversation','research','build','creative','action','analysis'],approval_for_high_risk:!['admin','owner'].includes(user.role),admin_direct_execution:['admin','owner'].includes(user.role)},decision_pipeline:'understand → authenticate → classify → plan → tools → receipt → response',truth_mode:'evidence-required',truth_policy_version:TRUTH_POLICY_VERSION,memory_location:'Cloudflare D1 · trinity-v03 · ops_memory + memory_long',media:mediaStatus(env),account:{email:user.email||null,role:user.role||null},tools:(await listPlugins(env)).filter(p=>p.enabled).flatMap(p=>p.tools)});
+  if(path==='/api/assistant/status'&&request.method==='GET')return json({name:'Trinity',version:TRINITY_VERSION,control:{emergency_stop:control.emergency_stop===true},mode:'cloud',model:env.AI_MODEL||'@cf/openai/gpt-oss-120b',available:true,cloud:true,local_available:!!env.TRINITY_GATEWAY_KEY&&['admin','owner'].includes(user.role),local_model:'qwen3:4b-instruct',pc_bridge:await getPCBridgeStatus(env),identity:'single',active_specializations:AGENTS.length,capability_registry:'extensible',personality:'persistent',consciousness:false,languages:'multilingual-auto',planning:{version:'1.1',intents:['conversation','research','build','creative','action','analysis'],approval_for_high_risk:!['admin','owner'].includes(user.role),admin_direct_execution:['admin','owner'].includes(user.role)},decision_pipeline:'understand → authenticate → classify → plan → tools → receipt → response',truth_mode:'evidence-required',truth_policy_version:TRUTH_POLICY_VERSION,memory_location:'Cloudflare D1 · trinity-v03 · ops_memory + memory_long',media:mediaStatus(env),account:{email:user.email||null,role:user.role||null},tools:(await listPlugins(env)).filter(p=>p.enabled).flatMap(p=>p.tools)});
   if(path==='/api/assistant/sessions'&&request.method==='GET')return json((await env.DB.prepare("SELECT session_id AS session,MIN(task) AS title,MAX(created_at) AS updated_at FROM ops_jobs WHERE task NOT LIKE 'Kontrolný test%' GROUP BY session_id ORDER BY updated_at DESC LIMIT 30").all()).results);
   if(path==='/api/assistant/history'&&request.method==='GET'){
     const id=uuid.parse(url.searchParams.get('session'));
@@ -321,6 +325,23 @@ async function route(request,env,ctx){
       request=new Request(request.url,{method:'POST',headers:request.headers,body:JSON.stringify(body)});
     }
     return handleMcp(request,env,ctx);
+  }
+  if(path==='/api/assistant/developer/memory'&&request.method==='POST'){
+    requireAdmin(user);await rateLimit(env,`developer-write:${user.id}`,12);
+    const d=z.object({key:z.string().trim().min(1).max(120),value:z.string().trim().min(1).max(10000),replace_existing:z.boolean().default(false)}).strict().parse(await readJSON(request));
+    if(!d.replace_existing&&await env.DB.prepare('SELECT 1 AS present FROM ops_memory WHERE key=?').bind(d.key).first())throw new HttpError(409,'Zaznam existuje. Nahradenie musis vyslovne povolit.');
+    const receipt=crypto.randomUUID();
+    const sql=d.replace_existing?"INSERT INTO ops_memory(key,value,source) VALUES(?,?,'user') ON CONFLICT(key) DO UPDATE SET value=excluded.value,source='user',updated_at=datetime('now')":"INSERT INTO ops_memory(key,value,source) VALUES(?,?,'user') ON CONFLICT(key) DO NOTHING";
+    const results=await env.DB.batch([
+      env.DB.prepare(sql).bind(d.key,d.value),
+      env.DB.prepare('INSERT INTO ops_events(action,details) VALUES(?,?)').bind('developer_memory_write',JSON.stringify({key:d.key,by:user.email||user.id,replace_existing:d.replace_existing,receipt_id:receipt})),
+    ]);
+    if(!results[0]?.meta?.changes)throw new HttpError(409,'Zaznam medzicasom vznikol. Obnov stav a skontroluj nahradenie.');
+    return json({stored:true,key:d.key,receipt_id:receipt});
+  }
+  if(path==='/api/assistant/developer'&&request.method==='GET'){
+    requireAdmin(user);
+    return json({...await developerStatus(env,TRINITY_VERSION),control:{emergency_stop:control.emergency_stop===true}});
   }
   if(path==='/api/ops/status'&&request.method==='GET'){
     const counts=await env.DB.prepare('SELECT status,COUNT(*) AS count FROM ops_jobs GROUP BY status').all();

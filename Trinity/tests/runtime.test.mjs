@@ -6,6 +6,7 @@ import {resolve} from 'node:path';
 import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
 import {createSystemAction} from '../src/system-actions.js';
 import {readKnowledgeSource} from '../src/knowledge-sources.js';
+import {issueSession} from '../src/security.js';
 let mf,db;const key='test-only-not-a-real-secret-123456789';const gatewayKey='test-only-gateway-secret-123456789012345';
 const url='https://trinity.test';
 async function req(path,body,auth=true,extra={}){return mf.dispatchFetch(url+path,{method:body===undefined?'GET':'POST',headers:{...(auth?{Authorization:'Bearer '+key}:{}),...(body===undefined?{}:{'Content-Type':'application/json'}),...extra},body:body===undefined?undefined:JSON.stringify(body)});}
@@ -32,6 +33,52 @@ before(async()=>{
   }
 });
 after(async()=>{await mf?.dispose();});
+test('developer monitoring requires admin on the server and serves bounded read-only data',async()=>{
+  assert.equal((await req('/api/assistant/developer',undefined,false)).status,401);
+  const signedIn=await issueSession({DB:db},Date.now()+60000,'ordinary@example.test');
+  const cookie=signedIn.headers.get('set-cookie').split(';')[0];
+  assert.equal((await req('/api/assistant/developer',undefined,false,{Cookie:cookie})).status,403);
+  const response=await req('/api/assistant/developer');
+  assert.equal(response.status,200,await response.clone().text());
+  const data=await response.json();
+  assert.equal(data.read_only,true);assert.equal(data.version,'9.4.0');
+  assert.ok(data.jobs.length<=20);assert.ok(data.events.length<=15);
+  assert.equal(data.storage.database,true);
+  assert.doesNotMatch(JSON.stringify(data),/test-only-not-a-real-secret|token_hash|payload_json|receipt_json/);
+  assert.equal((await req('/api/assistant/developer',{})).status,404);
+});
+test('developer monitoring remains available during emergency stop without resuming work',async()=>{
+  await req('/api/ops/control',{emergency_stop:true,reason:'developer status test'});
+  try{
+    const response=await req('/api/assistant/developer');
+    assert.equal(response.status,200);
+    assert.equal((await response.json()).control.emergency_stop,true);
+    const bootstrap=await req('/api/assistant/status');
+    assert.equal(bootstrap.status,200);
+    assert.equal((await bootstrap.json()).control.emergency_stop,true);
+    assert.equal((await req('/api/ops/jobs',{task:'must remain blocked'})).status,503);
+    assert.equal((await req('/api/assistant/memory',{key:'must-not-write',value:'blocked'})).status,503);
+    assert.equal((await req('/api/assistant/settings/plugins/web',{enabled:true})).status,503);
+    assert.equal((await req('/api/assistant/developer/memory',{key:'blocked-developer-write',value:'blocked'})).status,503);
+  }finally{await req('/api/ops/control',{emergency_stop:false,reason:'developer status test complete'});}
+});
+test('admin memory WRITE is authenticated, audited and cannot overwrite without explicit permission',async()=>{
+  const path='/api/assistant/developer/memory',key='test/admin-write',value='Explicit user preference';
+  assert.equal((await req(path,{key,value},false)).status,401);
+  const signedIn=await issueSession({DB:db},Date.now()+60000,'ordinary@example.test');
+  const cookie=signedIn.headers.get('set-cookie').split(';')[0];
+  assert.equal((await req(path,{key,value},false,{Cookie:cookie})).status,403);
+  const created=await req(path,{key,value});assert.equal(created.status,200,await created.clone().text());
+  const result=await created.json();assert.equal(result.stored,true);assert.match(result.receipt_id,/^[0-9a-f-]{36}$/);
+  const audit=await db.prepare("SELECT details FROM ops_events WHERE action='developer_memory_write' ORDER BY id DESC LIMIT 1").first();
+  assert.equal(JSON.parse(audit.details).receipt_id,result.receipt_id);
+  assert.doesNotMatch(audit.details,/Explicit user preference/);
+  assert.equal((await req(path,{key,value:'Accidental replacement'})).status,409);
+  assert.equal((await db.prepare('SELECT value FROM ops_memory WHERE key=?').bind(key).first()).value,value);
+  assert.equal((await req(path,{key,value:'Approved replacement',replace_existing:true})).status,200);
+  const stored=await db.prepare('SELECT value,source FROM ops_memory WHERE key=?').bind(key).first();
+  assert.deepEqual(stored,{value:'Approved replacement',source:'user'});
+});
 test('manual memory edits cannot be overwritten by later public-source refresh',async()=>{
   const key='web/ollama-api';
   await db.prepare('INSERT INTO ops_memory(key,value,source) VALUES(?,?,?)')

@@ -1,0 +1,141 @@
+function isWorkspaceAdmin(){return ['owner','admin'].includes(state?.account?.role);}
+Object.assign(words.sk,{
+  developer:'Developer',developerIntro:'Vývoj, stav systému a posledná práca na jednom mieste.',
+  menu:'Otvoriť menu',latestReply:'Najnovšia správa ↓',intro:'Stačí napísať, čo potrebuješ. Poďme na to spolu.',
+});
+Object.assign(words.en,{
+  developer:'Developer',developerIntro:'Development, system status and recent work in one place.',
+  menu:'Open menu',latestReply:'Latest message ↓',intro:'Tell me what you need. Let’s talk or get to work.',
+});
+
+const menuToggle=$('menu-toggle'),sidebar=$('workspace-sidebar'),shade=$('sidebar-shade');
+function closeWorkspaceMenu(){
+  document.body.classList.remove('menu-open');
+  menuToggle.setAttribute('aria-expanded','false');
+  if(matchMedia('(max-width:800px)').matches)sidebar.inert=true;
+}
+function syncWorkspaceMenu(){
+  const narrow=matchMedia('(max-width:800px)').matches;
+  sidebar.inert=narrow&&!document.body.classList.contains('menu-open');
+  if(!narrow)closeWorkspaceMenu();
+}
+menuToggle.onclick=()=>{
+  const open=!document.body.classList.contains('menu-open');
+  document.body.classList.toggle('menu-open',open);
+  menuToggle.setAttribute('aria-expanded',String(open));sidebar.inert=!open;
+  if(open)sidebar.querySelector('button:not([hidden])')?.focus();
+};
+shade.onclick=()=>{closeWorkspaceMenu();menuToggle.focus();};
+document.addEventListener('keydown',event=>{
+  if(!document.body.classList.contains('menu-open'))return;
+  if(event.key==='Escape'){closeWorkspaceMenu();menuToggle.focus();}
+  if(event.key==='Tab'){
+    const targets=[...sidebar.querySelectorAll('a,button,select,input')].filter(n=>!n.hidden&&!n.disabled&&n.getClientRects().length);
+    const first=targets[0],last=targets.at(-1);
+    if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}
+    else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
+  }
+});
+sidebar.addEventListener('click',event=>{
+  if(event.target.closest('[data-view],[data-open-chat],#new-chat,#memory-nav,[data-view-link],#sessions button'))closeWorkspaceMenu();
+});
+matchMedia('(max-width:800px)').addEventListener('change',syncWorkspaceMenu);
+syncWorkspaceMenu();
+
+window.trinityFollowLatest=true;
+const chatScroll=$('chat-area');
+chatScroll.addEventListener('scroll',()=>{
+  window.trinityFollowLatest=chatScroll.scrollHeight-chatScroll.scrollTop-chatScroll.clientHeight<140;
+  $('jump-latest').hidden=window.trinityFollowLatest;
+},{passive:true});
+$('jump-latest').onclick=()=>{window.trinityFollowLatest=true;bottom();$('jump-latest').hidden=true;};
+$('chat-form').addEventListener('submit',()=>{window.trinityFollowLatest=true;},true);
+$('new-chat').addEventListener('click',()=>{window.trinityFollowLatest=true;});
+$('message').addEventListener('input',()=>{
+  const input=$('message');input.style.height='auto';input.style.height=Math.min(input.scrollHeight,180)+'px';
+});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)developerController?.abort();});
+
+let developerLoading=false,developerController=null;
+const devLabel=status=>({completed:'Dokončené',running:'Prebieha',queued:'Čaká',pending:'Čaká',failed:'Chyba',cancelled:'Zrušené'}[status]||status||'Neznáme');
+function devState(text,type=''){return node('span',text,'dev-state '+type);}
+function developerService(name,description,label,type){
+  const row=node('div',undefined,'dev-service'),info=node('div');
+  info.append(node('b',name),node('small',description));row.append(info,devState(label,type));return row;
+}
+function devTime(value){
+  if(value===null||value===undefined||value==='')return 'Bez údaja';
+  let normalized=typeof value==='number'?value:String(value).replace(' ','T');
+  if(typeof normalized==='string'&&/^\d{4}-\d{2}-\d{2}T/.test(normalized)&&!/(?:Z|[+-]\d{2}:\d{2})$/i.test(normalized))normalized+='Z';
+  const date=new Date(normalized);
+  return Number.isNaN(date.getTime())?'Bez overeného času':date.toLocaleString(uiLanguage()==='en'?'en-GB':'sk-SK');
+}
+function clearDeveloperSnapshot(){
+  ['dev-readiness','dev-pc','dev-workflow','dev-version'].forEach(id=>$(id).textContent='—');
+  ['dev-services','dev-jobs','dev-events'].forEach(id=>$(id).replaceChildren());
+}
+async function loadDeveloperView(){
+  if(!isWorkspaceAdmin()){clearDeveloperSnapshot();return;}
+  if(developerLoading)return;
+  $('dev-memory-save').disabled=true;$('dev-write-settings').disabled=true;
+  developerLoading=true;developerController=new AbortController();
+  const timer=setTimeout(()=>developerController?.abort(),10000);
+  $('dev-refresh').disabled=true;$('dev-updated').textContent='Overujem aktuálny stav…';
+  try{
+    const response=await fetch('/api/assistant/developer',{signal:developerController.signal,cache:'no-store'});
+    if(!response.ok)throw new Error(response.status===403?'Developer je dostupný iba adminovi.':response.status===401?'Prihlásenie vypršalo.':'Stav sa nepodarilo načítať (HTTP '+response.status+').');
+    const data=await response.json();
+    $('dev-readiness').textContent=data.readiness.ready?'Pripravený':'Vyžaduje kontrolu';
+    $('dev-pc').textContent=data.pc.connected?'Spojenie hlásené':'Nepotvrdené';
+    $('dev-workflow').textContent=data.storage.workflow?'Nastavený':'Chýba binding';
+    $('dev-version').textContent=data.version;
+    $('dev-updated').textContent='Načítané: '+devTime(data.checked_at);
+    $('dev-write-settings').disabled=data.control?.emergency_stop===true;
+    $('dev-memory-save').disabled=data.control?.emergency_stop===true;
+    const stopped=data.control?.emergency_stop===true;
+    $('dev-alert').hidden=!data.partial&&!stopped;
+    $('dev-alert').textContent=(stopped?'Núdzové zastavenie je aktívne. Monitorovanie zostáva dostupné; pracovné akcie sú pozastavené. ':'')+
+      (data.partial?'Časť údajov nie je dostupná: '+data.unavailable_sections.join(', ')+'. Zvyšné údaje patria k uvedenému času.':'');
+    const services=$('dev-services');services.replaceChildren();
+    for(const [key,title] of [['database','D1 databáza'],['cache','KV cache'],['artifacts','R2 súbory'],['workflow','Cloudflare Workflow']])
+      services.append(developerService(title,'Prítomnosť bindingu, nie test celej služby.',data.storage[key]?'Nakonfigurované':'Nenastavené',data.storage[key]?'':'warn'));
+    services.append(developerService('Workers AI','Konfigurácia bez spustenia plateného inferovania.',data.providers.workers_ai?'Nakonfigurované':'Nenastavené',data.providers.workers_ai?'':'warn'));
+    services.append(developerService('OpenAI API','Konfigurácia kľúča; jeho hodnota sa nezobrazuje.',data.providers.openai?'Nakonfigurované':'Nenastavené',data.providers.openai?'':'warn'));
+    services.append(developerService('PC Gateway','Posledný hlásený kontakt: '+devTime(data.pc.last_seen),data.pc.connected?'Spojenie hlásené':'Bez potvrdenia',data.pc.connected?'':'warn'));
+    const jobs=$('dev-jobs');jobs.replaceChildren();
+    if(!data.jobs.length)jobs.append(node('p','Zatiaľ tu nie sú žiadne úlohy.','dev-empty'));
+    else{
+      const table=node('table',undefined,'dev-table'),head=node('thead'),header=node('tr');
+      for(const title of ['Úloha','Stav','Aktualizácia']){const cell=node('th',title);cell.scope='col';header.append(cell);}
+      head.append(header);table.append(head);const body=node('tbody');
+      for(const job of data.jobs){
+        const row=node('tr'),task=node('td',job.task),status=node('td'),time=node('td',devTime(job.updated_at));
+        status.append(devState(devLabel(job.status),job.status==='failed'?'bad':job.status==='completed'?'good':''));
+        row.append(task,status,time);body.append(row);
+      }table.append(body);jobs.append(table);
+    }
+    const events=$('dev-events');events.replaceChildren();
+    if(!data.events.length)events.append(node('p','Zatiaľ bez systémových udalostí.','dev-empty'));
+    for(const event of data.events){
+      const row=node('div',undefined,'dev-event'),info=node('div');info.append(node('b',event.action),node('small',devTime(event.created_at)));row.append(info);events.append(row);
+    }
+  }catch(error){
+    clearDeveloperSnapshot();$('dev-alert').hidden=false;
+    $('dev-alert').textContent=error.name==='AbortError'?'Načítanie bolo prerušené alebo vypršal čas. Skús obnoviť stav.':error.message;
+    $('dev-updated').textContent='Aktuálny stav nie je overený.';
+  }finally{clearTimeout(timer);developerLoading=false;developerController=null;$('dev-refresh').disabled=false;}
+}
+$('dev-refresh').onclick=loadDeveloperView;
+setInterval(()=>{
+  if(currentView==='developer'&&isWorkspaceAdmin()&&!document.hidden&&$('dev-auto-refresh').checked)loadDeveloperView();
+},30000);
+$('dev-memory-form').onsubmit=safe(async()=>{
+  if(!isWorkspaceAdmin())throw new Error('Admin WRITE vyzaduje overeny admin ucet.');
+  const button=$('dev-memory-save');button.disabled=true;$('dev-write-result').textContent='Ukladám…';
+  try{
+    const result=await api('/developer/memory',{key:$('dev-memory-key').value.trim(),value:$('dev-memory-value').value.trim(),replace_existing:$('dev-memory-replace').checked});
+    if(result.stored!==true||!result.receipt_id)throw new Error('Chýba potvrdenie zápisu.');
+    $('dev-write-result').textContent='Uložené do Cloudflare D1. Auditné potvrdenie: '+result.receipt_id;
+  }catch(error){$('dev-write-result').textContent='Uloženie nie je potvrdené: '+error.message;}
+  finally{await loadDeveloperView();}
+});
