@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Trinity PC Bridge — Lokálny klient (NextGen)
  *
  * Pripája sa na Trinity Worker (Cloudflare) cez PC Bridge API,
@@ -37,7 +37,7 @@ try {
 } catch {}
 
 const GATEWAY_KEY   = process.env.TRINITY_GATEWAY_KEY;
-const TRINITY_URL   = (process.env.TRINITY_URL || 'https://auru.dev').replace(/\/$/, '');
+const TRINITY_URL   = (process.env.TRINITY_URL || 'https://auru.space').replace(/\/$/, '');
 const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL || '5000', 10);
 const MAX_B64       = parseInt(process.env.MAX_PAYLOAD_KB || '512', 10) * 1024;
 const WORKSPACE_ROOTS = normalizeRoots(process.env.TRINITY_WORKSPACE_ROOTS, [resolve(__dirname, '..')]);

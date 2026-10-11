@@ -2,6 +2,6 @@
 # Do not commit real OAuth credentials.
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-GOOGLE_REDIRECT_URI=https://auru.dev/api/auth/google/callback
+GOOGLE_REDIRECT_URI=https://auru.space/api/auth/google/callback
 TRINITY_ADMIN_EMAILS=saboivan2008@gmail.com,usc31@auru.space,uscolective@gmail.com,delirium.trade12@gmail.com
 TRINITY_AUTH_MODE=legacy

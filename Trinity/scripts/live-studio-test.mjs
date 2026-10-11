@@ -2,7 +2,7 @@ import {writeFileSync} from 'node:fs';
 
 const key=process.env.TRINITY_TEST_KEY;
 if(!key)throw new Error('TRINITY_TEST_KEY is required.');
-const base=(process.env.TRINITY_URL||'https://auru.dev').replace(/\/$/,'');
+const base=(process.env.TRINITY_URL||'https://auru.space').replace(/\/$/,'');
 const response=await fetch(base+'/api/assistant/studio/projects',{
   method:'POST',
   headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},

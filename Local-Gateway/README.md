@@ -18,6 +18,23 @@ Privátna systémová vrstva jednej Trinity. Počúva výhradne na `127.0.0.1:87
 3. Potom používaj `SPUSTIT-LOCAL.cmd`.
 4. `install-autostart.ps1` nastaví bezpečné automatické spustenie po prihlásení do Windows.
 
+### Diagnostika spojenia bez tajomstiev
+
+Z koreňa Morhfeus spusti `node Local-Gateway/scripts/check-connection.mjs`.
+Skript iba číta lokálny `/health` a verejný MCP endpoint. Nečíta DPAPI,
+nevytvára kľúče, nemení nastavenia a nezaraďuje systémové akcie.
+
+- Lokálne `synchronization: connected` znamená, že cloud aj PC Bridge potvrdili spojenie.
+- MCP `401` s JSON odpoveďou znamená, že endpoint vyžaduje autorizáciu; nie je to dôkaz výpadku.
+- `403` alebo HTML odpoveď môžu znamenať ochranu Cloudflare. Automatický MCP klient nevyrieši interaktívnu browserovú výzvu.
+- Úspešný HTTP status s HTML sa nesmie vydávať za funkčné API spojenie.
+- Pri `unreachable-or-invalid-response` skontroluj, či lokálna brána beží a či funguje sieť.
+
+Predvolená cloudová adresa je `https://auru.space`, rovnako ako v Codex MCP moste.
+Ako záložnú adresu možno zvoliť `start.ps1 -CloudUrl https://trinity.saboivan2008.workers.dev`;
+skript povoľuje iba overené HTTPS adresy Trinity. Tokeny zostávajú v DPAPI.
+Táto diagnostika sama nepripojí ďalší AI účet ani Notion a nemení ochrany Cloudflare.
+
 ## Ovládanie počítača
 
 Desktop Controller 1.1 podporuje zoznam otvorených okien, spustenie a aktivovanie povolených aplikácií a písanie do Poznámkového bloku. Pred každou desktopovou operáciou musí používateľ schváliť presné ID návrhu. Predvolený zoznam aplikácií: Poznámkový blok, Kalkulačka, Skicár a Prieskumník. Prehliadače, heslá, platby a neobmedzené príkazy nie sú povolené.
