@@ -18,7 +18,7 @@ import {readControl,assertRunning} from './control.js';
 import {listApis,createApi,invokeApi,invokeApiBySlug} from './api-builder.js';
 import {listApiKeys,createApiKey,revokeApiKey,authenticateApiKey} from './api-keys.js';
 import {listSecrets,storeSecret,verifySecret,revokeSecret,promoteCustomSecretToGemini} from './secret-vault.js';
-import {listAIProviders,configureAIProvider,recordAIProviderCheck,geminiProjectControlEnabled} from './ai-providers.js';
+import {listAIProviders,configureAIProvider,recordAIProviderCheck} from './ai-providers.js';
 import {createPortfolio,listPortfolios,getPortfolio,recordTrade,setQuote} from './trading.js';
 import {getWallet,transactWallet} from './wallet.js';
 import {handleInboundEmail} from './email.js';
@@ -31,7 +31,7 @@ import assistantCSS from '../public/assistant/chat.css';
 import builderCSS from '../public/assistant/builder.css';
 import assistantJS from '../public/assistant/chat.js.txt';
 export {TrinityAgent,ChatAgent,GuardianAgent,TrinityOperations};
-const TRINITY_VERSION='9.0.0';
+const TRINITY_VERSION='9.1.0';
 const json=(data,status=200)=>Response.json(data,{status});
 const uuid=z.string().uuid();
 function requireAdmin(user){if(!['admin','owner'].includes(user.role))throw new HttpError(403,'Táto operácia je dostupná iba správcovi Trinity.');}
@@ -273,7 +273,7 @@ async function route(request,env,ctx){
     const wantsMemory=/^(zapamätaj si|zapamataj si|remember)\s*[:,-]?\s+/i.test(d.message);
     const delegated=shouldDelegate(d.message);
     const provider=d.engine==='local'?'local':d.engine==='ollama'?'ollama':d.engine==='gemini'?'gemini':d.engine==='openai'?'openai':'workers-ai';
-    const admin=['admin','owner'].includes(user.role),ownerMode=admin&&(provider!=='gemini'||await geminiProjectControlEnabled(env,ownerId));
+    const ownerMode=['admin','owner'].includes(user.role);
     return json(await createJob(env,{task:d.message,session_id:d.session,agent:delegated?'auto':'orchestrator',mode:delegated?'team':'single',provider,language:d.language,remember:d.remember||wantsMemory,owner_mode:ownerMode,idempotency_key:crypto.randomUUID()}),202);
   }
   const mediaRoute=path.match(/^\/api\/assistant\/media\/images\/([0-9a-f-]+)$/i);
@@ -352,7 +352,7 @@ async function route(request,env,ctx){
     catch(e){const check=await recordAIProviderCheck(env,ownerId,{status:'failed',provider,error:e.message,latency_ms:Date.now()-started});return json(check,502);}
   }
   if(path==='/api/ops/jobs'){
-    if(request.method==='POST'){await rateLimit(env,`job:${user.id}`,12);return json(await createJob(env,{...await readJSON(request),owner_mode:user.owner===true||user.role==='owner'}),202);}
+    if(request.method==='POST'){await rateLimit(env,`job:${user.id}`,12);return json(await createJob(env,{...await readJSON(request),owner_mode:['admin','owner'].includes(user.role)}),202);}
     if(request.method==='GET')return json((await env.DB.prepare('SELECT id,session_id,task,team,status,error,created_at,updated_at FROM ops_jobs ORDER BY created_at DESC,rowid DESC LIMIT 50').all()).results);
   }
   const jobRoute=path.match(/^\/api\/ops\/jobs\/([^/]+)(?:\/(artifact|cancel))?$/);

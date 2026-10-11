@@ -12,7 +12,7 @@ export const aiProviderInputSchema=z.object({
 const decodeVerification=value=>{try{return value?JSON.parse(value):null;}catch{return null;}};
 const safeError=value=>String(value||'Neznáma chyba').replace(/([?&](?:key|api_key)=)[^&\s]+/gi,'$1[redacted]').replace(/(x-goog-api-key\s*[:=]\s*)\S+/gi,'$1[redacted]').slice(0,500);
 export const GEMINI_OPERATOR_ACTIONS=['read','write','edit','selfwrite','run','deploy','share','upload','upgrade','screenshot','open_app','notify','system_info','scrape','web_fetch','download','git_commit','git_pr'];
-export const GEMINI_OPERATOR_POLICY={mode:'proposal-approval-receipt',approval_required:true,direct_pc_execution:false,workflow:['proposal','owner-approval','pc-gateway','verified-receipt']};
+export const GEMINI_OPERATOR_POLICY={mode:'authenticated-admin-direct',approval_required:false,direct_pc_execution:true,workflow:['authenticated-request','bounded-action','pc-gateway','verified-receipt']};
 const decodeChecks=rows=>{
   const checks=new Map();
   for(const row of rows){const item=decodeVerification(row.details);if(!item?.provider||checks.has(item.provider))continue;checks.set(item.provider,{status:item.status==='verified'?'verified':'failed',model:item.model||null,latency_ms:Number(item.latency_ms)||null,error:item.error||null,checked_at:row.created_at});}
@@ -38,7 +38,7 @@ export async function listAIProviders(env,ownerId){
   return {items:[
     {id:'workers-ai',name:'Cloudflare Workers AI',configured:!!env.AI,enabled:true,model:env.AI_MODEL||'@cf/openai/gpt-oss-120b',managed_by:'cloudflare',last_check:checks.get('workers-ai')||null},
     {id:'openai',name:'OpenAI / ChatGPT API',configured:typeof env.OPENAI_API_KEY==='string'&&env.OPENAI_API_KEY.length>=20,enabled:typeof env.OPENAI_API_KEY==='string'&&env.OPENAI_API_KEY.length>=20,model:env.OPENAI_MODEL||'gpt-5.6-luna',managed_by:'worker-secret',secret_source:'worker-secret',last_check:checks.get('openai')||null},
-    {id:'gemini',name:'Google Gemini',configured:!!geminiSetting||environmentGemini,enabled:geminiSetting?geminiSetting.enabled===1:environmentGemini,project_control:geminiSetting?.project_control===1,approval_policy:'owner-required',operator_policy:GEMINI_OPERATOR_POLICY,allowed_actions:GEMINI_OPERATOR_ACTIONS,model:geminiSetting?.model||env.GEMINI_MODEL||null,secret_id:geminiSetting?.secret_id||null,secret_source:geminiSetting?'encrypted-vault':environmentGemini?'worker-secret':null,credentials:geminiSecrets,updated_at:geminiSetting?.updated_at||null,last_check:checks.get('gemini')||null}
+    {id:'gemini',name:'Google Gemini',configured:!!geminiSetting||environmentGemini,enabled:geminiSetting?geminiSetting.enabled===1:environmentGemini,project_control:geminiSetting?.project_control===1,approval_policy:'authenticated-admin-request',operator_policy:GEMINI_OPERATOR_POLICY,allowed_actions:GEMINI_OPERATOR_ACTIONS,model:geminiSetting?.model||env.GEMINI_MODEL||null,secret_id:geminiSetting?.secret_id||null,secret_source:geminiSetting?'encrypted-vault':environmentGemini?'worker-secret':null,credentials:geminiSecrets,updated_at:geminiSetting?.updated_at||null,last_check:checks.get('gemini')||null}
   ]};
 }
 
@@ -55,8 +55,8 @@ export async function configureAIProvider(env,ownerId,provider,input){
     enabled=excluded.enabled,project_control=excluded.project_control,updated_at=datetime('now') RETURNING provider,secret_id,model,enabled,project_control,updated_at`)
     .bind(ownerId,provider,data.secret_id,data.model,data.enabled?1:0,data.project_control?1:0).first();
   await env.DB.prepare("INSERT INTO ops_events(action,details) VALUES('ai_provider_configured',?)")
-    .bind(JSON.stringify({owner_id:ownerId,provider,model:data.model,enabled:data.enabled,project_control:data.project_control,approval_policy:'owner-required'})).run();
-  return {...row,enabled:row.enabled===1,project_control:row.project_control===1,approval_policy:'owner-required'};
+    .bind(JSON.stringify({owner_id:ownerId,provider,model:data.model,enabled:data.enabled,project_control:data.project_control,approval_policy:'authenticated-admin-request'})).run();
+  return {...row,enabled:row.enabled===1,project_control:row.project_control===1,approval_policy:'authenticated-admin-request'};
 }
 
 export async function geminiProjectControlEnabled(env,ownerId){

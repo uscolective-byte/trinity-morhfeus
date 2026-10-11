@@ -7,7 +7,7 @@ import {parseAction,runAgent,executionPolicyForProvider} from '../src/engine.js'
 import {runTool} from '../src/tools.js';
 import {extractModelText,extractGeminiInteractionText,getOllamaKey,serviceStatus,runScheduledHealth,readiness} from '../src/services.js';
 import {TRUTH_POLICY,findUnsupportedActionClaims,truthStatus} from '../src/truth.js';
-import {normalizeLanguage,languageDirective,tokenBudget} from '../src/cognition.js';
+import {COMMUNICATION_STYLE,normalizeLanguage,languageDirective,tokenBudget} from '../src/cognition.js';
 import {planTask} from '../src/planner.js';
 import {apiDefinitionSchema} from '../src/api-builder.js';
 import {createApiKeySchema} from '../src/api-keys.js';
@@ -24,10 +24,11 @@ test('cross-origin blocked',()=>assert.throws(()=>checkOrigin(new Request('https
 test('bad JSON and oversized bodies rejected',async()=>{await assert.rejects(readJSON(new Request('http://localhost',{method:'POST',headers:{'Content-Type':'application/json'},body:'{'})),{status:400});await assert.rejects(readJSON(new Request('http://localhost',{method:'POST',headers:{'Content-Type':'application/json'},body:'x'.repeat(25000)})),{status:413});});
 test('job input rejects empty task and excessive teams',()=>{assert.equal(jobSchema.safeParse({task:' '}).success,false);assert.equal(jobSchema.safeParse({task:'hello',team:Array(6).fill('qa')}).success,false);});
 test('Gemini is accepted as a bounded job provider',()=>assert.equal(jobSchema.parse({task:'hello',provider:'gemini'}).provider,'gemini'));
-test('Gemini operator can propose actions but cannot directly execute PC tools',()=>{const policy=executionPolicyForProvider('gemini',true);assert.equal(policy.geminiOperator,true);assert.equal(policy.allowInternal,true);assert.equal(policy.allowDirectPC,false);assert.equal(policy.directAdmin,false);assert.equal(policy.approvalRequired,true);});
+test('authenticated Gemini admin can execute bounded tools without duplicate approval',()=>{const policy=executionPolicyForProvider('gemini',true);assert.equal(policy.geminiOperator,true);assert.equal(policy.allowInternal,true);assert.equal(policy.allowDirectPC,true);assert.equal(policy.directAdmin,true);assert.equal(policy.approvalRequired,false);});
 test('non-Gemini admin keeps direct bounded PC execution',()=>{const policy=executionPolicyForProvider('workers-ai',true);assert.equal(policy.directAdmin,true);assert.equal(policy.allowDirectPC,true);assert.equal(policy.approvalRequired,false);});
 test('OpenAI is accepted as a bounded job provider',()=>assert.equal(jobSchema.parse({task:'hello',provider:'openai'}).provider,'openai'));
 test('chat accepts world language tags and automatic language detection',()=>{assert.equal(jobSchema.parse({task:'こんにちは',language:'ja'}).language,'ja');assert.equal(jobSchema.parse({task:'مرحبا'}).language,'auto');assert.throws(()=>normalizeLanguage('../../bad'));assert.match(languageDirective('auto'),/jazyk/);});
+test('Trinity uses natural communication and treats authenticated request as scoped authorization',()=>{assert.match(COMMUNICATION_STYLE,/normálna osobná asistentka/);assert.match(COMMUNICATION_STYLE,/nežiadaj druhú textovú formulku SCHVÁĽ/);assert.match(COMMUNICATION_STYLE,/presne zadaný rozsah/);});
 test('complex scientific work receives a larger reasoning budget',()=>{assert.ok(tokenBudget('orchestrator','Analyzuj kvantovú fyziku')>tokenBudget('writer','Ahoj'));});
 test('next-gen planner classifies intent and risk without model claims',()=>{const research=planTask('Vyhľadaj aktuálne zdroje o kvantovej fyzike');assert.equal(research.intent,'research');assert.equal(research.risk,'low');const build=planTask('Vytvor a nasad webovú aplikáciu');assert.equal(build.intent,'build');assert.equal(build.risk,'high');assert.equal(build.requires_approval,true);assert.ok(build.steps.length>=3);});
 test('device keys cannot masquerade as Ollama API keys',async()=>assert.rejects(getOllamaKey({OLLAMA_API_KEY:'ssh-ed25519 public'})));
