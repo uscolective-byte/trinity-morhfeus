@@ -31,9 +31,10 @@ nevytvára kľúče, nemení nastavenia a nezaraďuje systémové akcie.
 - Pri `unreachable-or-invalid-response` skontroluj, či lokálna brána beží a či funguje sieť.
 
 Predvolená cloudová adresa je `https://auru.space`, rovnako ako v Codex MCP moste.
-Ako záložnú adresu možno zvoliť `start.ps1 -CloudUrl https://trinity.saboivan2008.workers.dev`;
+Alternatívnu adresu možno zvoliť cez `start.ps1 -CloudUrl https://auru.dev` alebo `https://trinity.saboivan2008.workers.dev`;
 skript povoľuje iba overené HTTPS adresy Trinity. Tokeny zostávajú v DPAPI.
 Táto diagnostika sama nepripojí ďalší AI účet ani Notion a nemení ochrany Cloudflare.
+Fungovanie stránky v prehliadači nemusí znamenať, že Cloudflare prijme aj automatické MCP požiadavky.
 
 ## Ovládanie počítača
 

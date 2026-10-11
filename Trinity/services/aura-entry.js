@@ -35,7 +35,7 @@ function approved(call){return call.approval?.approved===true&&['owner','admin']
 function validateEndpoint(call){
   if(call.action!=='test.endpoint')return;
   let url;try{url=new URL(call.data?.url);}catch{throw Object.assign(new Error('Neplatná testovacia URL.'),{status:400});}
-  const allowed=url.protocol==='https:'&&(url.hostname==='auru.space'||url.hostname.endsWith('.saboivan2008.workers.dev'));
+  const allowed=url.protocol==='https:'&&(url.hostname==='auru.dev'||url.hostname==='auru.space'||url.hostname.endsWith('.saboivan2008.workers.dev'));
   if(!allowed)throw Object.assign(new Error('Tester môže volať iba schválené Trinity HTTPS adresy.'),{status:403});
 }
 async function audit(env,ctx,event){

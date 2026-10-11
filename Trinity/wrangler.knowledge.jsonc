@@ -10,11 +10,19 @@
   "workers_dev": true,
   "keep_vars": true,
   "routes": [
-    {
-      "pattern": "auru.space",
-      "custom_domain": true
-    }
-  ],
+  {
+    "pattern": "auru.dev",
+    "custom_domain": true
+  },
+  {
+    "pattern": "auru.space",
+    "custom_domain": true
+  },
+  {
+    "pattern": "*.auru.dev/*",
+    "zone_name": "auru.dev"
+  }
+],
   "observability": {
     "enabled": true,
     "logs": {
