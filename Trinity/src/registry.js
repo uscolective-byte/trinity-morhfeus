@@ -1,3 +1,4 @@
+import {EXTENDED_SKILLS} from './extended-catalog.js';
 import {PRACTICAL_TOOL_NAMES} from './practical-skills.js';
 
 const groups = [
@@ -58,7 +59,7 @@ const groups = [
     ['reporter', 'Spravodajca výsledkov', 'Priprav prehľad vykonaného, dôkazov a zostávajúcich obmedzení.']
   ]]
 ];
-export const SKILLS=[
+const CORE_SKILLS=[
   {id:'planning',name:'Plánovanie úloh',description:'Rozdeľ požiadavku na kroky, závislosti a overiteľné výsledky.',clusters:['Riadenie','Podpora a automatizácia']},
   {id:'secure-development',name:'Bezpečný vývoj',description:'Validuj vstupy, minimalizuj oprávnenia a pokrývaj hraničné prípady testami.',clusters:['Vývoj','Kvalita a bezpečnosť']},
   {id:'cloud-operations',name:'Cloud prevádzka',description:'Over bindingy, build a health endpointy; nasadenie vyžaduje samostatné schválenie.',clusters:['Cloud a prevádzka']},
@@ -70,6 +71,8 @@ export const SKILLS=[
   {id:'integration-recovery',name:'Pripojenia bez slepých slučiek',description:'Over dostupný transport a autorizáciu; po zlyhaní zmeň postup, nie iba zopakuj rovnakú výzvu.',clusters:['Dáta a pamäť','Cloud a prevádzka','Podpora a automatizácia'],keywords:['mcp','pripoj','prepoj','connect','integr'],steps:['overiť endpoint, transport a skutočnú odpoveď','overiť autorizáciu bez zobrazenia tokenov','otestovať jeden neškodný nástroj a uviesť obmedzenia'],success_checks:['HTTP úspech sa nezamieňa s prístupom','pripojenie sa označí za hotové až po úspešnom nástroji']},
   {id:'clear-communication',name:'Zrozumiteľná spolupráca',description:'Najprv výsledok, potom krátke vysvetlenie a najviac jeden potrebný krok používateľa.',clusters:[],universal:true,steps:['vykonať dostupnú nezávislú prácu','oddeliť hotové, pripravené a blokované kroky','pri technickom probléme ponúknuť jeden konkrétny krok'],success_checks:['žiadne vymyslené dokončenie alebo prístup','bežná odpoveď nezahlcuje používateľa protokolom']},
 ];
+
+export const SKILLS=[...CORE_SKILLS,...EXTENDED_SKILLS];
 
 export function selectSkills(agent,task='') {
   return SKILLS.filter(skill=>skill.universal||skill.clusters.includes(agent.cluster)||(agent.id==='orchestrator'&&skill.clusters.includes('Riadenie'))||(skill.keywords?.some(word=>String(task).slice(0,12000).toLocaleLowerCase('sk').includes(word))));

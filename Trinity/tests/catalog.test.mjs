@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SKILLS} from '../src/practical-skills.js';
+import {SKILLS} from '../src/registry.js';
 import {PLUGINS} from '../src/plugins.js';
 
 test('Trinity exposes exactly 150 executable skills',()=>{
