@@ -14,6 +14,24 @@ export const PC_TOOLS=new Set(['pc_screenshot','pc_run','pc_file_read','pc_file_
 export const TOOL_SCHEMAS={
   plan_work:z.object({task:z.string().trim().min(1).max(12000)}).strict(),
   ...PRACTICAL_TOOL_SCHEMAS,
+  // Keep the existing PC constraints in the shared registry so validation
+  // occurs before any action is queued, without bypassing the admin/plugin gates.
+  pc_screenshot:z.object({}).strict(),
+  pc_run:z.object({command:z.string().min(1).max(4000),cwd:z.string().optional(),timeout:z.number().int().min(1000).max(120000).optional(),allowNonZero:z.boolean().optional()}).strict(),
+  pc_file_read:z.object({path:z.string().min(1).max(2000),depth:z.number().int().min(1).max(3).optional()}).strict(),
+  pc_file_write:z.object({path:z.string().min(1).max(2000),content:z.string().max(500000)}).strict(),
+  pc_file_append:z.object({path:z.string().min(1).max(2000),content:z.string().max(500000)}).strict(),
+  pc_file_edit:z.object({path:z.string().min(1).max(2000),find:z.string().min(1).max(200000),replace:z.string().max(200000)}).strict(),
+  pc_directory_create:z.object({path:z.string().min(1).max(2000)}).strict(),
+  pc_open_app:z.object({target:z.enum(['notepad','calculator','paint','explorer','chrome','edge'])}).strict(),
+  pc_app_control:z.object({operation:z.enum(['list','launch','type']),app:z.enum(['notepad','calculator','paint','explorer','chrome','edge']).optional(),text:z.string().min(1).max(500).optional()}).strict(),
+  pc_notify:z.object({message:z.string().min(1).max(256),title:z.string().max(80).optional(),duration:z.number().int().min(1).max(30).optional()}).strict(),
+  pc_system_info:z.object({detail:z.boolean().optional()}).strict(),
+  pc_scrape:z.object({url:z.string().url(),formats:z.array(z.string()).optional(),onlyMainContent:z.boolean().optional()}).strict(),
+  pc_web_fetch:z.object({url:z.string().url()}).strict(),
+  pc_download:z.object({url:z.string().url(),path:z.string().min(1).max(2000)}).strict(),
+  pc_git_commit:z.object({message:z.string().min(3).max(200),cwd:z.string().optional(),files:z.array(z.string()).optional(),push:z.boolean().optional()}).strict(),
+  pc_git_pr:z.object({title:z.string().min(3).max(200),head:z.string().min(1),body:z.string().max(4000).optional(),base:z.string().optional()}).strict(),
   search_memory:z.object({query:z.string().max(200).default('')}).strict(),
   list_knowledge_sources:z.object({query:z.string().max(200).default('')}).strict(),
   read_knowledge_source:z.object({id:z.string().regex(/^[a-z0-9-]{1,40}$/)}).strict(),
@@ -173,25 +191,7 @@ export async function runTool(env, agent, name, input, executionContext={}) {
       pc_scrape:'scrape',pc_web_fetch:'web_fetch',pc_download:'download', pc_git_commit:'git_commit', pc_git_pr:'git_pr',
     };
     const pcAction=pcActionMap[name];
-    const pcSchema={
-      pc_screenshot:z.object({}).strict(),
-      pc_run:z.object({command:z.string().min(1).max(4000),cwd:z.string().optional(),timeout:z.number().int().min(1000).max(120000).optional(),allowNonZero:z.boolean().optional()}).strict(),
-      pc_file_read:z.object({path:z.string().min(1).max(2000),depth:z.number().int().min(1).max(3).optional()}).strict(),
-      pc_file_write:z.object({path:z.string().min(1).max(2000),content:z.string().max(500000)}).strict(),
-      pc_file_append:z.object({path:z.string().min(1).max(2000),content:z.string().max(500000)}).strict(),
-      pc_file_edit:z.object({path:z.string().min(1).max(2000),find:z.string().min(1).max(200000),replace:z.string().max(200000)}).strict(),
-      pc_directory_create:z.object({path:z.string().min(1).max(2000)}).strict(),
-      pc_open_app:z.object({target:z.enum(['notepad','calculator','paint','explorer','chrome','edge'])}).strict(),
-      pc_app_control:z.object({operation:z.enum(['list','launch','type']),app:z.enum(['notepad','calculator','paint','explorer','chrome','edge']).optional(),text:z.string().min(1).max(500).optional()}).strict(),
-      pc_notify:z.object({message:z.string().min(1).max(256),title:z.string().max(80).optional(),duration:z.number().int().min(1).max(30).optional()}).strict(),
-      pc_system_info:z.object({detail:z.boolean().optional()}).strict(),
-      pc_scrape:z.object({url:z.string().url(),formats:z.array(z.string()).optional(),onlyMainContent:z.boolean().optional()}).strict(),
-      pc_web_fetch:z.object({url:z.string().url()}).strict(),
-      pc_download:z.object({url:z.string().url(),path:z.string().min(1).max(2000)}).strict(),
-      pc_git_commit:z.object({message:z.string().min(3).max(200),cwd:z.string().optional(),files:z.array(z.string()).optional(),push:z.boolean().optional()}).strict(),
-      pc_git_pr:z.object({title:z.string().min(3).max(200),head:z.string().min(1),body:z.string().max(4000).optional(),base:z.string().optional()}).strict(),
-    };
-    const parsedArgs=pcSchema[name].parse(input);
+    const parsedArgs=args;
     let payload=parsedArgs;
     if(name==='pc_file_read')payload={path:parsedArgs.path,depth:parsedArgs.depth};
     if(name==='pc_file_write')payload={path:parsedArgs.path,content:parsedArgs.content};
@@ -206,7 +206,12 @@ export async function runTool(env, agent, name, input, executionContext={}) {
       for(let i=0;i<120;i++){
         await new Promise(r=>setTimeout(r,1500));
         const current=await getSystemAction(env,action.id);
-        if(current?.status==='completed')return{...current.receipt,_evidence:{effect:'read',receipt_id:action.id}};
+        if(current?.status==='completed'){
+          if(!current.receipt||typeof current.receipt!=='object'||Array.isArray(current.receipt))
+            throw new Error('PC Bridge: dokončená akcia nemá platné potvrdenie.');
+          const actions=actionEvidence(pcAction);
+          return{...current.receipt,_evidence:{effect:actions.some(claim=>claim!=='verify')?'mutation':'read',actions,receipt_id:action.id}};
+        }
         if(current?.status==='failed')throw new Error(current.error || "PC Bridge: zlyhal.");
         if(current?.status==='proposed')break;
       }

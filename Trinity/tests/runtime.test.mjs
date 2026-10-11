@@ -5,6 +5,7 @@ import {readFileSync,readdirSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
 import {createSystemAction} from '../src/system-actions.js';
+import {runTool} from '../src/tools.js';
 import {readKnowledgeSource} from '../src/knowledge-sources.js';
 import {issueSession} from '../src/security.js';
 let mf,db;const key='test-only-not-a-real-secret-123456789';const gatewayKey='test-only-gateway-secret-123456789012345';
@@ -142,6 +143,39 @@ test('authenticated admin commands execute directly while agent proposals still 
   let claim=await(await req('/api/system/actions/claim',{},false,{Authorization:'Bearer '+gatewayKey})).json();assert.equal(claim.action.id,id);assert.equal(claim.action.status,'claimed');
   const receipt={action:'write',path:'Trinity/example.txt',after_sha256:'abc'};
   const finished=await(await req(`/api/system/actions/${id}/receipt`,{status:'completed',receipt},false,{Authorization:'Bearer '+gatewayKey})).json();assert.equal(finished.action.status,'completed');assert.deepEqual(finished.action.receipt,receipt);
+});
+test('validated PC write waits for an authenticated gateway receipt in the test runtime',async()=>{
+  // The receipt is simulated. No file is written and no external gateway is called.
+  const input={path:'Trinity/pc-validation-fixture.txt',content:'runtime fixture only'};
+  const outcome=runTool({DB:db},{id:'fixture',tools:['pc_file_write']},'pc_file_write',input,{adminAuthorized:true});
+  // Always observe a rejection, including when a later assertion aborts this test.
+  outcome.catch(()=>{});
+  let row;
+  for(let attempt=0;attempt<50;attempt++){
+    row=await db.prepare("SELECT * FROM ops_system_actions WHERE rationale=? AND payload_json=? ORDER BY created_at DESC LIMIT 1")
+      .bind('Trinity tool: pc_file_write',JSON.stringify(input)).first();
+    if(row)break;
+    await new Promise(resolve=>setTimeout(resolve,10));
+  }
+  assert.ok(row,'PC tool must enqueue a validated action');
+  assert.equal(row.status,'approved');
+  assert.equal(row.approved_by,'admin:agent:trinity');
+  const denied=await req(`/api/system/actions/${row.id}/receipt`,
+    {status:'completed',receipt:{fixture:true}},false);
+  assert.equal(denied.status,401);
+  const claimResponse=await req('/api/system/actions/claim',{},false,{Authorization:'Bearer '+gatewayKey});
+  assert.equal(claimResponse.status,200);
+  const claim=await claimResponse.json();
+  assert.equal(claim.action.id,row.id);
+  const receipt={action:'write',path:input.path,fixture:true};
+  const finished=await req(`/api/system/actions/${row.id}/receipt`,
+    {status:'completed',receipt},false,{Authorization:'Bearer '+gatewayKey});
+  assert.equal(finished.status,200,await finished.clone().text());
+  const result=await outcome;
+  assert.equal(result.fixture,true);
+  assert.equal(result._evidence.receipt_id,row.id);
+  assert.equal(result._evidence.effect,'mutation');
+  assert.deepEqual(result._evidence.actions,['change','create_file']);
 });
 test('expired claimed actions are closed as failed instead of remaining stuck',async()=>{const created=await(await req('/api/system/actions',{action:'read',payload:{path:'Trinity/package.json'},rationale:'expiry recovery test'})).json();await db.prepare("UPDATE ops_system_actions SET status='claimed',claimed_by='old-gateway',lease_until=0,expires_at=0 WHERE id=?").bind(created.action.id).run();const claim=await(await req('/api/system/actions/claim',{},false,{Authorization:'Bearer '+gatewayKey})).json();assert.equal(claim.action,null);const recovered=await(await req('/api/system/actions/'+created.action.id)).json();assert.equal(recovered.action.status,'failed');assert.match(recovered.action.error,/vypršala/);});
 test('durable job completes, stores artifact, and deduplicates',async()=>{const data={task:'Runtime verification',team:['planner','writer','qa'],idempotency_key:crypto.randomUUID()};const r=await req('/api/ops/jobs',data);assert.equal(r.status,202);const job=await r.json();const duplicate=await(await req('/api/ops/jobs',data)).json();assert.equal(duplicate.id,job.id);assert.equal(duplicate.reused,true);let done;for(let i=0;i<100;i++){done=await(await req('/api/ops/jobs/'+job.id)).json();if(['completed','failed'].includes(done.status))break;await new Promise(r=>setTimeout(r,200));}assert.equal(done.status,'completed',JSON.stringify(done));assert.equal(done.steps.length,3);assert.equal(done.result,'TEST_MODEL_RESULT');const artifact=await req('/api/ops/jobs/'+job.id+'/artifact');assert.equal(artifact.status,200);assert.match(await artifact.text(),/TEST_MODEL_RESULT/);});

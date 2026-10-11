@@ -53,10 +53,18 @@ unconfirmed pair of improvements or authorize privileged actions.
 ### First delivery slice: admin development workflow
 
 - [ ] **DEV-01 — Repair PC tool validation and receipt effect classification.**
-  Await explicit human approval for this specific repair. Preserve server-side
-  admin authorization, plugin checks, action approval and gateway path policy.
+  Explicit human approval for this specific repair was received. The branch
+  now validates PC tools in the shared schema registry and classifies completed
+  receipt evidence by the existing action claims, rejecting missing or malformed
+  receipts. Preserve server-side admin authorization, plugin checks, action
+  approval and gateway path policy.
   Verify valid/invalid input, user denial, pending/failed actions and real
-  completion receipts in tests. Do not label a completed write as a read.
+  completion receipts in tests. Regression tests and an isolated D1/API receipt
+  test cover the repaired contract; their receipts are simulated, not proof of
+  a Windows file write. Rollout and live Windows acceptance remain outstanding.
+  Validation: `npm test` completed with 181 passing tests, including eight
+  PC-tool regressions and one authenticated D1/API write-receipt flow.
+  Do not label a completed write as a read.
 - [ ] **DEV-02 — Reconcile cloud tool schemas with gateway capabilities.**
   Make unsupported actions explicit; a registered cloud tool is not proof of
   gateway support. Expose no arbitrary shell access or additional applications.
@@ -77,8 +85,9 @@ unconfirmed pair of improvements or authorize privileged actions.
   environment, define rollback and obtain approval for production deployment.
   Passing repository tests is not proof of deployment or a Windows PC write.
 
-DEV-01 remains approval-gated. UI review and planning can proceed independently.
-This documentation update creates no new permissions, endpoints or PC actions.
+DEV-01's code repair was specifically approved; deployment and live execution
+remain separate from that approval. UI review and planning can proceed independently.
+This roadmap grants no new permissions and defines no new endpoints.
 
 ### Requested expansion backlog
 
