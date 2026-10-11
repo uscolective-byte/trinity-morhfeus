@@ -1,6 +1,6 @@
 {
   "name": "trinity-operational-center",
-  "version": "9.3.0",
+  "version": "9.3.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -17,13 +17,18 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
-    "miniflare": "5.20260930.0-alpha",
-    "wrangler": "4.145.0"
+    "miniflare": "5.20261006.1-alpha",
+    "wrangler": "4.149.0"
+  },
+  "overrides": {
+    "@modelcontextprotocol/client": "2.3.1",
+    "@modelcontextprotocol/sdk": "1.32.1"
   },
   "allowScripts": {
     "core-js-pure@3.50.0": true,
     "esbuild@0.28.2": true,
     "esbuild@0.28.1": true,
-    "workerd@1.20260930.2": true
+    "workerd@1.20260930.2": true,
+    "workerd@1.20261006.1": true
   }
 }

@@ -1,11 +1,29 @@
 name: Trinity CI
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'Trinity/**'
+      - '.github/workflows/webpack.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'Trinity/**'
+      - '.github/workflows/webpack.yml'
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trinity-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
     - uses: actions/checkout@v4
@@ -20,6 +38,10 @@ jobs:
     - name: Install Trinity dependencies
       working-directory: Trinity
       run: npm ci
+
+    - name: Audit production and development dependencies
+      working-directory: Trinity
+      run: npm audit --audit-level=high
 
     - name: Build and test Trinity
       working-directory: Trinity
