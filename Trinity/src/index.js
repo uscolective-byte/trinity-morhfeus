@@ -8,6 +8,7 @@ import {authenticate,checkOrigin,hash,HttpError,rateLimit,readJSON,secure,validK
 import {callModel,serviceStatus,runScheduledHealth,readiness} from './services.js';
 import {searchMemory,runTool} from './tools.js';
 import {PLUGINS,listPlugins,pluginEnabled,installPlugin,installAllPlugins} from './plugins.js';
+import {verifyPluginTools} from './plugin-verification.js';
 import {handleMcp} from './mcp.js';
 import {TRUTH_POLICY_VERSION} from './truth.js';
 import {SYSTEM_CAPABILITIES,createSystemAction,listSystemActions,getSystemAction,approveSystemAction,rejectSystemAction,claimSystemAction,finishSystemAction,authenticateGateway,getPCBridgeStatus} from './system-actions.js';
@@ -365,9 +366,13 @@ async function route(request,env,ctx){
       if(check.status!==200||!(await check.text()).includes('serverInfo'))throw new HttpError(502,'MCP handshake zlyhal.');summary='MCP initialize handshake prešiel.';
     }
     if(plugin.id==='truth')summary=`Truth policy ${TRUTH_POLICY_VERSION} je aktívna; tvrdenia o externých akciách vyžadujú potvrdenie nástroja.`;
-    if(!summary)summary=`Balík je nainštalovaný a jeho jadrový nástroj ${plugin.tools?.[0]||'katalóg'} je registrovaný.`;
-    await env.DB.prepare("INSERT INTO ops_events(action,details) VALUES('plugin_verified',?)").bind(JSON.stringify({plugin:plugin.id,summary})).run();
-    return json({status:'verified',plugin:plugin.id,summary,details});
+    let status='verified';
+    if(!summary){
+      const verification=await verifyPluginTools(plugin,(tool,args)=>runTool(env,{id:'plugin-check',tools:plugin.tools},tool,args));
+      status=verification.status;summary=verification.summary;details={checks:verification.checks,verification_scope:verification.verification_scope,note:verification.note};
+    }
+    await env.DB.prepare("INSERT INTO ops_events(action,details) VALUES(?,?)").bind(status==='verified'?'plugin_verified':'plugin_test_incomplete',JSON.stringify({plugin:plugin.id,status,summary})).run();
+    return json({status,verified:status==='verified',plugin:plugin.id,summary,details});
   }
   if(path==='/api/ops/services'&&request.method==='GET')return json(await serviceStatus(env));
   if(path==='/api/ops/providers/test'&&request.method==='POST'){

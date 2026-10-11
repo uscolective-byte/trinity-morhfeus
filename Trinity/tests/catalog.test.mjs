@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {SKILLS} from '../src/registry.js';
 import {PLUGINS} from '../src/plugins.js';
 
-test('Trinity exposes exactly 150 executable skills',()=>{
+test('Trinity exposes exactly 150 workflow skills with unique identities',()=>{
   assert.equal(SKILLS.length,150);
   assert.equal(new Set(SKILLS.map(item=>item.id)).size,150);
   for(const skill of SKILLS) {

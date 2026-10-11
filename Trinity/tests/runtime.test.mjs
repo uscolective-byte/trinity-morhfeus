@@ -31,6 +31,19 @@ before(async()=>{
   }
 });
 after(async()=>{await mf?.dispose();});
+test('generic plugin verification executes local tools and distinguishes registration',async()=>{
+  const tested=await req('/api/ops/plugins/data-pack-01/test',{});
+  assert.equal(tested.status,200,await tested.clone().text());
+  const result=await tested.json();
+  assert.equal(result.status,'verified');assert.equal(result.verified,true);
+  assert.deepEqual(result.details.checks,[{tool:'json_tool',status:'passed'}]);
+  const registered=await req('/api/ops/plugins/cloud-pack-03/test',{});
+  assert.equal(registered.status,200,await registered.clone().text());
+  const pending=await registered.json();
+  assert.equal(pending.status,'registered');assert.equal(pending.verified,false);
+  const audit=await db.prepare("SELECT action FROM ops_events WHERE json_extract(details,'$.plugin')=? ORDER BY id DESC LIMIT 1").bind('cloud-pack-03').first();
+  assert.equal(audit.action,'plugin_test_incomplete');
+});
 test('public UI, liveness and readiness; private APIs',async()=>{assert.equal((await req('/',undefined,false)).status,200);const health=await(await req('/health',undefined,false)).json();assert.equal(health.agents,40);assert.equal(health.version,'9.4.0');const ready=await req('/ready',undefined,false);assert.equal(ready.status,200,await ready.clone().text());assert.equal((await ready.json()).checks.schema,true);assert.equal((await req('/api/ops/agents',undefined,false)).status,401);assert.equal((await req('/mcp',{},false)).status,401);});
 test('login sets protected cookie and logout revokes it',async()=>{const r=await req('/api/ops/login',{key},false);assert.equal(r.status,200);const c=r.headers.get('set-cookie');assert.match(c,/HttpOnly/);assert.match(c,/Secure/);assert.match(c,/SameSite=Strict/);assert.equal((await req('/api/ops/status',undefined,false,{Cookie:c.split(';')[0]})).status,200);await req('/api/ops/logout',{},false,{Cookie:c.split(';')[0]});assert.equal((await req('/api/ops/status',undefined,false,{Cookie:c.split(';')[0]})).status,401);});
 test('Google auth stays dormant and the authenticated owner is recognized',async()=>{const config=await(await req('/api/auth/config',undefined,false)).json();assert.deepEqual(config,{google_enabled:false,google_required:false});assert.equal((await req('/api/auth/google/start',undefined,false)).status,404);const pending=await req('/api/ops/users/pending');assert.equal(pending.status,200);assert.equal((await req('/api/ops/users/example%40gmail.com/approve',{})).status,404);});
