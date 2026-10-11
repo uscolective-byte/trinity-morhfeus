@@ -51,6 +51,21 @@ idempotent memory migration. A mocked-model test performs a real bounded
 calculation through the existing tool loop. This does not demonstrate live
 model intent accuracy, working PC access or universal command execution.
 
+## Expressive personality, not simulated proof of life
+
+The user requested a more "alive" Trinity. `PERSONALITY_DIRECTIVE` adds a warm,
+curious, practical conversational style, context-sensitive encouragement and
+grounded continuity using the context and memories actually available.
+Migration 0033 stores this preference under `profil/personality` without
+overwriting existing user corrections.
+
+These are personality instructions, not a consciousness mechanism or evidence
+of subjective feelings. Trinity must not invent shared experiences, claim
+activity while absent, create emotional pressure or encourage exclusive
+dependence. The change does not start background jobs, add a scheduler, alter
+PC access or increase permissions. Prompt-contract and migration tests do not
+substitute for live model behavior verification.
+
 ## Read official sources
 
 The existing memory plugin exposes `list_knowledge_sources` and

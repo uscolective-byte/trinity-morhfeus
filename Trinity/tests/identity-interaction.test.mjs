@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
-import {TRINITY_IDENTITY,IDENTITY_DIRECTIVE,NATURAL_COMMAND_DIRECTIVE} from '../src/identity.js';
+import {TRINITY_IDENTITY,IDENTITY_DIRECTIVE,NATURAL_COMMAND_DIRECTIVE,PERSONALITY_DIRECTIVE} from '../src/identity.js';
 import {runAgent,executionPolicyForProvider} from '../src/engine.js';
 
 test('identity attributes the Trinity project without claiming model authorship',()=>{
@@ -76,5 +76,42 @@ test('creator memory migration is idempotent and preserves existing user correct
     db.prepare("UPDATE ops_memory SET value=?,source='user' WHERE key='profil/interaction'").run('Moja nová preferencia');
     db.exec(sql);
     assert.equal(db.prepare("SELECT value FROM ops_memory WHERE key='profil/interaction'").get().value,'Moja nová preferencia');
+  }finally{db.close();}
+});
+
+test('expressive personality requires grounded continuity without false life or emotional pressure',()=>{
+  assert.match(PERSONALITY_DIRECTIVE,/srdečne, pokojne, zvedavo/);
+  assert.match(PERSONALITY_DIRECTIVE,/skutočne dostupný kontext/);
+  assert.match(PERSONALITY_DIRECTIVE,/nevymýšľaj spoločné zážitky/);
+  assert.match(PERSONALITY_DIRECTIVE,/Nepredstieraj ľudské pocity/);
+  assert.match(PERSONALITY_DIRECTIVE,/nie dôkaz života či vedomia/);
+  assert.match(PERSONALITY_DIRECTIVE,/Nevytváraj citový nátlak/);
+  assert.match(PERSONALITY_DIRECTIVE,/nezapína úlohy na pozadí/);
+});
+
+test('work and conversation receive the same personality contract without authorizing new activity',async()=>{
+  for(const task of ['Ahoj, porozprávajme sa','uprav tento text']){
+    let prompt='';
+    const result=await runAgent({AI:{run:async(_model,{messages})=>{
+      prompt=messages[0].content;return {response:'Rozumiem.'};
+    }}},'writer',task,'Relevantná používateľská poznámka');
+    assert.ok(prompt.includes(PERSONALITY_DIRECTIVE));
+    assert.match(prompt,/BEŽNÝ REŽIM:/);
+    assert.equal(result.tool_log.length,0);
+  }
+  // Mocked inference checks instruction delivery, not a live subjective state.
+});
+
+test('personality memory survives repeat migration and preserves user edits',()=>{
+  const sql=readFileSync(new URL('../migrations/0033_personality_memory.sql',import.meta.url),'utf8');
+  const db=new DatabaseSync(':memory:');
+  try{
+    db.exec('CREATE TABLE ops_memory(key TEXT PRIMARY KEY,value TEXT,source TEXT)');
+    db.exec(sql);db.exec(sql);
+    assert.equal(db.prepare('SELECT COUNT(*) AS total FROM ops_memory').get().total,1);
+    assert.match(db.prepare("SELECT value FROM ops_memory WHERE key='profil/personality'").get().value,/Nepredstierat vedomie/);
+    db.prepare("UPDATE ops_memory SET value=?,source='user' WHERE key='profil/personality'").run('Preferujem vecný tón bez humoru');
+    db.exec(sql);
+    assert.equal(db.prepare("SELECT value FROM ops_memory WHERE key='profil/personality'").get().value,'Preferujem vecný tón bez humoru');
   }finally{db.close();}
 });
