@@ -16,7 +16,36 @@ import {walletTransactionSchema} from '../src/wallet.js';
 import {portfolioSchema,tradeSchema,computePortfolioSummary,TRADING_DIRECTIVE} from '../src/trading.js';
 import {getPCBridgeStatus} from '../src/system-actions.js';
 import {handleInboundEmail} from '../src/email.js';
+import {PLUGINS} from '../src/plugins.js';
+import {PRACTICAL_TOOL_NAMES,PRACTICAL_TOOL_SCHEMAS,runPracticalTool} from '../src/practical-skills.js';
 test('40 unique agents in eight departments',()=>{assert.equal(AGENTS.length,40);assert.equal(new Set(AGENTS.map(a=>a.id)).size,40);assert.equal(new Set(AGENTS.map(a=>a.cluster)).size,8);});
+test('20 practical skills are installed as real tools for every Trinity role',()=>{assert.equal(PRACTICAL_TOOL_NAMES.length,20);assert.equal(new Set(PRACTICAL_TOOL_NAMES).size,20);assert.ok(PRACTICAL_TOOL_NAMES.every(name=>PLUGINS.some(plugin=>plugin.tools.includes(name))));assert.ok(AGENTS.every(agent=>PRACTICAL_TOOL_NAMES.every(name=>agent.tools.includes(name))));});
+test('all 20 practical skill implementations execute real bounded work',()=>{
+  const cases=[
+    ['date_math',{operation:'add_days',start:'2026-01-01',days:2},result=>assert.equal(result.date,'2026-01-03')],
+    ['timezone_convert',{datetime:'2026-01-01T12:00:00Z',to_timezone:'Europe/Bratislava'},result=>assert.equal(result.utc,'2026-01-01T12:00:00.000Z')],
+    ['statistics',{values:[1,2,3,4]},result=>assert.equal(result.median,2.5)],
+    ['csv_inspect',{csv:'name,value\nA,10\nB,20'},result=>assert.equal(result.numeric.value.mean,15)],
+    ['csv_to_json',{csv:'name,note\nA,"x,y"'},result=>assert.equal(result.records[0].note,'x,y')],
+    ['text_diff',{before:'a\nb',after:'a\nc'},result=>assert.deepEqual([result.added,result.removed],[1,1])],
+    ['list_cleaner',{items:[' A ','a','']},result=>assert.deepEqual(result.items,['A'])],
+    ['table_transform',{json:'[{"n":2},{"n":1}]',operation:'sort',field:'n'},result=>assert.equal(result.rows[0].n,1)],
+    ['url_inspect',{url:'https://example.com:8443/a?q=1'},result=>assert.equal(result.flags.non_standard_port,true)],
+    ['query_string',{operation:'parse',value:'a=1&a=2'},result=>assert.deepEqual(result.params.a,['1','2'])],
+    ['color_convert',{color:'#ff0000',to:'hsl'},result=>assert.equal(result.output,'hsl(0, 100%, 50%)')],
+    ['contrast_check',{foreground:'#000',background:'#fff'},result=>assert.equal(result.ratio,21)],
+    ['base64_codec',{operation:'encode',value:'Trinity'},result=>assert.equal(result.output,'VHJpbml0eQ==')],
+    ['uuid_tool',{operation:'generate'},result=>assert.match(result.uuid,/^[0-9a-f-]{36}$/)],
+    ['semver_compare',{left:'1.2.0',right:'1.1.9'},result=>assert.equal(result.relation,'newer')],
+    ['redact_sensitive',{text:'Napíš na test@example.com',types:['email']},result=>assert.doesNotMatch(result.text,/test@example/)],
+    ['markdown_inspect',{markdown:'# Nadpis\n- [x] Hotovo\n[Web](https://example.com)'},result=>assert.deepEqual([result.headings.length,result.completed_tasks,result.links.length],[1,1,1])],
+    ['html_to_text',{html:'<style>x{}</style><p>Ahoj <b>Trinity</b></p>'},result=>assert.equal(result.text,'Ahoj Trinity')],
+    ['business_math',{operation:'vat',amount:100,rate:20},result=>assert.equal(result.gross,120)],
+    ['geometry',{shape:'circle',radius:2},result=>assert.equal(result.area,Math.PI*4)]
+  ];
+  assert.equal(cases.length,20);
+  for(const [name,input,verify] of cases)verify(runPracticalTool(name,PRACTICAL_TOOL_SCHEMAS[name].parse(input)));
+});
 test('routing and team deduplication',()=>{assert.deepEqual(selectTeam('Cloudflare binding','team'),['planner','cloudflare','qa','orchestrator']);assert.equal(selectTeam('test','team','orchestrator').length,3);});
 test('work requests delegate while ordinary conversation stays direct',()=>{assert.equal(shouldDelegate('Ahoj Trinity'),false);assert.equal(shouldDelegate('Oprav a otestuj Cloudflare Worker'),true);assert.ok(AGENTS.find(a=>a.id==='orchestrator').tools.includes('web_search'));});
 test('fail closed and exact secret comparison',async()=>{assert.equal(await validKey('x',{}),false);assert.equal(await validKey('a'.repeat(32),{TRINITY_OPS_KEY:'b'.repeat(32)}),false);assert.equal(await validKey('a'.repeat(32),{TRINITY_OPS_KEY:'a'.repeat(32)}),true);});

@@ -4,9 +4,11 @@ import {ensureToolEnabled,pluginEnabled,listPlugins,installPlugin} from './plugi
 import {SKILLS} from './registry.js';
 import {createSystemAction,getSystemAction,actionEvidence} from './system-actions.js';
 import {getPortfolio} from './trading.js';
+import {PRACTICAL_TOOL_NAMES,PRACTICAL_TOOL_SCHEMAS,PRACTICAL_TOOL_HELP,runPracticalTool} from './practical-skills.js';
 export const INTERNAL_TOOLS=new Set(['request_system_action','system_action_status']);
 export const PC_TOOLS=new Set(['pc_screenshot','pc_run','pc_file_read','pc_file_write','pc_file_append','pc_file_edit','pc_directory_create','pc_open_app','pc_app_control','pc_notify','pc_system_info','pc_scrape','pc_web_fetch','pc_download','pc_git_commit','pc_git_pr']);
 export const TOOL_SCHEMAS={
+  ...PRACTICAL_TOOL_SCHEMAS,
   search_memory:z.object({query:z.string().max(200).default('')}).strict(),
   project_snapshot:z.object({}).strict(),
   service_status:z.object({binding:z.enum(Object.keys(SERVICES)).optional()}).strict(),
@@ -43,6 +45,7 @@ export async function runTool(env, agent, name, input, executionContext={}) {
   if(!INTERNAL_TOOLS.has(name)&&name!=='install_plugin')await ensureToolEnabled(env,name);
   if(name==='request_system_action'&&input&&typeof input==='object')input={action:input.action,payload:input.payload||(typeof input.resource==='string'?{path:input.resource}:{}),rationale:input.rationale||input.reason};
   const args=TOOL_SCHEMAS[name].parse(input);
+  if(PRACTICAL_TOOL_NAMES.includes(name))return runPracticalTool(name,args);
   if(name==='json_tool'){
     let value;try{value=JSON.parse(args.json);}catch(error){return {valid:false,error:error.message.slice(0,300)};}
     if(args.operation==='validate')return {valid:true,type:Array.isArray(value)?'array':value===null?'null':typeof value};
@@ -221,6 +224,7 @@ export async function recallMemory(env,task){
   return [...records.values()];
 }
 export const TOOL_HELP={
+  ...PRACTICAL_TOOL_HELP,
   // ── PC Bridge nástroje ──
   pc_screenshot:'Spraví screenshot obrazovky a vráti base64 PNG + rozlíšenie: {}',
   pc_run:'Spustí adminom autorizovaný PowerShell príkaz v povolenom workspace a vráti stdout/stderr: {command:string,cwd?:string,timeout?:ms,allowNonZero?:bool}',
