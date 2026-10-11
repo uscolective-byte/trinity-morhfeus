@@ -36,7 +36,16 @@ export function selectMemoryRecords(records, task, limit=8) {
 
 export function sanitizeMemoryRecords(records,limit=13,maxLength=2500) {
   return (Array.isArray(records)?records:[]).filter(r=>r&&typeof r.key==='string'&&typeof r.value==='string'&&!SECRET_KEY.test(r.key))
-    .slice(0,Math.max(0,Math.min(40,limit))).map(r=>({key:r.key.slice(0,160),value:r.value.slice(0,maxLength).replace(SECRET_VALUE,'[redacted]').replace(/((?:api[_ -]?key|password|heslo|access[_ -]?token)\s*[:=]\s*)[^\s"']+/gi,'$1[redacted]'),source:String(r.source||'unknown').slice(0,160),...(typeof r.updated_at==='string'?{updated_at:r.updated_at.slice(0,40)}:{})}));
+    .slice(0,Math.max(0,Math.min(40,limit))).map(r=>{
+      const source=String(r.source||'unknown').slice(0,160).replace(SECRET_VALUE,'[redacted]');
+      const web=/^(web|reference):https:\/\//.test(source);
+      let sourceUrl;
+      if(web){try{const url=new URL(source.replace(/^(web|reference):/,''));if(!url.username&&!url.password&&!url.search)sourceUrl=url.href;}catch{}}
+      return {key:r.key.slice(0,160),value:r.value.slice(0,maxLength).replace(SECRET_VALUE,'[redacted]').replace(/((?:api[_ -]?key|password|heslo|access[_ -]?token)\s*[:=]\s*)[^\s"']+/gi,'$1[redacted]'),
+        source,record_type:web?'web-reference':source.startsWith('legacy')?'historical':r.key.startsWith('profil/')?'user-profile':'note',
+        ...(sourceUrl?{source_url:sourceUrl,fact_status:'reference-not-live',untrusted_data:true}:{}),
+        ...(typeof r.updated_at==='string'?{updated_at:r.updated_at.slice(0,40)}:{})};
+    });
 }
 
 export function formatMemoryContext(records) {

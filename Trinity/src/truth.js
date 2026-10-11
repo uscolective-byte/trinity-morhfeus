@@ -48,7 +48,7 @@ const CLAIM_RULES=[
   }
 ];
 
-const READ_TOOLS=new Set(['search_memory','project_snapshot','service_status','web_search','calculate','analyze_text']);
+const READ_TOOLS=new Set(['search_memory','read_knowledge_source','project_snapshot','service_status','web_search','calculate','analyze_text']);
 
 function supportsClaim(receipt,claimId){
   if(!receipt||receipt.status!=='completed'||!receipt.receipt_id)return false;

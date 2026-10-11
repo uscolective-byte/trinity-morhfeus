@@ -302,7 +302,7 @@ async function route(request,env,ctx){
   }
   if(path==='/api/assistant/memory'){
     if(request.method==='GET')return json((await searchMemory(env,url.searchParams.get('q')||'')).records);
-    if(request.method==='POST'){const d=z.object({key:z.string().min(1).max(120),value:z.string().min(1).max(10000)}).strict().parse(await readJSON(request));await env.DB.prepare("INSERT INTO ops_memory(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=datetime('now')").bind(d.key,d.value).run();return json({stored:true});}
+    if(request.method==='POST'){const d=z.object({key:z.string().min(1).max(120),value:z.string().min(1).max(10000)}).strict().parse(await readJSON(request));await env.DB.prepare("INSERT INTO ops_memory(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,source='user',updated_at=datetime('now')").bind(d.key,d.value).run();return json({stored:true});}
   }
   if(path==='/api/assistant/changes'&&request.method==='GET')return json([]);
   if(path==='/api/ops/login-ticket'&&request.method==='POST'){
@@ -410,7 +410,7 @@ async function route(request,env,ctx){
     if(request.method==='GET')return json(await searchMemory(env,z.string().max(200).parse(url.searchParams.get('q')||'')));
     if(request.method==='POST'){
       const {key,value}=z.object({key:z.string().min(1).max(120),value:z.string().min(1).max(10000)}).strict().parse(await readJSON(request));
-      await env.DB.prepare("INSERT INTO ops_memory(key,value,source) VALUES(?,?,'user') ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=datetime('now')").bind(key,value).run();
+      await env.DB.prepare("INSERT INTO ops_memory(key,value,source) VALUES(?,?,'user') ON CONFLICT(key) DO UPDATE SET value=excluded.value,source='user',updated_at=datetime('now')").bind(key,value).run();
       return json({stored:true,key});
     }
   }

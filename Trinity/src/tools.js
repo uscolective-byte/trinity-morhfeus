@@ -7,6 +7,7 @@ import {getPortfolio} from './trading.js';
 import {PRACTICAL_TOOL_NAMES,PRACTICAL_TOOL_SCHEMAS,PRACTICAL_TOOL_HELP,runPracticalTool} from './practical-skills.js';
 import {planTask} from './planner.js';
 import {memorySearchTerms,selectMemoryRecords,sanitizeMemoryRecords} from './memory-context.js';
+import {listKnowledgeSources,readKnowledgeSource} from './knowledge-sources.js';
 
 export const INTERNAL_TOOLS=new Set(['request_system_action','system_action_status']);
 export const PC_TOOLS=new Set(['pc_screenshot','pc_run','pc_file_read','pc_file_write','pc_file_append','pc_file_edit','pc_directory_create','pc_open_app','pc_app_control','pc_notify','pc_system_info','pc_scrape','pc_web_fetch','pc_download','pc_git_commit','pc_git_pr']);
@@ -14,6 +15,8 @@ export const TOOL_SCHEMAS={
   plan_work:z.object({task:z.string().trim().min(1).max(12000)}).strict(),
   ...PRACTICAL_TOOL_SCHEMAS,
   search_memory:z.object({query:z.string().max(200).default('')}).strict(),
+  list_knowledge_sources:z.object({query:z.string().max(200).default('')}).strict(),
+  read_knowledge_source:z.object({id:z.string().regex(/^[a-z0-9-]{1,40}$/)}).strict(),
   project_snapshot:z.object({}).strict(),
   service_status:z.object({binding:z.enum(Object.keys(SERVICES)).optional()}).strict(),
   web_search:z.object({query:z.string().min(3).max(500)}).strict()
@@ -50,6 +53,8 @@ export async function runTool(env, agent, name, input, executionContext={}) {
   if(name==='request_system_action'&&input&&typeof input==='object')input={action:input.action,payload:input.payload||(typeof input.resource==='string'?{path:input.resource}:{}),rationale:input.rationale||input.reason};
   const args=TOOL_SCHEMAS[name].parse(input);
   if(name==='plan_work')return planTask(args.task);
+  if(name==='list_knowledge_sources')return {sources:listKnowledgeSources(args.query),note:'Oficialne referencie; zoznam nepotvrdzuje aktualne nacitanie.'};
+  if(name==='read_knowledge_source')return readKnowledgeSource(env,args.id);
   if(PRACTICAL_TOOL_NAMES.includes(name))return runPracticalTool(name,args);
   if(name==='json_tool'){
     let value;try{value=JSON.parse(args.json);}catch(error){return {valid:false,error:error.message.slice(0,300)};}
@@ -223,13 +228,16 @@ export async function runTool(env, agent, name, input, executionContext={}) {
 export async function recallMemory(env,task){
   if(!await pluginEnabled(env,'memory'))return [];
   const words=memorySearchTerms(task);
-  const pinned=await env.DB.prepare("SELECT key,substr(value,1,1800) AS value,source,updated_at FROM ops_memory WHERE key LIKE 'profil/%' ORDER BY updated_at DESC LIMIT 5").all();
-  const records=[...pinned.results];
+  const pinned=await env.DB.prepare("SELECT key,substr(value,1,1800) AS value,source,updated_at FROM ops_memory WHERE key LIKE 'profil/%' ORDER BY updated_at DESC LIMIT 8").all();
+  const recent=await env.DB.prepare("SELECT key,substr(value,1,1800) AS value,source,updated_at FROM ops_memory ORDER BY updated_at DESC LIMIT 48").all();
+  const records=[...pinned.results,...recent.results];
   for(const word of words)records.push(...(await searchMemory(env,word)).records);
   return selectMemoryRecords(records,task);
 }
 export const TOOL_HELP={
   plan_work:'Pripraví plán, riziká a kontrolu dokončenia bez vykonania akcií: {task:string}',
+  list_knowledge_sources:'Zoznam oficialnych zdrojov pre Trinity bez nacitania webu: {query?:string}',
+  read_knowledge_source:'Nacita konkretny oficialny zdroj s URL, casom nacitania a hodinovou cache; neoveruje pristup k sluzbe: {id:string z katalogu}',
   ...PRACTICAL_TOOL_HELP,
   // ── PC Bridge nástroje ──
   pc_screenshot:'Spraví screenshot obrazovky a vráti base64 PNG + rozlíšenie: {}',

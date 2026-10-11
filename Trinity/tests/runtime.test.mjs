@@ -5,6 +5,7 @@ import {readFileSync,readdirSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
 import {createSystemAction} from '../src/system-actions.js';
+import {readKnowledgeSource} from '../src/knowledge-sources.js';
 let mf,db;const key='test-only-not-a-real-secret-123456789';const gatewayKey='test-only-gateway-secret-123456789012345';
 const url='https://trinity.test';
 async function req(path,body,auth=true,extra={}){return mf.dispatchFetch(url+path,{method:body===undefined?'GET':'POST',headers:{...(auth?{Authorization:'Bearer '+key}:{}),...(body===undefined?{}:{'Content-Type':'application/json'}),...extra},body:body===undefined?undefined:JSON.stringify(body)});}
@@ -31,6 +32,17 @@ before(async()=>{
   }
 });
 after(async()=>{await mf?.dispose();});
+test('manual memory edits cannot be overwritten by later public-source refresh',async()=>{
+  const key='web/ollama-api';
+  await db.prepare('INSERT INTO ops_memory(key,value,source) VALUES(?,?,?)')
+    .bind(key,'Original public snapshot','web:https://docs.ollama.com/api/introduction').run();
+  const edited=await req('/api/ops/memory',{key,value:'Moja vlastna opravena poznamka.'});
+  assert.equal(edited.status,200,await edited.clone().text());
+  await readKnowledgeSource({DB:db},'ollama-api',{fetchImpl:async()=>new Response('New public documentation',{headers:{'Content-Type':'text/markdown'}})});
+  const row=await db.prepare('SELECT value,source FROM ops_memory WHERE key=?').bind(key).first();
+  assert.equal(row.value,'Moja vlastna opravena poznamka.');
+  assert.equal(row.source,'user');
+});
 test('generic plugin verification executes local tools and distinguishes registration',async()=>{
   const tested=await req('/api/ops/plugins/data-pack-01/test',{});
   assert.equal(tested.status,200,await tested.clone().text());

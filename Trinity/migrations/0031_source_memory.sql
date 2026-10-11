@@ -1,0 +1,11 @@
+-- Reference knowledge only: no live account state, credentials or authorization.
+-- Preserve user-edited records and existing preferences.
+INSERT INTO ops_memory(key,value,source) VALUES
+ ('reference/cloudflare-workers','Cloudflare Workers je serverless platforma na spustanie aplikacii. Dokumentacia je zdrojom kontraktov, nie dokazom, ze konkretne nasadenie alebo konto funguje.','reference:https://developers.cloudflare.com/workers/'),
+ ('reference/d1-local-development','Wrangler dev standardne pouziva oddelene lokalne D1 data, nie produkcnu databazu. Zmenu na remote bindings treba vyhodnotit samostatne; lokalny health-check nepotvrdzuje cloudovu databazu.','reference:https://developers.cloudflare.com/d1/best-practices/local-development/'),
+ ('reference/ollama-api','Lokalna Ollama API pouziva localhost:11434/api; cloudova API pouziva ollama.com/api. Cloud potrebuje API kluc, lokalna API ho standardne nevyzaduje. Dostupnost a model sa musia overit na prislusnom PC.','reference:https://docs.ollama.com/api/introduction'),
+ ('reference/copilot-mcp','VS Code rozlisuje workspace a user MCP konfiguracie a formaty servers/mcpServers. Server musi byt doveryhodny a jeho nastroje objavene; pridanie konfiguracie samo nepotvrdzuje pripojenie. Over aktualne formaty v oficialnej dokumentacii.','reference:https://code.visualstudio.com/docs/agent-customization/mcp-servers'),
+ ('reference/openai-api','Pre OpenAI API pouzivaj oficialny developer quickstart a aktualnu referenciu. Nazov modelu, dostupnost, API opravnenia a vykonanie poziadavky treba overit; ChatGPT aplikacia a API nie su rovnake pripojenie.','reference:https://developers.openai.com/api/docs/quickstart'),
+ ('profil/project-storage','Pouzivatel chce hlavny pracovny projekt Trinity/Morhfeus v OneDrive a ukladat tam nove projektove subory. Skutocnu lokalnu cestu over v prostredi; nevymyslaj, ze mas pristup k PC alebo ze presun prebehol.','user:explicit'),
+ ('profil/collaboration','Pouzivatel uprednostnuje aktivnu pomoc s projektom a ovladanie AI cez chat. Vykonavaj dostupnu pracu samostatne, ale zachovaj overenie opravneni. Pri blokovani daj jeden zrozumitelny dalsi krok.','user:explicit')
+ON CONFLICT(key) DO NOTHING;

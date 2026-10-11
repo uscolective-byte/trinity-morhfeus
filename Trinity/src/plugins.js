@@ -1,7 +1,7 @@
 import {EXTENDED_PLUGINS} from './extended-catalog.js';
 const CORE_PLUGINS=[
  {id:'task-planner',name:'Pracovný plánovač',icon:'◇',description:'Vytvorí ohraničený plán, riziká a podmienky dokončenia. Plán nie je vykonaná akcia ani oprávnenie.',tools:['plan_work'],dependency:'Zabudovaný plánovač Trinity',version:'1.0.0'},
- {id:'memory',name:'Pamäť',icon:'◈',description:'Ukladá tvoje poznámky a pripomína relevantné informácie pred odpoveďou.',tools:['search_memory'],dependency:'Cloudflare D1',version:'1.1.0'},
+ {id:'memory',name:'Pamäť',icon:'◈',description:'Pripomína tvoje poznámky, rozlišuje historické a webové poznatky a načítava oficiálne referencie s uvedeným zdrojom.',tools:['search_memory','list_knowledge_sources','read_knowledge_source'],dependency:'Cloudflare D1 + verejné HTTPS zdroje',version:'1.1.0'},
  {id:'projects',name:'Projekty',icon:'▦',description:'Číta existujúce projekty a úlohy. Nepredstiera ich dokončenie.',tools:['project_snapshot'],dependency:'Cloudflare D1',version:'1.0.0'},
  {id:'web',name:'Webový výskum',icon:'◎',description:'Vyhľadáva aktuálne zdroje cez overený účet Ollama.',tools:['web_search'],dependency:'Ollama API',version:'1.0.0'},
  {id:'images',name:'Tvorba obrázkov',icon:'◉',description:'Generuje skutočné obrázky pomocou Workers AI a bezpečne ich ukladá do R2.',tools:['generate_image'],dependency:'Workers AI + R2',version:'1.0.0'},
