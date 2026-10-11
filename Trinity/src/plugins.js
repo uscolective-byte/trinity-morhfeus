@@ -59,6 +59,13 @@ export async function installPlugin(env,id){
  await env.DB.prepare("INSERT INTO ops_events(action,details) VALUES('plugin_installed',?)").bind(JSON.stringify({plugin:plugin.id,source:'trinity-core'})).run();
  return {id:plugin.id,name:plugin.name,version:plugin.version,installed:true,enabled:true,source:'trinity-core'};
 }
+export async function installAllPlugins(env){
+ const now="datetime('now')";
+ const statements=PLUGINS.map(plugin=>env.DB.prepare(`INSERT INTO ops_plugins(id,version,installed,enabled,source,installed_at,updated_at) VALUES(?,?,1,1,'trinity-core',${now},${now}) ON CONFLICT(id) DO UPDATE SET version=excluded.version,installed=1,enabled=1,source='trinity-core',installed_at=coalesce(ops_plugins.installed_at,${now}),updated_at=${now}`).bind(plugin.id,plugin.version));
+ for(let index=0;index<statements.length;index+=50)await env.DB.batch(statements.slice(index,index+50));
+ await env.DB.prepare("INSERT INTO ops_events(action,details) VALUES('trusted_catalog_installed',?)").bind(JSON.stringify({plugins:PLUGINS.length,source:'trinity-core',enabled:true,external_code:false})).run();
+ return {installed:PLUGINS.length,enabled:PLUGINS.length,source:'trinity-core'};
+}
 export async function ensureToolEnabled(env,tool){const p=PLUGINS.find(p=>p.tools.includes(tool));if(!p||!await pluginEnabled(env,p.id))throw new Error('Rozšírenie pre tento nástroj je vypnuté.');}
 
 export const PLUGINS=[...CORE_PLUGINS,...EXTENDED_PLUGINS];

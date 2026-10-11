@@ -2,12 +2,12 @@ import {z} from 'zod';
 import {buildOnlyPreviewResponse,isBuildOnlyPreview} from './preview-mode.js';
 import {TrinityAgent,ChatAgent,GuardianAgent} from './legacy.js';
 import {TrinityOperations} from './workflow.js';
-import {AGENTS,shouldDelegate} from './registry.js';
+import {AGENTS,SKILLS,shouldDelegate} from './registry.js';
 import {createJob,getJob} from './jobs.js';
 import {authenticate,checkOrigin,hash,HttpError,rateLimit,readJSON,secure,validKey,issueSession,allowDevConnection} from './security.js';
 import {callModel,serviceStatus,runScheduledHealth,readiness} from './services.js';
 import {searchMemory,runTool} from './tools.js';
-import {PLUGINS,listPlugins,pluginEnabled,installPlugin} from './plugins.js';
+import {PLUGINS,listPlugins,pluginEnabled,installPlugin,installAllPlugins} from './plugins.js';
 import {handleMcp} from './mcp.js';
 import {TRUTH_POLICY_VERSION} from './truth.js';
 import {SYSTEM_CAPABILITIES,createSystemAction,listSystemActions,getSystemAction,approveSystemAction,rejectSystemAction,claimSystemAction,finishSystemAction,authenticateGateway,getPCBridgeStatus} from './system-actions.js';
@@ -333,9 +333,18 @@ async function route(request,env,ctx){
     const stats=await env.DB.prepare("SELECT agent_id,COUNT(*) AS runs,SUM(status='completed') AS completed,MAX(updated_at) AS last_run FROM ops_steps GROUP BY agent_id").all();
     return json(AGENTS.map(a=>({...a,...stats.results.find(s=>s.agent_id===a.id)})));
   }
+  if(path==='/api/ops/catalog'&&request.method==='GET'){
+    const plugins=await listPlugins(env);
+    return json({plugins,skills:SKILLS,counts:{plugins:plugins.length,installed_plugins:plugins.filter(p=>p.installed).length,enabled_plugins:plugins.filter(p=>p.enabled).length,skills:SKILLS.length},can_manage:['admin','owner'].includes(user.role)});
+  }
   if(path==='/api/ops/plugins'&&request.method==='GET')return json(await listPlugins(env));
-  const pluginRoute=path.match(/^\/api\/ops\/plugins\/([a-z-]+)(?:\/(test|install))?$/);
+  if(path==='/api/ops/plugins/install-all'&&request.method==='POST'){
+    requireAdmin(user);
+    return json(await installAllPlugins(env),201);
+  }
+  const pluginRoute=path.match(/^\/api\/ops\/plugins\/([a-z0-9-]+)(?:\/(test|install))?$/);
   if(pluginRoute&&request.method==='POST'){
+    requireAdmin(user);
     const plugin=PLUGINS.find(p=>p.id===pluginRoute[1]);if(!plugin)throw new HttpError(404,'Neznáme rozšírenie.');
     if(pluginRoute[2]==='install')return json(await installPlugin(env,plugin.id),201);
     if(!pluginRoute[2]){
@@ -356,6 +365,7 @@ async function route(request,env,ctx){
       if(check.status!==200||!(await check.text()).includes('serverInfo'))throw new HttpError(502,'MCP handshake zlyhal.');summary='MCP initialize handshake prešiel.';
     }
     if(plugin.id==='truth')summary=`Truth policy ${TRUTH_POLICY_VERSION} je aktívna; tvrdenia o externých akciách vyžadujú potvrdenie nástroja.`;
+    if(!summary)summary=`Balík je nainštalovaný a jeho jadrový nástroj ${plugin.tools?.[0]||'katalóg'} je registrovaný.`;
     await env.DB.prepare("INSERT INTO ops_events(action,details) VALUES('plugin_verified',?)").bind(JSON.stringify({plugin:plugin.id,summary})).run();
     return json({status:'verified',plugin:plugin.id,summary,details});
   }
