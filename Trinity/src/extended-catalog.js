@@ -16,8 +16,58 @@ const skillGroups = [
   ["quality", "Kvalita", ["Kontrolný zoznam", "Unit testy", "Regresia", "Hraničné prípady", "Peer review", "Dôkaz o výsledku", "Akceptačné testy", "QA dokumentácie", "QA prístupnosti", "Release gate"], ["Kvalita a bezpečnosť", "Podpora a automatizácia"]],
 ];
 
+const specificWorkflows = {
+  "software": {
+    "steps": [
+      "prečítať aktuálny zdroj a zachovať existujúce lokálne úpravy",
+      "pripraviť najmenšiu cielenú zmenu pre tento vývojový postup",
+      "spustiť dostupné testy a uložiť skutočné výsledky",
+      "odovzdať rozdiel, obmedzenia a bezpečný ďalší krok"
+    ],
+    "success_checks": [
+      "testy bez vykonania zostávajú označené ako neoverené",
+      "žiadne tvrdenie o nasadení bez potvrdenia nasadenia"
+    ]
+  },
+  "cloud": {
+    "steps": [
+      "rozlíšiť lokálne, preview a produkčné prostredie",
+      "overiť aktuálnu konfiguráciu a odpoveď služby bez čítania tajomstiev",
+      "pripraviť cielenú zmenu a postup návratu",
+      "vykonať zmenu iba s príslušnou autorizáciou a overiť výsledok"
+    ],
+    "success_checks": [
+      "HTTP 200 nie je dôkaz autorizovaného nástroja",
+      "žiadne zamieňanie lokálnej a produkčnej databázy"
+    ]
+  },
+  "quality": {
+    "steps": [
+      "určiť konkrétne požiadavky a akceptačné podmienky",
+      "pokryť úspešný, chybový a hraničný prípad",
+      "vykonať dostupnú kontrolu a zaznamenať výstup",
+      "oddeliť úspešné testy od netestovaných závislostí"
+    ],
+    "success_checks": [
+      "registrovaný nástroj sa nevydáva za úspešne otestovaný",
+      "pri zlyhaní zostáva výsledok neúspešný alebo blokovaný"
+    ]
+  },
+  "support": {
+    "steps": [
+      "zistiť konkrétnu chybu a prostredie bez požadovania kľúčov v chate",
+      "overiť jednu neškodnú diagnostickú požiadavku",
+      "opraviť príčinu namiesto opakovania rovnakého neúspešného kroku",
+      "odovzdať stručný stav a najviac jeden potrebný krok používateľa"
+    ],
+    "success_checks": [
+      "záver má skutočný dôkaz, nie iba staré hlásenie",
+      "citlivé nastavenia sa nemenia len na zakrytie chyby"
+    ]
+  }
+};
 export const EXTENDED_SKILLS = skillGroups.flatMap(([key, category, names, clusters]) => names.map((name, index) => ({
-  id: `${key}-${String(index + 1).padStart(2, '0')}`, name: `${category}: ${name}`, description: `${name}: vytvor konkrétny postup, uveď vstupy, overiteľný výstup a zostávajúce obmedzenia.`, clusters, keywords: [name.toLocaleLowerCase('sk'), category.toLocaleLowerCase('sk'), key], steps: [`zistiť vstupy a hranice pre ${name.toLocaleLowerCase('sk')}`, 'zvoliť iba dostupné a povolené nástroje', 'vykonať alebo pripraviť výsledok s označením stavu', 'skontrolovať výstup podľa akceptačných podmienok'], success_checks: ['výstup je spätne overiteľný', 'fakty, odhady a návrhy sú oddelené', 'bez vykonaného nástroja sa akcia neoznačí za dokončenú']})));
+  id: `${key}-${String(index + 1).padStart(2, '0')}`, name: `${category}: ${name}`, description: `${name}: vytvor konkrétny postup, uveď vstupy, overiteľný výstup a zostávajúce obmedzenia.`, clusters, keywords: [name.toLocaleLowerCase('sk'), category.toLocaleLowerCase('sk'), key], steps: [`zistiť vstupy a hranice pre ${name.toLocaleLowerCase('sk')}`, 'zvoliť iba dostupné a povolené nástroje', 'vykonať alebo pripraviť výsledok s označením stavu', 'skontrolovať výstup podľa akceptačných podmienok'], success_checks: ['výstup je spätne overiteľný', 'fakty, odhady a návrhy sú oddelené', 'bez vykonaného nástroja sa akcia neoznačí za dokončenú'], kind: 'workflow', ...(specificWorkflows[key]||{})})));
 
 const pluginGroups = [
   ["productivity", "Produktivita", ["Inbox úloh", "Denná agenda", "Ciele", "Poznámky", "Focus plán", "Prioritizácia", "Checklisty"]],
@@ -37,11 +87,400 @@ const pluginGroups = [
   ["planning", "Plánovanie", ["Roadmap", "Scope guard", "Risk register", "Backlog board", "Milestones", "Requirements", "Acceptance gate"]],
 ];
 
-const pluginTools = ['plan_work','search_memory','project_snapshot','service_status','calculate','analyze_text','current_time','json_tool','hash_text','convert_units','extract_entities','format_text','date_math','timezone_convert','statistics','csv_inspect','csv_to_json','text_diff','list_cleaner','table_transform','url_inspect','query_string','color_convert','contrast_check','base64_codec','uuid_tool','semver_compare','redact_sensitive','markdown_inspect','html_to_text','business_math','geometry','web_search','generate_image','list_capabilities','list_skills','list_connectors'];
+// Explicit shared-tool bundles; these are workflows, not new external integrations.
+const pluginToolSets = {
+  "productivity": [
+    [
+      "project_snapshot",
+      "plan_work"
+    ],
+    [
+      "current_time",
+      "plan_work"
+    ],
+    [
+      "plan_work"
+    ],
+    [
+      "search_memory"
+    ],
+    [
+      "plan_work"
+    ],
+    [
+      "plan_work"
+    ],
+    [
+      "markdown_inspect",
+      "plan_work"
+    ]
+  ],
+  "developer": [
+    [
+      "json_tool",
+      "plan_work"
+    ],
+    [
+      "text_diff",
+      "plan_work"
+    ],
+    [
+      "text_diff"
+    ],
+    [
+      "semver_compare",
+      "plan_work"
+    ],
+    [
+      "semver_compare"
+    ],
+    [
+      "text_diff",
+      "markdown_inspect"
+    ],
+    [
+      "markdown_inspect",
+      "analyze_text"
+    ]
+  ],
+  "data": [
+    [
+      "json_tool"
+    ],
+    [
+      "csv_inspect",
+      "csv_to_json"
+    ],
+    [
+      "table_transform"
+    ],
+    [
+      "statistics"
+    ],
+    [
+      "list_cleaner"
+    ],
+    [
+      "redact_sensitive"
+    ],
+    [
+      "json_tool"
+    ]
+  ],
+  "cloud": [
+    [
+      "service_status",
+      "list_connectors"
+    ],
+    [
+      "project_snapshot",
+      "list_connectors"
+    ],
+    [
+      "list_connectors"
+    ],
+    [
+      "list_connectors"
+    ],
+    [
+      "plan_work"
+    ],
+    [
+      "service_status"
+    ],
+    [
+      "service_status",
+      "list_connectors"
+    ]
+  ],
+  "research": [
+    [
+      "web_search"
+    ],
+    [
+      "web_search",
+      "plan_work"
+    ],
+    [
+      "web_search",
+      "plan_work"
+    ],
+    [
+      "web_search"
+    ],
+    [
+      "web_search"
+    ],
+    [
+      "web_search"
+    ],
+    [
+      "web_search",
+      "project_snapshot"
+    ]
+  ],
+  "content": [
+    [
+      "markdown_inspect"
+    ],
+    [
+      "html_to_text"
+    ],
+    [
+      "analyze_text"
+    ],
+    [
+      "format_text",
+      "analyze_text"
+    ],
+    [
+      "analyze_text",
+      "markdown_inspect"
+    ],
+    [
+      "markdown_inspect"
+    ],
+    [
+      "analyze_text",
+      "text_diff"
+    ]
+  ],
+  "design": [
+    [
+      "color_convert"
+    ],
+    [
+      "contrast_check"
+    ],
+    [
+      "plan_work"
+    ],
+    [
+      "plan_work",
+      "contrast_check"
+    ],
+    [
+      "generate_image"
+    ],
+    [
+      "analyze_text"
+    ],
+    [
+      "plan_work"
+    ]
+  ],
+  "security": [
+    [
+      "url_inspect",
+      "plan_work"
+    ],
+    [
+      "list_connectors"
+    ],
+    [
+      "list_connectors",
+      "plan_work"
+    ],
+    [
+      "list_capabilities"
+    ],
+    [
+      "json_tool"
+    ],
+    [
+      "redact_sensitive"
+    ],
+    [
+      "project_snapshot",
+      "plan_work"
+    ]
+  ],
+  "automation": [
+    [
+      "plan_work"
+    ],
+    [
+      "plan_work"
+    ],
+    [
+      "hash_text",
+      "plan_work"
+    ],
+    [
+      "list_capabilities",
+      "plan_work"
+    ],
+    [
+      "plan_work"
+    ],
+    [
+      "csv_to_json",
+      "json_tool"
+    ],
+    [
+      "table_transform",
+      "json_tool"
+    ]
+  ],
+  "support": [
+    [
+      "service_status",
+      "list_connectors"
+    ],
+    [
+      "service_status",
+      "plan_work"
+    ],
+    [
+      "plan_work",
+      "markdown_inspect"
+    ],
+    [
+      "analyze_text",
+      "plan_work"
+    ],
+    [
+      "markdown_inspect"
+    ],
+    [
+      "project_snapshot",
+      "plan_work"
+    ],
+    [
+      "project_snapshot",
+      "current_time"
+    ]
+  ],
+  "finance": [
+    [
+      "business_math"
+    ],
+    [
+      "business_math"
+    ],
+    [
+      "portfolio_summary"
+    ],
+    [
+      "business_math"
+    ],
+    [
+      "statistics",
+      "business_math"
+    ],
+    [
+      "business_math",
+      "json_tool"
+    ],
+    [
+      "portfolio_summary",
+      "business_math"
+    ]
+  ],
+  "time": [
+    [
+      "date_math"
+    ],
+    [
+      "timezone_convert"
+    ],
+    [
+      "date_math"
+    ],
+    [
+      "date_math"
+    ],
+    [
+      "plan_work",
+      "date_math"
+    ],
+    [
+      "current_time"
+    ],
+    [
+      "date_math",
+      "plan_work"
+    ]
+  ],
+  "integration": [
+    [
+      "list_capabilities"
+    ],
+    [
+      "list_connectors"
+    ],
+    [
+      "plan_work"
+    ],
+    [
+      "list_connectors"
+    ],
+    [
+      "list_connectors"
+    ],
+    [
+      "analyze_text",
+      "plan_work"
+    ],
+    [
+      "json_tool",
+      "plan_work"
+    ]
+  ],
+  "media": [
+    [
+      "plan_work"
+    ],
+    [
+      "json_tool"
+    ],
+    [
+      "analyze_text"
+    ],
+    [
+      "analyze_text",
+      "plan_work"
+    ],
+    [
+      "redact_sensitive"
+    ],
+    [
+      "plan_work"
+    ],
+    [
+      "project_snapshot"
+    ]
+  ],
+  "planning": [
+    [
+      "plan_work"
+    ],
+    [
+      "plan_work"
+    ],
+    [
+      "plan_work"
+    ],
+    [
+      "project_snapshot",
+      "plan_work"
+    ],
+    [
+      "plan_work",
+      "date_math"
+    ],
+    [
+      "plan_work"
+    ],
+    [
+      "plan_work"
+    ]
+  ]
+};
 const icons = ['◇','◈','▦','◎','⌁','±','Aa','✓','↔','◉','Σ','▤','⇄','⌕','✳'];
 export const EXTENDED_PLUGINS = pluginGroups.flatMap(([key, category, names], groupIndex) => names.map((name, index) => {
   const id = `${key}-pack-${String(index + 1).padStart(2, '0')}`;
-  const tool = key === 'research' ? 'web_search' : key === 'design' && index === 4 ? 'generate_image' : pluginTools[(groupIndex * 7 + index) % pluginTools.length];
+  const tools = pluginToolSets[key][index];
   const dependency = key === 'cloud' ? 'Cloudflare bindings' : key === 'developer' ? 'Trinity runtime' : key === 'data' ? 'Worker runtime' : key === 'integration' ? 'Authorized connector' : key === 'finance' ? 'D1 paper ledger' : 'Trinity core';
-  return {id, name: `${category}: ${name}`, icon: icons[groupIndex], description: `Dôveryhodný balík pre ${name.toLocaleLowerCase('sk')}; používa existujúci nástroj ${tool} a neťahá ani nespúšťa externý kód.`, tools: [tool], dependency, version: '1.0.0', category: key, trusted: true};
+  return {id, name: `${category}: ${name}`, icon: icons[groupIndex], description: `Dôveryhodný balík pre ${name.toLocaleLowerCase('sk')}; používa iba zdieľané nástroje ${tools.join(", ")}. Samostatná integrácia ani vykonanie nie sú týmto balíkom potvrdené.`, tools, dependency, version: '1.0.0', category: key, trusted: true, kind: 'workflow-pack', external_code: false};
 }));

@@ -74,8 +74,19 @@ const CORE_SKILLS=[
 
 export const SKILLS=[...CORE_SKILLS,...EXTENDED_SKILLS];
 
+export const MAX_ACTIVE_SKILLS=8;
+const normalizeSkillText=value=>String(value||'').slice(0,12000).normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('sk');
 export function selectSkills(agent,task='') {
-  return SKILLS.filter(skill=>skill.universal||skill.clusters.includes(agent.cluster)||(agent.id==='orchestrator'&&skill.clusters.includes('Riadenie'))||(skill.keywords?.some(word=>String(task).slice(0,12000).toLocaleLowerCase('sk').includes(word))));
+  const text=normalizeSkillText(task);
+  return SKILLS.map((skill,index)=>{
+    const cluster=skill.clusters.includes(agent.cluster)||(agent.id==='orchestrator'&&skill.clusters.includes('Riadenie'));
+    const matches=(skill.keywords||[]).filter(word=>normalizeSkillText(word)&&text.includes(normalizeSkillText(word))).length;
+    const nameMatch=text.includes(normalizeSkillText(skill.name))?1:0;
+    const core=index<CORE_SKILLS.length;
+    return {skill,index,eligible:skill.universal||cluster||matches>0,
+      score:(skill.universal?1000:0)+matches*100+nameMatch*40+(cluster?20:0)+(core?10:0)};
+  }).filter(item=>item.eligible).sort((a,b)=>b.score-a.score||a.index-b.index)
+    .slice(0,MAX_ACTIVE_SKILLS).map(item=>item.skill);
 }
 
 export const AGENTS = groups.flatMap(([cluster, roles]) => roles.map(([id, name, role]) => ({
