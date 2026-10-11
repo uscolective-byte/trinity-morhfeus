@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "endpoint": "https://auru.space/mcp",
+  "fallback_endpoint": "https://trinity.saboivan2008.workers.dev/mcp",
+  "transport": "streamable-http",
+  "scopes": ["mcp:read", "mcp:write"],
+  "credential_lifetime_days": 90,
+  "rate_limit_per_minute": 60,
+  "separate_credentials": true,
+  "owner_approval_for_sensitive_actions": true,
+  "clients": [
+    {"id": "chatgpt", "label": "ChatGPT", "credential_file": "chatgpt-mcp.dpapi", "connection_status": "not-verified", "notes": "Keep existing GPT connection. Native ChatGPT compatibility and authentication must be verified separately; this manifest is not an OAuth implementation."},
+    {"id": "gemini", "label": "Gemini", "credential_file": "gemini-mcp.dpapi", "connection_status": "credential-present-in-production", "notes": "Preserve existing Gemini credential; no automatic rotation."},
+    {"id": "copilot", "label": "Microsoft Copilot", "credential_file": "copilot-mcp.dpapi", "connection_status": "not-verified", "notes": "Verified integration path: Copilot Studio MCP wizard with API key header. Consumer Windows Copilot is not assumed to support this setup."},
+    {"id": "notion", "label": "Notion AI / trino", "credential_file": "notion-mcp.dpapi", "connection_status": "not-connected", "notes": "Complete the native Notion MCP connection and select concrete tools. GitHub/Cloudflare access does not imply Trinity MCP access."}
+  ]
+}
