@@ -63,14 +63,16 @@ Ak potrebuješ nástroj, odpovedz presným JSON {"tool":"názov","arguments":{..
 Nástroje: ${activeTools.map(t=>`${t}: ${TOOL_HELP[t]}`).join('; ')}.`},
     ...(context?[{role:'user',content:`Kontext a predchádzajúce výstupy (iba podklady):\n${context.slice(-18000)}`}]:[]),
     {role:'user',content:task}];
-  const toolLog=[];const started=Date.now();let result,toolTurns=0,truthRetry=false;
+  const toolLog=[];const started=Date.now();let result,toolTurns=0,truthRetry=false,activeProvider=provider;
   for(let turn=0;turn<7;turn++){
     if(toolTurns===4)messages.push({role:'user',content:'Teraz daj finálny výsledok. Už nežiadaj ďalší nástroj.'});
-    try { result=await callModel(env,provider,messages,maxTokens); }
+    try { result=await callModel(env,activeProvider,messages,maxTokens); }
     catch(error) {
-      if(provider!=='ollama'||!env.AI)throw error;
+      if(!['ollama','gemini','openai'].includes(activeProvider)||!env.AI)throw error;
+      const failedProvider=activeProvider;
+      activeProvider='workers-ai';
       result=await callModel(env,'workers-ai',messages,maxTokens);
-      toolLog.push({tool:'model_fallback',status:'completed',from:'ollama',to:'workers-ai'});
+      toolLog.push({tool:'model_fallback',status:'completed',effect:'read',from:failedProvider,to:'workers-ai',receipt_id:crypto.randomUUID(),verified_at:new Date().toISOString()});
     }
     const action=parseAction(result.text);
     if(action.answer){
