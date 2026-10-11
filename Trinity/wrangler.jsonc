@@ -236,5 +236,10 @@
 			"secret_name": "ollama"
 		}
 	],
-	"preview_urls": true
+	"preview_urls": true,
+	"previews": {
+		"vars": {
+			"TRINITY_PREVIEW_MODE": "build-only"
+		}
+	}
 }
