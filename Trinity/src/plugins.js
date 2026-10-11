@@ -1,4 +1,5 @@
 export const PLUGINS=[
+ {id:'task-planner',name:'Pracovný plánovač',icon:'◇',description:'Vytvorí ohraničený plán, riziká a podmienky dokončenia. Plán nie je vykonaná akcia ani oprávnenie.',tools:['plan_work'],dependency:'Zabudovaný plánovač Trinity',version:'1.0.0'},
  {id:'memory',name:'Pamäť',icon:'◈',description:'Ukladá tvoje poznámky a pripomína relevantné informácie pred odpoveďou.',tools:['search_memory'],dependency:'Cloudflare D1',version:'1.1.0'},
  {id:'projects',name:'Projekty',icon:'▦',description:'Číta existujúce projekty a úlohy. Nepredstiera ich dokončenie.',tools:['project_snapshot'],dependency:'Cloudflare D1',version:'1.0.0'},
  {id:'web',name:'Webový výskum',icon:'◎',description:'Vyhľadáva aktuálne zdroje cez overený účet Ollama.',tools:['web_search'],dependency:'Ollama API',version:'1.0.0'},
@@ -9,7 +10,7 @@ export const PLUGINS=[
  {id:'clock',name:'Čas a dátum',icon:'◷',description:'Vráti skutočný čas pre zadané časové pásmo.',tools:['current_time'],dependency:'Worker runtime',version:'1.0.0'},
  {id:'capabilities',name:'Katalóg schopností',icon:'◇',description:'Ukáže nainštalované a zapnuté moduly jednej Trinity.',tools:['list_capabilities'],dependency:'Plugin registry',version:'1.0.0'},
  {id:'truth',name:'Strážca pravdivosti',icon:'✓',description:'Blokuje nepodložené tvrdenia o vykonaných akciách a oddeľuje fakty od návrhov.',tools:[],dependency:'Truth policy + evidence receipts',version:'1.0.0',required:true},
- {id:'mcp',name:'MCP most',icon:'↔',description:'Päť nástrojov pre pripojenie Trinity k ďalším AI aplikáciám.',tools:[],dependency:'MCP SDK + Agents SDK',version:'1.0.0'},
+ {id:'mcp',name:'MCP most',icon:'↔',description:'Autorizované MCP nástroje pre stav, úlohy, pamäť a ohraničené projektové akcie.',tools:[],dependency:'MCP SDK + Agents SDK',version:'1.0.0'},
  {id:'artifacts',name:'Archív výstupov',icon:'↗',description:'Ukladá dokončené výstupy tímu do stiahnuteľných dokumentov.',tools:[],dependency:'Cloudflare R2',version:'1.0.0',required:true},
  {id:'skills',name:'Zručnosti Trinity',icon:'✳',description:'Poskytuje špecializované pracovné postupy pre vývoj, výskum, prevádzku a bezpečnosť.',tools:['list_skills','install_plugin'],dependency:'Zabudovaný katalóg zručností',version:'1.0.0'},
  {id:'connectors',name:'Konektory',icon:'↔',description:'Zobrazuje dostupné Cloudflare bindings a stav nakonfigurovaných služieb bez odhalenia tajomstiev.',tools:['list_connectors'],dependency:'Cloudflare service bindings',version:'1.0.0'}

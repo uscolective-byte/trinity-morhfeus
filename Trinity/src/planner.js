@@ -16,5 +16,5 @@ export function planTask(task){
     :intent==='action'?['identifikovať presný cieľ a dopad','skontrolovať oprávnenie a riziko','vyžiadať schválenie pri nezvratnej zmene','vykonať iba povolený krok a priložiť dôkaz']
     :intent==='analysis'?['zachytiť otázku a predpoklady','spracovať dostupné podklady','skontrolovať rozpory a neistotu','odpovedať s jasným záverom']
     :['pochopiť otázku','odpovedať prirodzene a stručne'];
-  return {version:'1.0',intent,risk,requires_approval:risk==='high',steps};
+  return {version:'1.1',intent,risk,requires_approval:risk==='high',steps,completion_checks:['Výsledok zodpovedá aktuálnemu cieľu a rozsahu.','Vykonané akcie sú doložené výsledkom povoleného nástroja.','Zostávajúce blokátory a neistota sú jasne uvedené.'],execution_status:'not-started',grants_permissions:false};
 }

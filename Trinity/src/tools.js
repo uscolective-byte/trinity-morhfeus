@@ -5,9 +5,13 @@ import {SKILLS} from './registry.js';
 import {createSystemAction,getSystemAction,actionEvidence} from './system-actions.js';
 import {getPortfolio} from './trading.js';
 import {PRACTICAL_TOOL_NAMES,PRACTICAL_TOOL_SCHEMAS,PRACTICAL_TOOL_HELP,runPracticalTool} from './practical-skills.js';
+import {planTask} from './planner.js';
+import {memorySearchTerms,selectMemoryRecords,sanitizeMemoryRecords} from './memory-context.js';
+
 export const INTERNAL_TOOLS=new Set(['request_system_action','system_action_status']);
 export const PC_TOOLS=new Set(['pc_screenshot','pc_run','pc_file_read','pc_file_write','pc_file_append','pc_file_edit','pc_directory_create','pc_open_app','pc_app_control','pc_notify','pc_system_info','pc_scrape','pc_web_fetch','pc_download','pc_git_commit','pc_git_pr']);
 export const TOOL_SCHEMAS={
+  plan_work:z.object({task:z.string().trim().min(1).max(12000)}).strict(),
   ...PRACTICAL_TOOL_SCHEMAS,
   search_memory:z.object({query:z.string().max(200).default('')}).strict(),
   project_snapshot:z.object({}).strict(),
@@ -35,9 +39,9 @@ const unique=list=>[...new Set(list)].slice(0,50);
 const formatToken=value=>value.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 export async function searchMemory(env,query='') {
   const pattern=`%${query.replace(/[!%_]/g,'!$&')}%`;
-  const own=await env.DB.prepare("SELECT key,substr(value,1,2500) AS value,source FROM ops_memory WHERE key LIKE ? ESCAPE '!' OR value LIKE ? ESCAPE '!' ORDER BY updated_at DESC LIMIT 8").bind(pattern,pattern).all();
+  const own=await env.DB.prepare("SELECT key,substr(value,1,2500) AS value,source,updated_at FROM ops_memory WHERE key LIKE ? ESCAPE '!' OR value LIKE ? ESCAPE '!' ORDER BY updated_at DESC LIMIT 8").bind(pattern,pattern).all();
   const older=await env.DB.prepare("SELECT key,substr(value,1,2000) AS value,category AS source FROM memory_long WHERE key LIKE ? ESCAPE '!' OR value LIKE ? ESCAPE '!' ORDER BY importance DESC LIMIT 5").bind(pattern,pattern).all();
-  return {records:[...own.results,...older.results],scope:'ops_memory + existujúca memory_long'};
+  return {records:sanitizeMemoryRecords([...own.results,...older.results]),scope:'ops_memory + existujúca memory_long'};
 }
 export async function runTool(env, agent, name, input, executionContext={}) {
   if(!agent.tools.includes(name)||(!TOOL_SCHEMAS[name]&&!PC_TOOLS.has(name))) throw new Error('Tool not allowed');
@@ -45,6 +49,7 @@ export async function runTool(env, agent, name, input, executionContext={}) {
   if(!INTERNAL_TOOLS.has(name)&&name!=='install_plugin')await ensureToolEnabled(env,name);
   if(name==='request_system_action'&&input&&typeof input==='object')input={action:input.action,payload:input.payload||(typeof input.resource==='string'?{path:input.resource}:{}),rationale:input.rationale||input.reason};
   const args=TOOL_SCHEMAS[name].parse(input);
+  if(name==='plan_work')return planTask(args.task);
   if(PRACTICAL_TOOL_NAMES.includes(name))return runPracticalTool(name,args);
   if(name==='json_tool'){
     let value;try{value=JSON.parse(args.json);}catch(error){return {valid:false,error:error.message.slice(0,300)};}
@@ -217,13 +222,14 @@ export async function runTool(env, agent, name, input, executionContext={}) {
 }
 export async function recallMemory(env,task){
   if(!await pluginEnabled(env,'memory'))return [];
-  const words=[...new Set(task.match(/[\p{L}\p{N}_-]{5,}/gu)||[])].slice(0,4);
-  const pinned=await env.DB.prepare("SELECT key,substr(value,1,1800) AS value,source FROM ops_memory WHERE key LIKE 'profil/%' ORDER BY updated_at DESC LIMIT 5").all();
-  const records=new Map(pinned.results.map(r=>[r.key,r]));
-  for(const word of words){for(const r of (await searchMemory(env,word)).records){if(records.size<8)records.set(r.key,r);}}
-  return [...records.values()];
+  const words=memorySearchTerms(task);
+  const pinned=await env.DB.prepare("SELECT key,substr(value,1,1800) AS value,source,updated_at FROM ops_memory WHERE key LIKE 'profil/%' ORDER BY updated_at DESC LIMIT 5").all();
+  const records=[...pinned.results];
+  for(const word of words)records.push(...(await searchMemory(env,word)).records);
+  return selectMemoryRecords(records,task);
 }
 export const TOOL_HELP={
+  plan_work:'Pripraví plán, riziká a kontrolu dokončenia bez vykonania akcií: {task:string}',
   ...PRACTICAL_TOOL_HELP,
   // ── PC Bridge nástroje ──
   pc_screenshot:'Spraví screenshot obrazovky a vráti base64 PNG + rozlíšenie: {}',

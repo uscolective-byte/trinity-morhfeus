@@ -65,11 +65,19 @@ export const SKILLS=[
   {id:'evidence-research',name:'Výskum s dôkazmi',description:'Oddeľ zdroje, fakty, odhady a neoverené predpoklady.',clusters:['Výskum','Dáta a pamäť']},
   {id:'integration-design',name:'Návrh integrácií',description:'Najprv over dostupný konektor a jeho oprávnenia; tajomstvá nikdy nevypisuj.',clusters:['Dáta a pamäť','Cloud a prevádzka']},
   {id:'quality-review',name:'Kontrola kvality',description:'Porovnaj výsledok s požiadavkami a uveď konkrétne zostávajúce riziká.',clusters:['Kvalita a bezpečnosť','Tvorba']},
-  {id:'paper-trading',name:'Papierové obchodovanie',description:'Vedie simulované portfólio, investičný denník a rizikové limity bez použitia reálnych peňazí.',clusters:['Výskum','Dáta a pamäť','Kvalita a bezpečnosť']}
+  {id:'paper-trading',name:'Papierové obchodovanie',description:'Vedie simulované portfólio, investičný denník a rizikové limity bez použitia reálnych peňazí.',clusters:['Výskum','Dáta a pamäť','Kvalita a bezpečnosť']},
+  {id:'memory-hygiene',name:'Dôveryhodná pracovná pamäť',description:'Vyber relevantné spomienky, zachovaj ich pôvod a nevydávaj staré hlásenia za aktuálny stav.',clusters:['Dáta a pamäť','Riadenie'],steps:['vybrať relevantné záznamy a odstrániť duplicity','oddeliť preferencie, historické údaje a aktuálne dôkazy','pri premenlivom stave použiť dostupný overovací nástroj'],success_checks:['zdroj zostáva priradený k záznamu','pamäť neudeľuje oprávnenia a nevypisuje tajomstvá']},
+  {id:'integration-recovery',name:'Pripojenia bez slepých slučiek',description:'Over dostupný transport a autorizáciu; po zlyhaní zmeň postup, nie iba zopakuj rovnakú výzvu.',clusters:['Dáta a pamäť','Cloud a prevádzka','Podpora a automatizácia'],keywords:['mcp','pripoj','prepoj','connect','integr'],steps:['overiť endpoint, transport a skutočnú odpoveď','overiť autorizáciu bez zobrazenia tokenov','otestovať jeden neškodný nástroj a uviesť obmedzenia'],success_checks:['HTTP úspech sa nezamieňa s prístupom','pripojenie sa označí za hotové až po úspešnom nástroji']},
+  {id:'clear-communication',name:'Zrozumiteľná spolupráca',description:'Najprv výsledok, potom krátke vysvetlenie a najviac jeden potrebný krok používateľa.',clusters:[],universal:true,steps:['vykonať dostupnú nezávislú prácu','oddeliť hotové, pripravené a blokované kroky','pri technickom probléme ponúknuť jeden konkrétny krok'],success_checks:['žiadne vymyslené dokončenie alebo prístup','bežná odpoveď nezahlcuje používateľa protokolom']},
 ];
+
+export function selectSkills(agent,task='') {
+  return SKILLS.filter(skill=>skill.universal||skill.clusters.includes(agent.cluster)||(agent.id==='orchestrator'&&skill.clusters.includes('Riadenie'))||(skill.keywords?.some(word=>String(task).slice(0,12000).toLocaleLowerCase('sk').includes(word))));
+}
+
 export const AGENTS = groups.flatMap(([cluster, roles]) => roles.map(([id, name, role]) => ({
   id, name, cluster, role,
-  tools: ['search_memory','project_snapshot','calculate','analyze_text','current_time','json_tool','hash_text','convert_units','extract_entities','format_text',...PRACTICAL_TOOL_NAMES,'list_capabilities','list_skills','list_connectors','install_plugin', ...(['Výskum'].includes(cluster)||id==='orchestrator' ? ['web_search'] : []),
+  tools: ['plan_work','search_memory','project_snapshot','calculate','analyze_text','current_time','json_tool','hash_text','convert_units','extract_entities','format_text',...PRACTICAL_TOOL_NAMES,'list_capabilities','list_skills','list_connectors','install_plugin', ...(['Výskum'].includes(cluster)||id==='orchestrator' ? ['web_search'] : []),
     ...(['ui','writer','orchestrator'].includes(id)?['generate_image']:[]),
     ...(['market-research','orchestrator'].includes(id)?['portfolio_summary']:[]),
     ...(['Riadenie','Cloud a prevádzka','Dáta a pamäť','Kvalita a bezpečnosť','Podpora a automatizácia'].includes(cluster) ? ['service_status'] : []),

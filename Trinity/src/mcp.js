@@ -1,10 +1,11 @@
-﻿import {McpServer} from '@modelcontextprotocol/server';
+import {McpServer} from '@modelcontextprotocol/server';
 import {createMcpHandler} from 'agents/mcp/server';
 import {z} from 'zod';
 import {AGENTS} from './registry.js';
 import {createJob,getJob,listJobs} from './jobs.js';
 import {searchMemory} from './tools.js';
-import {serviceStatus} from './services.js';
+import {serviceStatus,readiness} from './services.js';
+import {listPlugins} from './plugins.js';
 import {createSystemAction,getSystemAction,listSystemActions,approveSystemAction} from './system-actions.js';
 import {geminiProjectControlEnabled} from './ai-providers.js';
 
@@ -14,6 +15,13 @@ export function handleMcp(request,env,ctx,access={}){
   return createMcpHandler(()=>{
   const server=new McpServer({name:'trinity',version:'9.4.0'});
     const projectControlAllowed=()=>access.projectControl?Promise.resolve(true):geminiProjectControlEnabled(env,env.TRINITY_OWNER_EMAIL||'');
+
+    server.registerTool('trinity_status',{description:'Overí aktuálnu pripravenosť jadra a stav registra pluginov. Netvrdí prístup k PC ani ROOT_ADMIN.',inputSchema:{}},
+      async()=>{
+        const state=await readiness(env);
+        const plugins=env.DB?await listPlugins(env):[];
+        return result({service:'trinity',mcp_version:'9.4.0',...state,plugins:{catalog:plugins.length,installed:plugins.filter(p=>p.installed).length,enabled:plugins.filter(p=>p.enabled).length},pc_access:'not-checked',checked_at:new Date().toISOString()});
+      });
 
     // ── Pôvodné nástroje ──
     server.registerTool('list_agents',{description:'Zoznam 40 špecialistov Trinity.',inputSchema:{}},
