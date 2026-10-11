@@ -1,4 +1,5 @@
-export const PLUGINS=[
+import {EXTENDED_PLUGINS} from './extended-catalog.js';
+const CORE_PLUGINS=[
  {id:'task-planner',name:'Pracovný plánovač',icon:'◇',description:'Vytvorí ohraničený plán, riziká a podmienky dokončenia. Plán nie je vykonaná akcia ani oprávnenie.',tools:['plan_work'],dependency:'Zabudovaný plánovač Trinity',version:'1.0.0'},
  {id:'memory',name:'Pamäť',icon:'◈',description:'Ukladá tvoje poznámky a pripomína relevantné informácie pred odpoveďou.',tools:['search_memory'],dependency:'Cloudflare D1',version:'1.1.0'},
  {id:'projects',name:'Projekty',icon:'▦',description:'Číta existujúce projekty a úlohy. Nepredstiera ich dokončenie.',tools:['project_snapshot'],dependency:'Cloudflare D1',version:'1.0.0'},
@@ -59,3 +60,5 @@ export async function installPlugin(env,id){
  return {id:plugin.id,name:plugin.name,version:plugin.version,installed:true,enabled:true,source:'trinity-core'};
 }
 export async function ensureToolEnabled(env,tool){const p=PLUGINS.find(p=>p.tools.includes(tool));if(!p||!await pluginEnabled(env,p.id))throw new Error('Rozšírenie pre tento nástroj je vypnuté.');}
+
+export const PLUGINS=[...CORE_PLUGINS,...EXTENDED_PLUGINS];
