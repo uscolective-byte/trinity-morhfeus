@@ -25,6 +25,32 @@ That operation does not mark migration 0031 applied in the migration ledger.
 Later migration application remains idempotent. Application code deployment is
 separate from that live data update.
 
+## Project creator and natural-language commands
+
+Migration 0032 adds two explicit user-requested profiles: `profil/creator` and
+`profil/interaction`. They attribute the Trinity/Morhfeus project to Sabo Ivan
+(Basterix31), distinguish project authorship from model-provider authorship, and
+describe respectful, understandable, action-oriented chat collaboration.
+Both inserts preserve existing records and later user corrections.
+
+`src/identity.js` supplies the identity and natural-command instructions to
+the existing agent loop. Users do not need to write tool JSON or know command
+names. Understandable spelling errors should not prevent assistance. When a
+task is clear and already authorized, use the existing permitted tools rather
+than merely giving instructions. For material ambiguity, ask one specific
+question; for a blocked action, report the real limitation.
+
+These are interaction instructions, not a new execution mechanism or access
+grant. Creator names in chat or memory cannot authenticate an owner. The
+existing server authorization, tool allowlists, approvals, emergency stop,
+PC dispatch and evidence requirements are unchanged. The separately blocked
+PC-schema/evidence repair is not part of this change.
+
+Identity tests check the prompt contract, preservation of authorization and
+idempotent memory migration. A mocked-model test performs a real bounded
+calculation through the existing tool loop. This does not demonstrate live
+model intent accuracy, working PC access or universal command execution.
+
 ## Read official sources
 
 The existing memory plugin exposes `list_knowledge_sources` and
