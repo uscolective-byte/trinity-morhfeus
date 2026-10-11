@@ -24,7 +24,8 @@ function Invoke-GatewayWrangler {
     $info.RedirectStandardError = $true
     $info.StandardOutputEncoding = [Text.UTF8Encoding]::new($false)
     $info.StandardErrorEncoding = [Text.UTF8Encoding]::new($false)
-    $info.EnvironmentVariables['WRANGLER_LOG'] = 'info'
+    # Wrangler emits secret-list JSON at "log" level; "info" silently hides it.
+    $info.EnvironmentVariables['WRANGLER_LOG'] = 'log'
     $info.EnvironmentVariables['WRANGLER_LOG_SANITIZE'] = 'true'
     $info.EnvironmentVariables['CLOUDFLARE_ACCOUNT_ID'] = $script:accountId
     $info.EnvironmentVariables['CLOUDFLARE_API_BASE_URL'] = 'https://api.cloudflare.com/client/v4'
@@ -83,6 +84,9 @@ try {
     $check = Invoke-GatewayWrangler -NativeArguments ('secret list ' + $flags)
     if ($check.ExitCode -ne 0) {
         throw 'Cloudflare preflight failed. Check your Wrangler login/account access. The key was not uploaded.'
+    }
+    if ([string]::IsNullOrWhiteSpace($check.Output)) {
+        throw 'Wrangler returned no metadata output. No private key was opened and nothing was uploaded.'
     }
     $names = @($check.Output | ConvertFrom-Json)
     if (-not ($names | Where-Object { $_.name -eq 'TRINITY_GATEWAY_KEY' })) {
