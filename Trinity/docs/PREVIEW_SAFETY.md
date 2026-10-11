@@ -9,15 +9,18 @@ Tento prvý náhľad je zámerne **build-only**, nie integračné alebo vývojov
 - Všetky ostatné HTTP cesty, vrátane UI, prihlásenia a MCP, vracajú HTTP 503.
 - Plánované úlohy sa nevykonávajú a prijímané e-maily sa odmietajú.
 - Náhľad nedeklaruje žiadne D1, R2, KV, AI, PC ani službové väzby. Nemení produkčné nastavenia ani dáta.
-- Zdieľané tajomstvá z Cloudflare Preview Base môžu byť platformou zdedené; kód build-only náhľadu ich nečíta ani nevystavuje. Táto zmena ich nemaže ani nerotuje.
+- Existujúce náhľady môžu mať zdedené väzby z Cloudflare Preview Base. Tie nemeníme. Dva nové build-only náhľady sa vytvárajú pod samostatnými názvami s `--ignore-base-config`, aby nezdedili produkčné zdroje ani tajomstvá. Tento prepínač je zámerný iba pre blokovaný build-only režim, nie pre bežné integračné prostredie.
 
 Produkcia nemá `TRINITY_PREVIEW_MODE=build-only` a pokračuje pôvodnými cestami.
 
 ## Overenie
 
-1. V Cloudflare Workers Builds použiť koreň `Trinity`, build príkaz `npm test` a náhľadový deploy príkaz `npx wrangler preview --config wrangler.jsonc`.
+1. V Cloudflare Workers Builds použiť koreň `Trinity` a build príkaz `npm test`. Každá z dvoch pracovných vetiev má samostatný náhľadový deploy príkaz:
+   - Oprava spojenia: `npx wrangler preview --config wrangler.jsonc --name build-only-connection --ignore-base-config`.
+   - Balík jadra: `npx wrangler preview --config wrangler.jsonc --name build-only-foundations --ignore-base-config`.
 2. Po vytvorení Preview overiť JSON z `/health`, HTTP 503 a `ready: false` z `/ready` a HTTP 503 z `/mcp`.
 3. Úspešné vytvorenie tohto náhľadu nepotvrdzuje prihlasovanie, AI odpoveď, vykonanie úlohy ani prístup k PC. Samo osebe nie je dôvodom nasadiť zmenu do produkcie.
+4. Pri prvom zavedení overiť v metadátach nasadenia, že väzby obsahujú iba `TRINITY_PREVIEW_MODE`. Nepoužívať starý zdedený náhľad ani jeho URL ako dôkaz izolácie.
 
 ## Ďalšia fáza: integračné staging prostredie
 
