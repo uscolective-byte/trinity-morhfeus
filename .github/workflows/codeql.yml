@@ -7,36 +7,37 @@ on:
     branches: [main]
   schedule:
     - cron: '21 4 * * 1'
+  workflow_dispatch:
 
 permissions:
   contents: read
-  security-events: write
   actions: read
+  security-events: write
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   analyze:
-    name: Analyze JavaScript and TypeScript
+    name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-22.04
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [actions, javascript-typescript]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: Trinity/package-lock.json
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
-          languages: javascript-typescript
+          languages: ${{ matrix.language }}
           build-mode: none
-      - name: Install application dependencies
-        working-directory: Trinity
-        run: npm ci
-      - name: Bundle Cloudflare Worker (dry run)
-        working-directory: Trinity
-        run: npm run build
+
       - name: Analyze
         uses: github/codeql-action/analyze@v4
         with:
-          category: /language:javascript-typescript
+          category: /language:${{ matrix.language }}
