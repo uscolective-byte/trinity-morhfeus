@@ -1,0 +1,1 @@
+This folder contains the built output assets for the worker "trinity-builder" generated at 2026-10-10T14:34:00.377Z.

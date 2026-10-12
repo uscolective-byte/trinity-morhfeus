@@ -1,0 +1,1 @@
+This folder contains the built output assets for the worker "aura_optimizer" generated at 2026-10-10T14:12:15.619Z.

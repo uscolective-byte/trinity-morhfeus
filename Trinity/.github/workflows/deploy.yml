@@ -1,0 +1,97 @@
+﻿# Trinity — Auto Deploy + Test Pipeline
+# Spúšťa sa pri push na main alebo manuálne cez Trinity (workflow_dispatch)
+
+name: Trinity Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Prostredie (production / staging)'
+        required: false
+        default: 'production'
+      skip_tests:
+        description: 'Preskočiť testy (true/false)'
+        required: false
+        default: 'false'
+
+jobs:
+  deploy:
+    name: Build, Test & Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Wrangler types
+        run: npm run types
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Build (dry-run)
+        run: npm run build
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Run unit tests
+        if: inputs.skip_tests != 'true'
+        run: npm test
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Deploy to Cloudflare Workers
+        run: npm run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Postman API Tests
+        if: inputs.skip_tests != 'true' && env.POSTMAN_API_KEY != ''
+        run: |
+          npm install -g newman
+          newman run "https://api.getpostman.com/collections/${{ secrets.POSTMAN_COLLECTION_ID }}?apikey=${{ secrets.POSTMAN_API_KEY }}" \
+            --env-var "baseUrl=https://auru.dev" \
+            --reporters cli,json \
+            --reporter-json-export newman-result.json || true
+        env:
+          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+          POSTMAN_COLLECTION_ID: ${{ secrets.POSTMAN_COLLECTION_ID }}
+
+      - name: Upload Newman results
+        if: always() && inputs.skip_tests != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-results
+          path: newman-result.json
+          if-no-files-found: ignore
+
+      - name: Notify Trinity on success
+        if: success()
+        run: |
+          curl -s -X POST "${{ secrets.TRINITY_URL }}/api/ops/events" \
+            -H "Authorization: Bearer ${{ secrets.TRINITY_GATEWAY_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"action":"deploy_success","details":{"sha":"${{ github.sha }}","ref":"${{ github.ref }}","run_id":"${{ github.run_id }}"}}'
+        continue-on-error: true
+
+      - name: Notify Trinity on failure
+        if: failure()
+        run: |
+          curl -s -X POST "${{ secrets.TRINITY_URL }}/api/ops/events" \
+            -H "Authorization: Bearer ${{ secrets.TRINITY_GATEWAY_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"action":"deploy_failed","details":{"sha":"${{ github.sha }}","ref":"${{ github.ref }}","run_id":"${{ github.run_id }}"}}'
+        continue-on-error: true

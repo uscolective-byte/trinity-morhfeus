@@ -1,0 +1,12 @@
+{
+	"main": "src/index.js",
+	"workers_dev": true,
+	"name": "trinity-pc-bridge-v2",
+	"compatibility_date": "2026-10-08",
+	"kv_namespaces": [
+		{
+			"binding": "PC_STATE",
+			"id": "7eb48d414296418f9c60d87f8c602956"
+		}
+	]
+}

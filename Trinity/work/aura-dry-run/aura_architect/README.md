@@ -1,0 +1,1 @@
+This folder contains the built output assets for the worker "aura_architect" generated at 2026-10-10T14:11:57.692Z.
