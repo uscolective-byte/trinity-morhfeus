@@ -12,7 +12,7 @@ import {handleMcp} from './mcp.js';
 import {TRUTH_POLICY_VERSION} from './truth.js';
 import {SYSTEM_CAPABILITIES,createSystemAction,listSystemActions,getSystemAction,approveSystemAction,rejectSystemAction,claimSystemAction,finishSystemAction,authenticateGateway,getPCBridgeStatus} from './system-actions.js';
 import {listStudioProjects,getStudioProject,createStudioProject,reviseStudioProject} from './studio.js';
-import {beginGoogleLogin,finishGoogleLogin,googleAuthRequired,googleOAuthConfigured,googleAuthEnforced} from './google-auth.js';
+import {beginGoogleLogin,finishGoogleLogin,googleAuthRequired,googleAuthEnforced} from './google-auth.js';
 import {normalizeLanguage} from './cognition.js';
 import {mediaStatus} from './media.js';
 import {readControl,assertRunning} from './control.js';
