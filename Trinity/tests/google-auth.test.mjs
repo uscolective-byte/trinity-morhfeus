@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {googleAuthRequired,googleOAuthConfigured,isGoogleAdminEmail,verifyGoogleIdToken} from '../src/google-auth.js';
+import {googleAuthEnforced,googleAuthRequired,googleOAuthConfigured,isGoogleAdminEmail,verifyGoogleIdToken} from '../src/google-auth.js';
 import {authenticate,hash} from '../src/security.js';
 
 const encode=value=>btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(value)))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
@@ -22,7 +22,10 @@ test('Google OAuth stays off without client configuration',()=>{
   assert.equal(googleAuthRequired({}),false);
   assert.equal(googleOAuthConfigured({TRINITY_ADMIN_EMAILS:'owner@example.com',GOOGLE_CLIENT_ID:'id',GOOGLE_CLIENT_SECRET:'secret',GOOGLE_REDIRECT_URI:'http://example.com/callback'}),false);
   assert.equal(googleOAuthConfigured({TRINITY_ADMIN_EMAILS:'owner@example.com',GOOGLE_CLIENT_ID:'id',GOOGLE_CLIENT_SECRET:'secret',GOOGLE_REDIRECT_URI:'https://trinity.example/api/auth/google/callback'}),true);
-  assert.equal(googleAuthRequired({TRINITY_AUTH_MODE:'google'}),true);
+  const incomplete={TRINITY_AUTH_MODE:'google'};
+  assert.equal(googleAuthRequired(incomplete),true);
+  assert.equal(googleAuthEnforced(incomplete),false);
+  assert.equal(googleAuthEnforced({TRINITY_AUTH_MODE:'google',TRINITY_ADMIN_EMAILS:'owner@example.com',GOOGLE_CLIENT_ID:'id',GOOGLE_CLIENT_SECRET:'secret',GOOGLE_REDIRECT_URI:'https://trinity.example/api/auth/google/callback'}),true);
 });
 
 test('admin email allowlist is normalized and exact',()=>{
