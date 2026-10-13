@@ -2,7 +2,7 @@
   "generated_by": "openai-assistant",
   "reviewed": false,
   "risk": "high",
-  "component": "Trinity authentication",
-  "description": "Prevents production lockout when Google-only auth is requested before OAuth credentials are fully configured; preserves access-key fallback and documents the UI state.",
+  "component": "Trinity authentication and Cloudflare deployment",
+  "description": "Prevents auth lockout during incomplete Google OAuth setup and adds a guarded, manually confirmed Cloudflare production deployment workflow with build, tests, secret validation, and health verification.",
   "source_pr": 22
 }
