@@ -13,7 +13,7 @@ export function planTask(task){
   const steps=intent==='research'?['spresniť otázku a časový rozsah','vyhľadať a porovnať dôveryhodné zdroje','oddeliť fakty, neistotu a závery','predložiť zdroje a stručný výsledok']
     :intent==='build'?['rozložiť požiadavku na funkcie','skontrolovať existujúci zdroj a závislosti','implementovať najmenší bezpečný krok','spustiť testy a uviesť dôkazy']
     :intent==='creative'?['ujasniť formát a štýl','pripraviť návrh alebo prompt','vytvoriť výstup cez povolený nástroj','overiť formát a dostupnosť výstupu']
-    :intent==='action'?['identifikovať presný cieľ a dopad','skontrolovať oprávnenie a riziko','vyžiadať schválenie pri nezvratnej zmene','vykonať iba povolený krok a priložiť dôkaz']
+    :intent==='action'?['identifikovať presný cieľ a dopad','skontrolovať serverové oprávnenie a riziko','povolené kroky vykonať; iba rizikové zaradiť na správnu kontrolu','uviesť doložený výsledok bez ďalšej potvrdzovacej formulky']
     :intent==='analysis'?['zachytiť otázku a predpoklady','spracovať dostupné podklady','skontrolovať rozpory a neistotu','odpovedať s jasným záverom']
     :['pochopiť otázku','odpovedať prirodzene a stručne'];
   return {version:'1.1',intent,risk,requires_approval:risk==='high',steps,completion_checks:['Výsledok zodpovedá aktuálnemu cieľu a rozsahu.','Vykonané akcie sú doložené výsledkom povoleného nástroja.','Zostávajúce blokátory a neistota sú jasne uvedené.'],execution_status:'not-started',grants_permissions:false};
