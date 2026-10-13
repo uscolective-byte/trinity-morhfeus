@@ -8,6 +8,7 @@ on:
       - 'Audit-Worker/**'
       - 'PC-Bridge-Worker/**'
       - 'Local-Gateway/**'
+      - 'Copilot-Bridge-Worker/**'
       - '.github/**'
   pull_request:
     branches: [main]
@@ -16,6 +17,7 @@ on:
       - 'Audit-Worker/**'
       - 'PC-Bridge-Worker/**'
       - 'Local-Gateway/**'
+      - 'Copilot-Bridge-Worker/**'
       - '.github/**'
   workflow_dispatch:
 
@@ -71,6 +73,9 @@ jobs:
         run: |
           npm ci --prefix Local-Gateway
           npm test --prefix Local-Gateway
+
+      - name: Validate Microsoft Copilot Bridge JWT and scoped API
+        run: node --test Copilot-Bridge-Worker/tests/*.test.mjs
 
       - name: Validate AI Change Policy against JSON Schema (Ajv)
         run: npx --yes ajv-cli@5.0.0 validate -s .github/ai-change-policy.schema.json -d .github/ai-change.json
