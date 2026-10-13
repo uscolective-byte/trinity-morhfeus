@@ -72,7 +72,7 @@ export function handleMcp(request,env,ctx,access={}){
         if(!enabled)return result({error:'Riadenie projektu nie je pre tohto MCP klienta zapnuté.'});
         const action=await createSystemAction(env,{action:'selfwrite',payload:{path,content},rationale:`MCP klient: ${rationale}`},'mcp:client');
         return result({id:action.id,status:action.status,approval_required:true,
-          note:`Čaká na schválenie príkazom SCHVÁĽ ${action.id} v Trinity chate.`});
+          note:`Akcia čaká na rozhodnutie správcu v Trinity; ID: ${action.id}.`});
       });
 
     server.registerTool('list_project_files',{description:'Vypíše štruktúru Trinity projektu.',
@@ -97,7 +97,7 @@ export function handleMcp(request,env,ctx,access={}){
         if(!enabled)return result({error:'Riadenie projektu nie je pre tohto MCP klienta zapnuté.'});
         const action=await createSystemAction(env,{action:'run',payload:{command:'npm run build',cwd:cwd||'.',allowNonZero:false},rationale:'MCP klient: wrangler build'},'mcp:client');
         return result({id:action.id,status:action.status,approval_required:action.status==='proposed',
-          note:`Čaká na schválenie príkazom SCHVÁĽ ${action.id}.`});
+          note:`Akcia čaká na rozhodnutie správcu v Trinity; ID: ${action.id}.`});
       });
 
     server.registerTool('request_project_action',{description:'Navrhne ohraničenú akciu autorizovaného MCP klienta. Zmeny sa nikdy nevykonajú bez samostatného schválenia vlastníka.',
@@ -107,7 +107,7 @@ export function handleMcp(request,env,ctx,access={}){
         if(!enabled)return result({error:'Riadenie projektu nie je pre tohto MCP klienta zapnuté.'});
         const proposed=await createSystemAction(env,{action,payload,rationale:`MCP klient: ${rationale}`},'mcp:client');
         return result({id:proposed.id,action:proposed.action,status:proposed.status,approval_required:proposed.status==='proposed',
-          next_step:proposed.status==='proposed'?`Vlastník musí v Trinity chate odoslať SCHVÁĽ ${proposed.id}.`:'Akcia čaká na PC bránu.'});
+          next_step:proposed.status==='proposed'?`Vlastník musí akciu skontrolovať v Trinity; ID: ${proposed.id}.`:'Akcia čaká na PC bránu.'});
       });
 
     server.registerTool('get_project_action',{description:'Vráti stav a overený doklad projektovej akcie MCP klienta.',
@@ -137,7 +137,7 @@ export function handleMcp(request,env,ctx,access={}){
       inputSchema:{command:z.string().min(1).max(2000),cwd:z.string().max(500).optional(),rationale:z.string().min(5).max(300)}},
       async({command,cwd,rationale})=>{
         const action=await createSystemAction(env,{action:'run',payload:{command,cwd},rationale:`MCP: ${rationale}`},'mcp:trinity');
-        return result({id:action.id,approval_required:true,note:`SCHVÁĽ ${action.id}`});
+        return result({id:action.id,approval_required:true,note:`Akcia čaká na rozhodnutie správcu v Trinity; ID: ${action.id}`});
       });
 
     return server;
