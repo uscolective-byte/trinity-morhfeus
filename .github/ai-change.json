@@ -2,7 +2,7 @@
   "generated_by": "openai-assistant",
   "reviewed": false,
   "risk": "high",
-  "component": "Audit-Worker",
-  "description": "Adds audited, allowlisted CI ingestion and repository governance infrastructure. Pending human CODEOWNER review and staging validation.",
+  "component": "Trinity authentication",
+  "description": "Prevents production lockout when Google-only auth is requested before OAuth credentials are fully configured; preserves access-key fallback and documents the UI state.",
   "source_pr": null
 }
