@@ -4,5 +4,5 @@
   "risk": "high",
   "component": "Trinity authentication",
   "description": "Prevents production lockout when Google-only auth is requested before OAuth credentials are fully configured; preserves access-key fallback and documents the UI state.",
-  "source_pr": null
+  "source_pr": 22
 }
