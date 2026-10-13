@@ -12,7 +12,7 @@
     "test:truth-live": "node scripts/live-truth-test.mjs"
   },
   "dependencies": {
-    "@modelcontextprotocol/server": "2.0.0",
+    "@modelcontextprotocol/server": "2.3.1",
     "agents": "0.24.0",
     "zod": "4.6.5"
   },
