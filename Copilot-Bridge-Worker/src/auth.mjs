@@ -56,7 +56,7 @@ export async function microsoftJwks(tenantId) {
   return data.keys;
 }
 
-export async function verifyEntraToken(token, env, getKeys = microsoftJwks) {
+export async function verifyEntraToken(token, env, getKeys = microsoftJwks, requiredScope = 'Trinity.Read') {
   if (!configReady(env)) throw new AuthError(503, 'Microsoft Entra integration not configured');
   if (typeof token !== 'string' || token.length > 16000) throw new AuthError(401, 'Invalid bearer token');
   const parts = token.split('.');
@@ -99,16 +99,17 @@ export async function verifyEntraToken(token, env, getKeys = microsoftJwks) {
       !allowedIds(env.ENTRA_ALLOWED_USER_OIDS).includes(claims.oid.toLowerCase()) ||
       !GUID.test(claims.azp || '') ||
       !allowedIds(env.ENTRA_ALLOWED_CLIENT_IDS).includes(claims.azp.toLowerCase()) ||
-      !String(claims.scp || '').split(/\s+/).includes('Trinity.Read')) {
+      (!['Trinity.Read', 'Trinity.Execute'].includes(requiredScope) ||
+      !String(claims.scp || '').split(/\s+/).includes(requiredScope))) {
     throw new AuthError(403, 'Microsoft identity or scope not permitted');
   }
   return {oid: claims.oid, tenant, client: claims.azp};
 }
 
-export async function authorizeRequest(request, env, getKeys = microsoftJwks) {
+export async function authorizeRequest(request, env, getKeys = microsoftJwks, requiredScope = 'Trinity.Read') {
   if (!configReady(env)) throw new AuthError(503, 'Microsoft Entra integration not configured');
   const auth = request.headers.get('Authorization') || '';
   const match = /^Bearer\s+([A-Za-z0-9._-]+)$/i.exec(auth);
   if (!match) throw new AuthError(401, 'Microsoft Entra bearer token required');
-  return verifyEntraToken(match[1], env, getKeys);
+  return verifyEntraToken(match[1], env, getKeys, requiredScope);
 }
