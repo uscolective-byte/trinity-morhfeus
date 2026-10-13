@@ -4,6 +4,7 @@ import {TrinityAgent,ChatAgent,GuardianAgent} from './legacy.js';
 import {TrinityOperations} from './workflow.js';
 import {AGENTS,SKILLS,shouldDelegate} from './registry.js';
 import {createJob,getJob} from './jobs.js';
+import {planTask} from './planner.js';
 import {authenticate,checkOrigin,hash,HttpError,rateLimit,readJSON,secure,validKey,issueSession,allowDevConnection,sessionCookie} from './security.js';
 import {callModel,serviceStatus,runScheduledHealth,readiness} from './services.js';
 import {searchMemory,runTool} from './tools.js';
@@ -68,6 +69,29 @@ async function route(request,env,ctx){
   if(path==='/ready'&&request.method==='GET'){
     const state=await readiness(env);
     return json({service:'Trinity',version:TRINITY_VERSION,...state},state.ready?200:503);
+  }
+  // Microsoft Copilot Studio scoped access: no owner/admin privilege is inherited.
+  if(path==='/api/integrations/copilot/agents'&&request.method==='GET'){
+    await authenticateApiKey(request,env,'mcp:read');
+    return json({agents:AGENTS.map(({id,name,cluster})=>({id,name,cluster}))});
+  }
+  if(path==='/api/integrations/copilot/tasks'&&request.method==='POST'){
+    const client=await authenticateApiKey(request,env,'mcp:write');
+    await rateLimit(env,`copilot:tasks:${client.id}`,6,60);
+    const data=z.object({message:z.string().trim().min(1).max(4000)}).strict().parse(await readJSON(request,5500));
+    const plan=planTask(data.message);
+    if(plan.risk==='high')throw new HttpError(403,'Táto úloha vyžaduje prihlásenú reláciu vlastníka Trinity.');
+    const created=await createJob(env,{task:data.message,agent:'orchestrator',mode:'single',provider:'workers-ai',
+      owner_mode:false,remember:false,language:'auto'});
+    return json({id:created.id,status:created.status,review_required:false,execution_claim:'queued-not-completed'},202);
+  }
+  const copilotJob=path.match(/^\/api\/integrations\/copilot\/tasks\/([0-9a-f-]{36})$/i);
+  if(copilotJob&&request.method==='GET'){
+    const client=await authenticateApiKey(request,env,'mcp:write');
+    await rateLimit(env,`copilot:poll:${client.id}`,30,60);
+    const job=await getJob(env,uuid.parse(copilotJob[1]));
+    return json({id:job.id,status:job.status,result:job.status==='completed'?String(job.result||'').slice(0,12000):null,
+      error:job.status==='failed'?'Trinity task failed':null});
   }
   if(path==='/api/auth/config'&&request.method==='GET')return json({google_enabled:googleAuthRequired(env)&&googleOAuthConfigured(env),google_required:googleAuthRequired(env)});
   const generatedApi=path.match(/^\/api\/v1\/generated\/([a-z0-9]+(?:-[a-z0-9]+)*)$/);

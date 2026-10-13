@@ -57,17 +57,30 @@ export async function getPCBridgeStatus(env){
   catch(error){console.error(JSON.stringify({event:'pc_bridge_status_failed',message:error instanceof Error?error.message:String(error)}));return {connected:false,status:'unavailable'};}
 }
 
+export function allowOwnerAutoApproval(action,payload={}) {
+  // Only server-authenticated admin/owner sessions may use this policy.
+  // Critical actions and generic shell commands always require explicit risk review.
+  if (['read','screenshot','notify','system_info','scrape','web_fetch',
+       'write','edit','open_app','download'].includes(action)) return true;
+  if (action==='run') {
+    const command=typeof payload.command==='string'?payload.command.trim():'';
+    return /^(?:npm (?:test|run (?:test|build))|git (?:status|diff(?: --stat)?|log(?: --oneline)?)|(?:pwd|ls|dir))$/i.test(command);
+  }
+  return false;
+}
+
 export async function createSystemAction(env,input,requestedBy='trinity',options={}){
   const data=systemActionSchema.parse(input);const definition=SYSTEM_CAPABILITIES.find(item=>item.id===data.action);const id=crypto.randomUUID();const now=Date.now();
   // Auto-approval is deliberately impossible for generic agents, MCP clients,
   // providers and gateways. The caller must carry server-verified admin context
   // and use the reserved admin requester namespace.
-  const adminAuthorized=options.adminAuthorized===true&&requestedBy.startsWith('admin:');
-  const status=!definition.approval||adminAuthorized?'approved':'proposed';
-  const approvedBy=adminAuthorized?requestedBy:definition.approval?null:'policy:auto-read';
+  const serverVerifiedAdmin=options.adminAuthorized===true&&requestedBy.startsWith('admin:');
+  const autoAuthorized=serverVerifiedAdmin&&allowOwnerAutoApproval(data.action,data.payload);
+  const status=!definition.approval||autoAuthorized?'approved':'proposed';
+  const approvedBy=autoAuthorized?requestedBy:definition.approval?null:'policy:auto-read';
   await env.DB.prepare(`INSERT INTO ops_system_actions(id,action,payload_json,rationale,status,requested_by,approved_by,approved_at,expires_at,created_at,updated_at)
     VALUES(?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))`).bind(id,data.action,JSON.stringify(data.payload),data.rationale,status,requestedBy,approvedBy,status==='approved'?now:null,now+30*60_000).run();
-  await env.DB.prepare("INSERT INTO ops_events(action,details) VALUES(?,?)").bind(adminAuthorized?'system_action_admin_authorized':'system_action_proposed',JSON.stringify({id,action:data.action,status,requested_by:requestedBy,admin_authorized:adminAuthorized})).run();
+  await env.DB.prepare("INSERT INTO ops_events(action,details) VALUES(?,?)").bind(autoAuthorized?'system_action_admin_authorized':'system_action_proposed',JSON.stringify({id,action:data.action,status,requested_by:requestedBy,admin_authorized:autoAuthorized})).run();
   const row=await getSystemAction(env,id);await mirrorBridge(env,row);return row;
 }
 

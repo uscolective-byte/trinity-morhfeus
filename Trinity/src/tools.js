@@ -85,7 +85,7 @@ export async function runTool(env, agent, name, input, executionContext={}) {
     const adminAuthorized=executionContext.adminAuthorized===true;
     const requester=adminAuthorized?`admin:agent:${agent.id||'trinity'}`:`agent:${agent.id||'trinity'}`;
     const action=await createSystemAction(env,args,requester,{adminAuthorized});
-    return {id:action.id,action:action.action,status:action.status,approval_required:action.status==='proposed',expires_at:action.expires_at,note:action.status==='proposed'?`Čaká na samostatné schválenie používateľa príkazom SCHVÁĽ ${action.id}.`:'Admin príkaz bol autorizovaný a čaká na lokálnu bránu.',_evidence:{effect:'proposal'}};
+    return {id:action.id,action:action.action,status:action.status,approval_required:action.status==='proposed',expires_at:action.expires_at,note:action.status==='proposed'?`Akcia čaká na rozhodnutie správcu v Trinity (ID: ${action.id}).`:'Admin príkaz bol autorizovaný a čaká na lokálnu bránu.',_evidence:{effect:'proposal'}};
   }
   if(name==='system_action_status'){
     const action=await getSystemAction(env,args.id);if(!action)throw new Error('Systémová akcia neexistuje.');
@@ -207,7 +207,7 @@ export async function runTool(env, agent, name, input, executionContext={}) {
       }
     }
     return {id:action.id,action:pcAction,status:action.status,approval_required:action.status==='proposed',
-      note:action.status==='proposed'?`Čaká na schválenie príkazom SCHVÁĽ ${action.id}.`:'Admin príkaz vykonáva PC Bridge.',
+      note:action.status==='proposed'?`Akcia čaká na rozhodnutie správcu v Trinity (ID: ${action.id}).`:'Admin príkaz vykonáva PC Bridge.',
       _evidence:{effect:'proposal'}};
   }
   if(name==='web_search') {
