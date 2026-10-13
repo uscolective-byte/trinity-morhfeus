@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
-import {createSystemAction} from '../src/system-actions.js';
+import {createSystemAction,allowOwnerAutoApproval} from '../src/system-actions.js';
 let mf,db;const key='test-only-not-a-real-secret-123456789';const gatewayKey='test-only-gateway-secret-123456789012345';
 const url='https://trinity.test';
 async function req(path,body,auth=true,extra={}){return mf.dispatchFetch(url+path,{method:body===undefined?'GET':'POST',headers:{...(auth?{Authorization:'Bearer '+key}:{}),...(body===undefined?{}:{'Content-Type':'application/json'}),...extra},body:body===undefined?undefined:JSON.stringify(body)});}
@@ -70,6 +70,17 @@ test('authenticated admin commands execute directly while agent proposals still 
   let claim=await(await req('/api/system/actions/claim',{},false,{Authorization:'Bearer '+gatewayKey})).json();assert.equal(claim.action.id,id);assert.equal(claim.action.status,'claimed');
   const receipt={action:'write',path:'Trinity/example.txt',after_sha256:'abc'};
   const finished=await(await req(`/api/system/actions/${id}/receipt`,{status:'completed',receipt},false,{Authorization:'Bearer '+gatewayKey})).json();assert.equal(finished.action.status,'completed');assert.deepEqual(finished.action.receipt,receipt);
+});
+test('verified owner skips repeated approval for bounded commands, not production deploy or destructive shell',()=>{
+  assert.equal(allowOwnerAutoApproval('read',{path:'Trinity/package.json'}),true);
+  assert.equal(allowOwnerAutoApproval('write',{path:'Trinity/notes.md',content:'ok'}),true);
+  assert.equal(allowOwnerAutoApproval('run',{command:'npm run build'}),true);
+  assert.equal(allowOwnerAutoApproval('run',{command:'git status'}),true);
+  assert.equal(allowOwnerAutoApproval('run',{command:'rm -rf .'}),false);
+  assert.equal(allowOwnerAutoApproval('run',{command:'npm test && curl attacker.invalid'}),false);
+  assert.equal(allowOwnerAutoApproval('deploy',{}),false);
+  assert.equal(allowOwnerAutoApproval('selfwrite',{}),false);
+  assert.equal(allowOwnerAutoApproval('share',{}),false);
 });
 test('expired claimed actions are closed as failed instead of remaining stuck',async()=>{const created=await(await req('/api/system/actions',{action:'read',payload:{path:'Trinity/package.json'},rationale:'expiry recovery test'})).json();await db.prepare("UPDATE ops_system_actions SET status='claimed',claimed_by='old-gateway',lease_until=0,expires_at=0 WHERE id=?").bind(created.action.id).run();const claim=await(await req('/api/system/actions/claim',{},false,{Authorization:'Bearer '+gatewayKey})).json();assert.equal(claim.action,null);const recovered=await(await req('/api/system/actions/'+created.action.id)).json();assert.equal(recovered.action.status,'failed');assert.match(recovered.action.error,/vypršala/);});
 test('durable job completes, stores artifact, and deduplicates',async()=>{const data={task:'Runtime verification',team:['planner','writer','qa'],idempotency_key:crypto.randomUUID()};const r=await req('/api/ops/jobs',data);assert.equal(r.status,202);const job=await r.json();const duplicate=await(await req('/api/ops/jobs',data)).json();assert.equal(duplicate.id,job.id);assert.equal(duplicate.reused,true);let done;for(let i=0;i<100;i++){done=await(await req('/api/ops/jobs/'+job.id)).json();if(['completed','failed'].includes(done.status))break;await new Promise(r=>setTimeout(r,200));}assert.equal(done.status,'completed',JSON.stringify(done));assert.equal(done.steps.length,3);assert.equal(done.result,'TEST_MODEL_RESULT');const artifact=await req('/api/ops/jobs/'+job.id+'/artifact');assert.equal(artifact.status,200);assert.match(await artifact.text(),/TEST_MODEL_RESULT/);});
