@@ -12,7 +12,7 @@ import {handleMcp} from './mcp.js';
 import {TRUTH_POLICY_VERSION} from './truth.js';
 import {SYSTEM_CAPABILITIES,createSystemAction,listSystemActions,getSystemAction,approveSystemAction,rejectSystemAction,claimSystemAction,finishSystemAction,authenticateGateway,getPCBridgeStatus} from './system-actions.js';
 import {listStudioProjects,getStudioProject,createStudioProject,reviseStudioProject} from './studio.js';
-import {beginGoogleLogin,finishGoogleLogin,googleAuthRequired,googleOAuthConfigured} from './google-auth.js';
+import {beginGoogleLogin,finishGoogleLogin,googleAuthRequired,googleOAuthConfigured,googleAuthEnforced} from './google-auth.js';
 import {normalizeLanguage} from './cognition.js';
 import {mediaStatus} from './media.js';
 import {readControl,assertRunning} from './control.js';
@@ -69,7 +69,7 @@ async function route(request,env,ctx){
     const state=await readiness(env);
     return json({service:'Trinity',version:TRINITY_VERSION,...state},state.ready?200:503);
   }
-  if(path==='/api/auth/config'&&request.method==='GET')return json({google_enabled:googleAuthRequired(env)&&googleOAuthConfigured(env),google_required:googleAuthRequired(env)});
+  if(path==='/api/auth/config'&&request.method==='GET'){const requested=googleAuthRequired(env),enforced=googleAuthEnforced(env);return json({google_enabled:enforced,google_required:enforced,google_requested:requested});}
   const generatedApi=path.match(/^\/api\/v1\/generated\/([a-z0-9]+(?:-[a-z0-9]+)*)$/);
   if(generatedApi&&(request.method==='GET'||request.method==='POST')){const client=await authenticateApiKey(request,env);return json(await invokeApiBySlug(env,client.owner_id,generatedApi[1],request.method));}
   if(path==='/api/auth/google/start'&&request.method==='GET'){
@@ -84,20 +84,20 @@ async function route(request,env,ctx){
   }
   checkOrigin(request,env);
   if(path==='/api/ops/dev-login'&&request.method==='POST'){
-    if(googleAuthRequired(env))throw new HttpError(403,'Použi prihlásenie cez Google.');
+    if(googleAuthEnforced(env))throw new HttpError(403,'Použi prihlásenie cez Google.');
     if(!await allowDevConnection(request,env))throw new HttpError(401,'Automatický vývojový vstup pre toto pripojenie nie je dostupný.');
     await rateLimit(env,'dev-login',20,60);
     return issueSession(env,env.TRINITY_DEV_UNTIL?Date.parse(env.TRINITY_DEV_UNTIL):undefined,env.TRINITY_OWNER_EMAIL||null,request);
   }
   if(path==='/api/ops/login'&&request.method==='POST'){
-    if(googleAuthRequired(env))throw new HttpError(403,'Prihlásenie prístupovým kľúčom je vypnuté. Použi Google.');
+    if(googleAuthEnforced(env))throw new HttpError(403,'Prihlásenie prístupovým kľúčom je vypnuté. Použi Google.');
     await rateLimit(env,'login:'+(await hash(request.headers.get('CF-Connecting-IP')||'local')).slice(0,24),10,300);
     const {key}=z.object({key:z.string().max(2048)}).parse(await readJSON(request));
     if(!await validKey(key,env))throw new HttpError(401,'Nesprávny prístupový kľúč.');
     return issueSession(env,undefined,env.TRINITY_OWNER_EMAIL||null,request);
   }
   if(path==='/api/ops/redeem'&&request.method==='POST'){
-    if(googleAuthRequired(env))throw new HttpError(403,'Jednorazové kľúče sú vypnuté. Použi Google.');
+    if(googleAuthEnforced(env))throw new HttpError(403,'Jednorazové kľúče sú vypnuté. Použi Google.');
     await rateLimit(env,'redeem:'+(await hash(request.headers.get('CF-Connecting-IP')||'local')).slice(0,24),10,300);
     const {ticket}=z.object({ticket:z.string().regex(/^[a-f0-9]{64}$/)}).parse(await readJSON(request));
     const used=await env.DB.prepare('DELETE FROM ops_login_tickets WHERE token_hash=? RETURNING expires_at').bind(await hash(ticket)).first();
