@@ -3,18 +3,21 @@ const has=(text,patterns)=>patterns.some(pattern=>text.includes(pattern));
 
 export function planTask(task){
   const text=normalize(task);
-  const intent=has(text,['vyhlada','hladaj','zdroj','aktualne','spravy','over','research'])?'research'
+  const repair=has(text,['oprav','problem','chyba','nejde','nefunguje','vyleps','diagnost']);
+  const intent=repair?'repair'
+    :has(text,['vyhlada','hladaj','zdroj','aktualne','spravy','over','research'])?'research'
     :has(text,['vytvor','vybuduj','naprogram','web','aplikac','kod','implement'])?'build'
     :has(text,['obrazok','obrazky','ilustrac','grafik','video','hudb'])?'creative'
     :has(text,['nasad','zmen','uprav','vymaz','odosli','spusti','prihlas','heslo','domenu','worker'])?'action'
     :has(text,['analyz','porovnaj','vysvetli','preskumaj','skontroluj'])?'analysis':'conversation';
   const risk=has(text,['vymaz','zmaz','heslo','prihlas','platb','peniaze','nasad','deploy','domenu'])?'high'
     :has(text,['zmen','uprav','odosli','spusti','vytvor','vybuduj','naprogram'])?'medium':'low';
-  const steps=intent==='research'?['spresniť otázku a časový rozsah','vyhľadať a porovnať dôveryhodné zdroje','oddeliť fakty, neistotu a závery','predložiť zdroje a stručný výsledok']
+  const steps=repair?['zistiť skutočný stav a zdroj problému','urobiť najmenšiu vratnú opravu v zadanom rozsahu','pri zlyhaní zmeniť bezpečný postup alebo preskočiť nepovinný krok','spustiť primeraný test a uložiť potvrdenie výsledku']
+    :intent==='research'?['spresniť otázku a časový rozsah','vyhľadať a porovnať dôveryhodné zdroje','oddeliť fakty, neistotu a závery','predložiť zdroje a stručný výsledok']
     :intent==='build'?['rozložiť požiadavku na funkcie','skontrolovať existujúci zdroj a závislosti','implementovať najmenší bezpečný krok','spustiť testy a uviesť dôkazy']
     :intent==='creative'?['ujasniť formát a štýl','pripraviť návrh alebo prompt','vytvoriť výstup cez povolený nástroj','overiť formát a dostupnosť výstupu']
     :intent==='action'?['identifikovať presný cieľ a dopad','skontrolovať oprávnenie a riziko','vyžiadať schválenie pri nezvratnej zmene','vykonať iba povolený krok a priložiť dôkaz']
     :intent==='analysis'?['zachytiť otázku a predpoklady','spracovať dostupné podklady','skontrolovať rozpory a neistotu','odpovedať s jasným záverom']
     :['pochopiť otázku','odpovedať prirodzene a stručne'];
-  return {version:'1.1',intent,risk,requires_approval:risk==='high',steps,completion_checks:['Výsledok zodpovedá aktuálnemu cieľu a rozsahu.','Vykonané akcie sú doložené výsledkom povoleného nástroja.','Zostávajúce blokátory a neistota sú jasne uvedené.'],execution_status:'not-started',grants_permissions:false};
+  return {version:'1.2',intent,risk,repair,requires_approval:risk==='high',steps,completion_checks:['Výsledok zodpovedá aktuálnemu cieľu a rozsahu.','Vykonané akcie sú doložené výsledkom povoleného nástroja.','Zostávajúce blokátory a neistota sú jasne uvedené.'],execution_status:'not-started',grants_permissions:false};
 }

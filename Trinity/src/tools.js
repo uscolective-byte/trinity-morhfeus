@@ -37,6 +37,20 @@ export const TOOL_SCHEMAS={
 const UNIT_GROUPS={length:{mm:.001,cm:.01,m:1,km:1000,in:.0254,ft:.3048,yd:.9144,mi:1609.344},mass:{mg:.000001,g:.001,kg:1,oz:.028349523125,lb:.45359237}};
 const unique=list=>[...new Set(list)].slice(0,50);
 const formatToken=value=>value.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const actionEffect=action=>['read','screenshot','system_info','scrape','web_fetch'].includes(action)?'read':'mutation';
+
+export async function waitForSystemAction(env,action,{attempts=80,intervalMs=1500}={}){
+  if(action.status!=='approved'&&action.status!=='claimed')return action;
+  for(let i=0;i<attempts;i++){
+    if(intervalMs>0)await sleep(intervalMs);
+    const current=await getSystemAction(env,action.id);
+    if(current?.status==='completed')return current;
+    if(current?.status==='failed')throw new Error(current.error||'Systémová akcia zlyhala bez podrobností.');
+    if(!current||['proposed','rejected'].includes(current.status))return current||action;
+  }
+  return await getSystemAction(env,action.id)||action;
+}
 export async function searchMemory(env,query='') {
   const pattern=`%${query.replace(/[!%_]/g,'!$&')}%`;
   const own=await env.DB.prepare("SELECT key,substr(value,1,2500) AS value,source,updated_at FROM ops_memory WHERE key LIKE ? ESCAPE '!' OR value LIKE ? ESCAPE '!' ORDER BY updated_at DESC LIMIT 8").bind(pattern,pattern).all();
@@ -85,7 +99,9 @@ export async function runTool(env, agent, name, input, executionContext={}) {
     const adminAuthorized=executionContext.adminAuthorized===true;
     const requester=adminAuthorized?`admin:agent:${agent.id||'trinity'}`:`agent:${agent.id||'trinity'}`;
     const action=await createSystemAction(env,args,requester,{adminAuthorized});
-    return {id:action.id,action:action.action,status:action.status,approval_required:action.status==='proposed',expires_at:action.expires_at,note:action.status==='proposed'?`Čaká na samostatné schválenie používateľa príkazom SCHVÁĽ ${action.id}.`:'Admin príkaz bol autorizovaný a čaká na lokálnu bránu.',_evidence:{effect:'proposal'}};
+    const current=adminAuthorized?await waitForSystemAction(env,action):action;
+    if(current.status==='completed')return {id:current.id,action:current.action,status:current.status,receipt:current.receipt,approval_required:false,_evidence:{effect:actionEffect(current.action),actions:actionEvidence(current.action),receipt_id:current.id}};
+    return {id:current.id,action:current.action,status:current.status,approval_required:current.status==='proposed',expires_at:current.expires_at,note:current.status==='proposed'?`Čaká na samostatné schválenie používateľa príkazom SCHVÁĽ ${current.id}.`:'Admin príkaz bol autorizovaný, ale lokálna brána zatiaľ neposlala potvrdenie výsledku.',_evidence:{effect:'proposal'}};
   }
   if(name==='system_action_status'){
     const action=await getSystemAction(env,args.id);if(!action)throw new Error('Systémová akcia neexistuje.');
@@ -196,18 +212,10 @@ export async function runTool(env, agent, name, input, executionContext={}) {
     const adminAuthorized=executionContext.adminAuthorized===true;
     const requester=adminAuthorized?'admin:agent:trinity':'agent:trinity';
     const action=await createSystemAction(env,{action:pcAction,payload,rationale},requester,{adminAuthorized});
-    if(action.status==='approved'){
-      // Autorizovaný admin príkaz aj bezpečné čítanie čakajú na reálny receipt.
-      for(let i=0;i<120;i++){
-        await new Promise(r=>setTimeout(r,1500));
-        const current=await getSystemAction(env,action.id);
-        if(current?.status==='completed')return{...current.receipt,_evidence:{effect:'read',receipt_id:action.id}};
-        if(current?.status==='failed')throw new Error(current.error || "PC Bridge: zlyhal.");
-        if(current?.status==='proposed')break;
-      }
-    }
-    return {id:action.id,action:pcAction,status:action.status,approval_required:action.status==='proposed',
-      note:action.status==='proposed'?`Čaká na schválenie príkazom SCHVÁĽ ${action.id}.`:'Admin príkaz vykonáva PC Bridge.',
+    const current=await waitForSystemAction(env,action,{attempts:120});
+    if(current.status==='completed')return{...current.receipt,_evidence:{effect:actionEffect(pcAction),actions:actionEvidence(pcAction),receipt_id:action.id}};
+    return {id:action.id,action:pcAction,status:current.status,approval_required:current.status==='proposed',
+      note:current.status==='proposed'?`Čaká na schválenie príkazom SCHVÁĽ ${action.id}.`:'Admin príkaz bol odovzdaný PC Bridge, ale potvrdenie výsledku ešte neprišlo.',
       _evidence:{effect:'proposal'}};
   }
   if(name==='web_search') {

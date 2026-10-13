@@ -4,7 +4,7 @@ import {AGENTS,SKILLS,selectTeam,shouldDelegate} from '../src/registry.js';
 import {validKey,checkOrigin,readJSON} from '../src/security.js';
 import {jobSchema} from '../src/jobs.js';
 import {parseAction,runAgent,executionPolicyForProvider} from '../src/engine.js';
-import {runTool} from '../src/tools.js';
+import {runTool,waitForSystemAction} from '../src/tools.js';
 import {extractModelText,extractGeminiInteractionText,getOllamaKey,serviceStatus,runScheduledHealth,readiness} from '../src/services.js';
 import {TRUTH_POLICY,findUnsupportedActionClaims,truthStatus} from '../src/truth.js';
 import {COMMUNICATION_STYLE,normalizeLanguage,languageDirective,tokenBudget} from '../src/cognition.js';
@@ -62,6 +62,8 @@ test('chat accepts world language tags and automatic language detection',()=>{as
 test('Trinity uses natural communication and treats authenticated request as scoped authorization',()=>{assert.match(COMMUNICATION_STYLE,/normálna osobná asistentka/);assert.match(COMMUNICATION_STYLE,/nežiadaj druhú textovú formulku SCHVÁĽ/);assert.match(COMMUNICATION_STYLE,/presne zadaný rozsah/);});
 test('complex scientific work receives a larger reasoning budget',()=>{assert.ok(tokenBudget('orchestrator','Analyzuj kvantovú fyziku')>tokenBudget('writer','Ahoj'));});
 test('next-gen planner classifies intent and risk without model claims',()=>{const research=planTask('Vyhľadaj aktuálne zdroje o kvantovej fyzike');assert.equal(research.intent,'research');assert.equal(research.risk,'low');const build=planTask('Vytvor a nasad webovú aplikáciu');assert.equal(build.intent,'build');assert.equal(build.risk,'high');assert.equal(build.requires_approval,true);assert.ok(build.steps.length>=3);});
+test('repair planner diagnoses, repairs, skips optional failures and verifies',()=>{const repair=planTask('Nájdi problém, oprav Trinity a otestuj ju');assert.equal(repair.intent,'repair');assert.equal(repair.repair,true);assert.match(repair.steps.join(' '),/zdroj problému/);assert.match(repair.steps.join(' '),/preskočiť nepovinný krok/);assert.match(repair.steps.join(' '),/test/);});
+test('admin system action waits for a completed receipt instead of claiming success early',async()=>{let call=0;const rows=[{id:'00000000-0000-4000-8000-000000000001',action:'edit',status:'claimed',payload_json:'{}',receipt_json:null},{id:'00000000-0000-4000-8000-000000000001',action:'edit',status:'completed',payload_json:'{}',receipt_json:'{"path":"Trinity/src/index.js","after_sha256":"abc"}'}];const env={DB:{prepare:()=>({bind(){return this;},first:async()=>rows[Math.min(call++,rows.length-1)]})}};const result=await waitForSystemAction(env,{id:rows[0].id,status:'approved'},{attempts:2,intervalMs:0});assert.equal(result.status,'completed');assert.equal(result.receipt.after_sha256,'abc');});
 test('device keys cannot masquerade as Ollama API keys',async()=>assert.rejects(getOllamaKey({OLLAMA_API_KEY:'ssh-ed25519 public'})));
 test('tool allowlist rejects arbitrary execution',async()=>assert.rejects(runTool({},AGENTS[0],'shell',{command:'whoami'})));
 test('PC operator tools require server-verified admin context',async()=>assert.rejects(runTool({},AGENTS.find(a=>a.id==='orchestrator'),'pc_system_info',{}),/admin režime/));
