@@ -12,6 +12,7 @@ export function googleOAuthConfigured(env){
   try{const url=new URL(env.GOOGLE_REDIRECT_URI);return url.protocol==='https:'||url.hostname==='localhost'||url.hostname==='127.0.0.1';}catch{return false;}
 }
 export const googleAuthRequired=env=>env.TRINITY_AUTH_MODE==='google';
+export const googleAuthEnforced=env=>googleAuthRequired(env)&&googleOAuthConfigured(env);
 
 async function signingKeys(force=false){
   if(!force&&cachedJwks&&cachedJwksUntil>Date.now())return cachedJwks;
