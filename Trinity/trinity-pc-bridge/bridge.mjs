@@ -226,7 +226,7 @@ async function executeAction(action) {
           receipt = { type:'system_info', ...getSystemInfo(!!payload.detail) }; break;
         }
         if (payload.task==='local-inference') {
-          receipt = { response:'[lokálny model nie je nakonfigurovaný]', model:'none' }; break;
+          receipt = await (await import('./local-model.mjs')).runLocalInference(payload); break;
         }
         const rp = safePath(payload.path||WORKSPACE_ROOTS[0], { mustExist: true });
         const st = statSync(rp);
