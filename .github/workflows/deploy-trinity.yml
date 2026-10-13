@@ -1,0 +1,70 @@
+name: Deploy Trinity to Cloudflare
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type DEPLOY to publish the current main branch to auru.dev'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trinity-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Test and deploy auru.dev
+    if: github.ref == 'refs/heads/main' && inputs.confirm == 'DEPLOY'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    environment:
+      name: production
+      url: https://auru.dev
+    defaults:
+      run:
+        working-directory: Trinity
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: Trinity/package-lock.json
+
+      - name: Verify Cloudflare credential is connected
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::Missing production secret CLOUDFLARE_API_TOKEN"
+            exit 1
+          fi
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Build Worker
+        run: npm run build
+
+      - name: Run unit tests
+        run: node --test tests/*.test.mjs
+
+      - name: Deploy Trinity Worker
+        run: npx wrangler deploy --config wrangler.jsonc
+
+      - name: Verify production health
+        working-directory: .
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if curl --fail --silent --show-error https://auru.dev/api/health; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::auru.dev health check failed after deployment"
+          exit 1
