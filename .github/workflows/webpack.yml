@@ -78,7 +78,7 @@ jobs:
         run: node --test Copilot-Bridge-Worker/tests/*.test.mjs
 
       - name: Validate AI Change Policy against JSON Schema (Ajv)
-        run: npx --yes ajv-cli@5.0.0 validate -s .github/ai-change-policy.schema.json -d .github/ai-change.json
+        run: npx --yes --package ajv-cli@5.0.0 --package ajv-formats@3.0.1 ajv validate -c ajv-formats -s .github/ai-change-policy.schema.json -d .github/ai-change.json
 
       - name: Emit signed audit receipt on main (fail closed)
         if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
