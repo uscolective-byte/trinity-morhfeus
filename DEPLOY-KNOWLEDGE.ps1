@@ -1,11 +1,11 @@
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
-function Run-Step([string]$Directory, [string[]]$Arguments) {
+function Run([string]$Directory, [string[]]$Arguments) {
   Push-Location $Directory
   try { & npm @Arguments; if ($LASTEXITCODE -ne 0) { throw "npm failed in $Directory" } }
   finally { Pop-Location }
 }
-Run-Step 'Capacity-Worker' @('ci','--ignore-scripts')
+ 'Capacity-Worker' @('ci','--ignore-scripts')
 Run-Step 'Capacity-Worker' @('test')
 Run-Step 'Knowledge-Worker' @('ci','--ignore-scripts')
 Run-Step 'Knowledge-Worker' @('test')
