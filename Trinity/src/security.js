@@ -1,3 +1,4 @@
+import {googleAuthEnforced} from './auth-config.js';
 import { timingSafeEqual } from 'node:crypto';
 export class HttpError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -39,7 +40,7 @@ export async function allowDevConnection(request,env){
   return equal(ip,env.TRINITY_DEV_IP);
 }
 export async function authenticate(request, env) {
-  const googleOnly=env.TRINITY_AUTH_MODE==='google';
+  const googleOnly=googleAuthEnforced(env);
   const token = request.headers.get('Authorization')?.replace(/^Bearer /, '') || request.headers.get('X-Trinity-Token');
   if (!googleOnly&&await validKey(token, env)) return { id: (await hash(token)).slice(0, 24),email:env.TRINITY_OWNER_EMAIL||null,role:'owner',owner:true };
   const session = request.headers.get('Cookie')?.match(/(?:^|;\s*)trinity_session=([a-f0-9]{64})(?:;|$)/)?.[1];

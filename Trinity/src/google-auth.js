@@ -1,17 +1,12 @@
 import {equal,hash,HttpError,issueSession} from './security.js';
+import {googleAuthRequired,googleOAuthConfigured,isGoogleAdminEmail} from './auth-config.js';
+export {googleAuthEnforced,googleAuthRequired,googleOAuthConfigured,isGoogleAdminEmail} from './auth-config.js';
 
 let cachedJwks=null,cachedJwksUntil=0;
 const textEncoder=new TextEncoder();
 const base64UrlEncode=bytes=>btoa(String.fromCharCode(...bytes)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
 function base64UrlDecode(value){const normalized=value.replace(/-/g,'+').replace(/_/g,'/');const binary=atob(normalized+'='.repeat((4-normalized.length%4)%4));return Uint8Array.from(binary,char=>char.charCodeAt(0));}
 function randomToken(){return base64UrlEncode(crypto.getRandomValues(new Uint8Array(32)));}
-function adminEmails(env){return new Set((env.TRINITY_ADMIN_EMAILS||'').split(',').map(email=>email.trim().toLowerCase()).filter(Boolean));}
-export function isGoogleAdminEmail(env,email){return adminEmails(env).has(String(email||'').trim().toLowerCase());}
-export function googleOAuthConfigured(env){
-  if(!env.GOOGLE_CLIENT_ID||!env.GOOGLE_CLIENT_SECRET||!env.GOOGLE_REDIRECT_URI||adminEmails(env).size===0)return false;
-  try{const url=new URL(env.GOOGLE_REDIRECT_URI);return url.protocol==='https:'||url.hostname==='localhost'||url.hostname==='127.0.0.1';}catch{return false;}
-}
-export const googleAuthRequired=env=>env.TRINITY_AUTH_MODE==='google';
 
 async function signingKeys(force=false){
   if(!force&&cachedJwks&&cachedJwksUntil>Date.now())return cachedJwks;
