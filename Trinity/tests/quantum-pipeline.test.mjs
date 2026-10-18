@@ -2,7 +2,30 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {QuantumCoreEngine} from '../src/quantum_core.js';
 import {TeleologicalMemoryEngine} from '../src/teleological_memory.js';
-import {processTeleologicalPrompt} from '../src/quantum_pipeline.js';
+import {buildQuantumReasoningContext,processTeleologicalPrompt,shouldUseQuantumReasoning} from '../src/quantum_pipeline.js';
+
+test('quantum reasoning selection is explicit, bounded and disableable', () => {
+  assert.equal(shouldUseQuantumReasoning('Ahoj', 'auto'), false);
+  assert.equal(shouldUseQuantumReasoning('Použi kvantový rozum na návrh architektúry.', 'auto'), true);
+  assert.equal(shouldUseQuantumReasoning('Ahoj', 'quantum'), true);
+  assert.equal(shouldUseQuantumReasoning('Použi kvantový rozum.', 'standard'), false);
+});
+
+test('quantum reasoning builds a parallel evidence brief without claiming quantum hardware', async () => {
+  const prompts=[];
+  const env={AI:{run:async(_model,input)=>{
+    prompts.push(input.messages[0].content);
+    if(input.messages[0].content.includes('koordinátor'))return {response:'Postup: over stav, oprav, otestuj. Riziko: neoverené dáta. Dôkaz: test a receipt.'};
+    return {response:`Rozbor ${prompts.length}: overiteľný pracovný podklad.`};
+  }}};
+  const result=await buildQuantumReasoningContext(env,'Navrhni bezpečnú architektúru.');
+  assert.equal(result.enabled,true);
+  assert.equal(result.candidates,3);
+  assert.equal(result.quantum_hardware,false);
+  assert.equal(result.strategy,'parallel-deliberation');
+  assert.match(result.brief,/over stav/);
+  assert.equal(prompts.length,4);
+});
 
 test('QuantumCoreEngine: computeInterference and collapseSuperposition with empirical veto', () => {
   const thesis = { dimension: 'thesis', content: 'Téza', phaseAngle: 0, amplitude: 0.85 };

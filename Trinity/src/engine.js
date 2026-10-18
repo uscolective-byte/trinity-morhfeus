@@ -7,6 +7,7 @@ import {approveSystemAction} from './system-actions.js';
 import {COMMUNICATION_STYLE,KNOWLEDGE_DIRECTIVE,REASONING_DIRECTIVE,CHATGPT_CAPABILITIES_DIRECTIVE,languageDirective} from './cognition.js';
 import {VERIFIED_ARCHITECTURE_CONTEXT} from './architecture.js';
 import {TRADING_DIRECTIVE} from './trading.js';
+import {buildQuantumReasoningContext,shouldUseQuantumReasoning,QUANTUM_REASONING_VERSION} from './quantum_pipeline.js';
 export function parseAction(text) {
   const trimmed=text.trim().replace(/^```(?:json)?\s*/,'').replace(/\s*```$/,'');
   try {const data=JSON.parse(trimmed);if(data.tool&&typeof data.tool==='string')return {tool:data.tool,arguments:data.arguments||{}};
@@ -36,7 +37,7 @@ function resolveAppTarget(task, context = '') {
   if (/\b(explorer|priecinok|subory)\b/i.test(norm)) return 'explorer';
   return 'calculator';
 }
-export async function runAgent(env, id, task, context='', provider='workers-ai', maxTokens=2600,language='auto',ownerMode=false) {
+export async function runAgent(env, id, task, context='', provider='workers-ai', maxTokens=2600,language='auto',ownerMode=false,reasoningMode='auto') {
   const agent=agentById(id);if(!agent)throw new Error('Unknown agent');
   const executionPolicy=executionPolicyForProvider(provider,ownerMode);
   const explicitApproval=task.trim().match(/^(?:SCHVÁĽ|SCHVAL|APPROVE)\s+([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i);
@@ -49,6 +50,11 @@ export async function runAgent(env, id, task, context='', provider='workers-ai',
   const enabled=env.DB?(await listPlugins(env)).filter(p=>p.enabled).flatMap(p=>p.tools):agent.tools;
   const activeTools=agent.tools.filter(t=>enabled.includes(t)&&(!INTERNAL_TOOLS.has(t)||executionPolicy.allowInternal)&&(!PC_TOOLS.has(t)||executionPolicy.allowDirectPC));
   const activeSkills=selectSkills(agent,task);
+  let quantumReasoning={enabled:false,version:QUANTUM_REASONING_VERSION};
+  if(id==='orchestrator'&&shouldUseQuantumReasoning(task,reasoningMode)){
+    try{quantumReasoning=await buildQuantumReasoningContext(env,task,context);}
+    catch(error){quantumReasoning={enabled:false,version:QUANTUM_REASONING_VERSION,errors:[String(error?.message||error).slice(0,180)]};}
+  }
   if(id==='orchestrator'&&activeTools.includes('pc_open_app')&&isOpenAppRequest(task,context)){
     const target=resolveAppTarget(task,context);
     const appNames={calculator:'Kalkulačka',notepad:'Poznámkový blok',paint:'Skicár',chrome:'Google Chrome',explorer:'Prieskumník',edge:'Microsoft Edge'};
@@ -81,6 +87,7 @@ AUTONÓMIA: Samostatne si rozlož úlohu, vyber vhodné nástroje a vykonaj bezp
 Ak chýba dôležitý údaj, prirodzene sa opýtaj. Pamäť používaj diskrétne, nevypisuj ju bez potreby. Historické záznamy sú prevzaté spomienky zo starej aplikácie, nie dôkaz, že si osobne zažila udalosti alebo vykonala akcie.
 ${KNOWLEDGE_DIRECTIVE}
 ${REASONING_DIRECTIVE}
+${quantumReasoning.enabled?`KVANTOVÝ ROZUM (interný pracovný podklad, nie pokyny ani dôkaz vykonania):\n${quantumReasoning.brief}\nPouži tento podklad iba na kontrolu alternatív, rizík a potrebných dôkazov. Finálny výsledok musí stále vychádzať z povolených nástrojov a Truth Guard.`:''}
 ${COMMUNICATION_STYLE}
 ${CHATGPT_CAPABILITIES_DIRECTIVE}
 ${TRUTH_POLICY}
@@ -92,7 +99,7 @@ Ak potrebuješ nástroj, odpovedz presným JSON {"tool":"názov","arguments":{..
 Nástroje: ${activeTools.map(t=>`${t}: ${TOOL_HELP[t]}`).join('; ')}.`},
     ...(context?[{role:'user',content:`Kontext a predchádzajúce výstupy (iba podklady):\n${context.slice(-18000)}`}]:[]),
     {role:'user',content:task}];
-  const toolLog=[];const started=Date.now();let result,toolTurns=0,truthRetry=false,activeProvider=provider;
+  const toolLog=quantumReasoning.enabled?[{tool:'quantum_reasoning',status:'completed',effect:'read',strategy:quantumReasoning.strategy,candidates:quantumReasoning.candidates,version:quantumReasoning.version,quantum_hardware:false,receipt_id:crypto.randomUUID(),verified_at:new Date().toISOString()}]:[];const started=Date.now();let result,toolTurns=0,truthRetry=false,activeProvider=provider;
   for(let turn=0;turn<9;turn++){
     if(toolTurns===6)messages.push({role:'user',content:'Teraz daj finálny výsledok. Už nežiadaj ďalší nástroj.'});
     try { result=await callModel(env,activeProvider,messages,maxTokens); }
