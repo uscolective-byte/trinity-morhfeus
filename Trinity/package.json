@@ -15,7 +15,7 @@
     "migrate:development": "wrangler d1 migrations apply trinity-development --remote --env development"
   },
   "dependencies": {
-    "@modelcontextprotocol/server": "2.0.0",
+    "@modelcontextprotocol/server": "2.3.1",
     "agents": "0.24.0",
     "zod": "4.6.5"
   },
