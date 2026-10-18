@@ -32,7 +32,7 @@ function safeReadResponse(data, endpoint) {
   }))};
 }
 
-async function boundedBody(request, maximum = 5500) {
+async function boundedBody(request, maximum = 5500, project = false) {
   if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get('content-type') || '')) {
     throw new AuthError(415, 'Expected JSON');
   }
@@ -56,6 +56,7 @@ async function boundedBody(request, maximum = 5500) {
   let data;
   try { data = JSON.parse(new TextDecoder().decode(buffer)); }
   catch { throw new AuthError(400, 'Invalid JSON'); }
+  if(project){if(!data||typeof data!=='object'||Array.isArray(data))throw new AuthError(400,'Expected project action');return data;}
   if (!data || typeof data !== 'object' || Array.isArray(data) ||
       Object.keys(data).some(k => k !== 'message') ||
       typeof data.message !== 'string' ||
@@ -72,10 +73,13 @@ export async function handleRequest(request, env, options = {}) {
       configured: configReady(env) && Boolean(env.TRINITY?.fetch),
       tasks_enabled: configReady(env) && tasksEnabled(env)});
   }
+  const projectRoute=path.match(/^\/v1\/trinity\/project-actions(?:\/([0-9a-f-]{36}))?$/i);
+  const isProject=Boolean(projectRoute);
+  if(isProject&&env.ENTRA_ENABLE_PROJECT_EDITS!=='true')return respond({error:'Project editing disabled'},503);
   const taskId = path.match(/^\/v1\/trinity\/tasks\/([0-9a-f-]{36})$/i);
   const isRead = ['/v1/trinity/status', '/v1/trinity/readiness', '/v1/trinity/agents'].includes(path);
-  const isSubmit = path === '/v1/trinity/tasks';
-  const isPoll = Boolean(taskId && UUID.test(taskId[1]));
+  const isSubmit = path === '/v1/trinity/tasks'||Boolean(projectRoute&&!projectRoute[1]);
+  const isPoll = Boolean(taskId && UUID.test(taskId[1])||projectRoute?.[1]&&UUID.test(projectRoute[1]));
   if (!isRead && !isSubmit && !isPoll) return respond({error: 'Not found'}, 404);
   if ((isRead || isPoll) && request.method !== 'GET' ||
       isSubmit && request.method !== 'POST') return respond({error: 'Method not allowed'}, 405);
@@ -89,7 +93,7 @@ export async function handleRequest(request, env, options = {}) {
   }
   if (!env.TRINITY?.fetch) return respond({error: 'Trinity service binding unavailable'}, 503);
 
-  const upstream = path === '/v1/trinity/status' ? '/api/health'
+  const upstream = isProject?'/api/integrations/copilot/project-actions'+(projectRoute[1]?'/'+projectRoute[1]:''):path === '/v1/trinity/status' ? '/api/health'
     : path === '/v1/trinity/readiness' ? '/ready'
     : path === '/v1/trinity/agents' ? '/api/integrations/copilot/agents'
     : path === '/v1/trinity/tasks' ? '/api/integrations/copilot/tasks'
@@ -103,7 +107,7 @@ export async function handleRequest(request, env, options = {}) {
   if (isSubmit || isPoll) headers.set('Authorization', 'Bearer ' + env.COPILOT_TRINITY_TASK_KEY);
   let body;
   if (isSubmit) {
-    try { body = JSON.stringify(await boundedBody(request)); }
+    try { body = JSON.stringify(await boundedBody(request,isProject?610000:5500,isProject)); }
     catch (error) {
       return respond({error: error instanceof AuthError ? error.message : 'Bad request'},
         error instanceof AuthError ? error.status : 400);
@@ -122,6 +126,11 @@ export async function handleRequest(request, env, options = {}) {
     }
     const data = await response.json();
     if (isRead) return respond(safeReadResponse(data, path));
+    if(isProject){
+      const allowed=['proposed','approved','claimed','completed','failed','rejected'];
+      if(!UUID.test(data.id||'')||!allowed.includes(data.status)||isPoll&&data.id!==projectRoute[1])return respond({error:'Invalid project receipt'},502);
+      return respond({id:data.id,status:data.status,approval_required:data.status==='proposed',completed:data.status==='completed'},isSubmit?202:200);
+    }
     if (isSubmit) {
       if (!UUID.test(data.id || '') || data.status !== 'queued') return respond({error: 'Invalid task receipt'}, 502);
       return respond({id: data.id, status: 'queued', completed: false}, 202);

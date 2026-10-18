@@ -120,3 +120,18 @@ test('rejects blocked tasks and malformed bodies',async()=>{
   });
   assert.equal(disabled.status,503);
 });
+
+test('project edits require separate enablement and Execute scope; receipts remain proposals',async()=>{
+ const id='aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+ const environment={...env(),ENTRA_ENABLE_PROJECT_EDITS:'true',TRINITY:{async fetch(req){
+  assert.equal(new URL(req.url).pathname,'/api/integrations/copilot/project-actions');
+  assert.equal((await req.json()).operation,'edit');
+  return Response.json({id,status:'proposed',receipt:{secret:'never-forward'}},{status:202});
+ }}};
+ const payload={operation:'edit',path:'Trinity/src/example.js',content:'export const x=1;',rationale:'Improve the source file'};
+ const r=await request('/v1/trinity/project-actions','POST',payload,environment);
+ assert.equal(r.status,202);assert.deepEqual(await r.json(),{id,status:'proposed',approval_required:true,completed:false});
+ assert.equal((await request('/v1/trinity/project-actions','POST',payload,env())).status,503);
+ const denied=await handleRequest(new Request('https://copilot.test/v1/trinity/project-actions',{method:'POST',headers:{Authorization:'Bearer '+token({scp:'Trinity.Read'}),'content-type':'application/json'},body:JSON.stringify(payload)}),environment,{getKeys:keys});
+ assert.equal(denied.status,403);
+});

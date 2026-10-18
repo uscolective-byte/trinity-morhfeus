@@ -1,3 +1,4 @@
+import {createApiKey} from '../src/api-keys.js';
 import {PLUGINS} from '../src/plugins.js';
 import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
@@ -11,7 +12,7 @@ async function req(path,body,auth=true,extra={}){return mf.dispatchFetch(url+pat
 before(async()=>{
   const modules=readdirSync('dist').filter(x=>!x.endsWith('.map')&&!x.endsWith('.md')).map(name=>({type:name==='index.js'?'ESModule':'Text',path:resolve('dist',name)}));
   modules.sort((a,b)=>a.type==='ESModule'?-1:b.type==='ESModule'?1:0);
-  mf=new Miniflare(convertV4MiniflareOptions({workers:[{name:'trinity',modules,compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],bindings:{TRINITY_OPS_KEY:key,TRINITY_GATEWAY_KEY:gatewayKey,TRINITY_VAULT_KEY:Buffer.alloc(32,7).toString('base64url'),OLLAMA_API_KEY:'test-only-ollama-key',OLLAMA_MODEL:'gemma4:31b'},d1Databases:{DB:'test-db'},r2Buckets:{ARTIFACTS:'test-r2'},
+  mf=new Miniflare(convertV4MiniflareOptions({workers:[{name:'trinity',modules,compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],bindings:{TRINITY_OPS_KEY:key,TRINITY_GATEWAY_KEY:gatewayKey,TRINITY_VAULT_KEY:Buffer.alloc(32,7).toString('base64url'),OLLAMA_API_KEY:'test-only-ollama-key',OLLAMA_MODEL:'gemma4:31b',COPILOT_PROJECT_CONTROL:'development'},d1Databases:{DB:'test-db'},r2Buckets:{ARTIFACTS:'test-r2'},
     serviceBindings:{AI:{name:'mock',entrypoint:'MockAI'}},workflows:{OPS_WORKFLOW:{name:'test-workflow',className:'TrinityOperations'}}},
     {name:'mock',modules:true,compatibilityDate:'2026-10-01',script:`import {WorkerEntrypoint} from 'cloudflare:workers'; export class MockAI extends WorkerEntrypoint{async run(model,args){if(model.includes('flux'))return {image:btoa('mock-jpeg')};const prompt=args.messages.at(-1).content;if(prompt==='FAIL_TEST')throw new Error('Simulated failure');if(prompt.includes('STUDIO_TEST')){const revised=prompt.includes('STUDIO_TEST_REVISION');return {response:'<!doctype html><html><head><title>Studio test</title></head><body><main><h1>'+(revised?'Revised':'Created')+'</h1></main></body></html>'};}return {response:'TEST_MODEL_RESULT'};}} export default {fetch(){return new Response('mock')}};`} ]}));
   db=await mf.getD1Database('DB','trinity');
@@ -114,4 +115,22 @@ test('read-only MCP token can inspect readiness but cannot access private admin 
   const response=await mf.dispatchFetch(url+'/mcp',{method:'POST',headers:{Authorization:'Bearer '+created.secret,'Content-Type':'application/json',Accept:'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',id:101,method:'tools/call',params:{name:'trinity_status',arguments:{}}})});
   assert.equal(response.status,200);assert.ok((await response.text()).includes('not-checked'));
   assert.equal((await mf.dispatchFetch(url+'/api/ops/status',{headers:{Authorization:'Bearer '+created.secret}})).status,401);
+});
+
+test('Copilot project edits remain owner-reviewed and client-bound',async()=>{
+ const issue=async(name,scopes)=>(await createApiKey({DB:db},'copilot-test-owner',{name,scopes,rate_limit_per_minute:30,expires_at:null})).secret;
+ const first=await issue('Copilot project first',['mcp:write']);
+ const second=await issue('Copilot project second',['mcp:write']);
+ const read=await issue('Copilot project reader',['mcp:read']);
+ const path='/api/integrations/copilot/project-actions';
+ const input={operation:'edit',path:'Trinity/src/example.js',content:'export const x=1;',rationale:'Update the source example'};
+ assert.equal((await req(path,input,false,{Authorization:'Bearer '+read})).status,403);
+ const created=await req(path,input,false,{Authorization:'Bearer '+first});
+ assert.equal(created.status,202,await created.clone().text());
+ const action=await created.json();assert.equal(action.status,'proposed');assert.equal(action.approval_required,true);assert.equal(action.completed,false);
+ const stored=await db.prepare('SELECT approved_by,status FROM ops_system_actions WHERE id=?').bind(action.id).first();
+ assert.equal(stored.approved_by,null);assert.equal(stored.status,'proposed');
+ const own=await req(path+'/'+action.id,undefined,false,{Authorization:'Bearer '+first});assert.equal(own.status,200);
+ assert.equal((await own.json()).completed,false);
+ assert.equal((await req(path+'/'+action.id,undefined,false,{Authorization:'Bearer '+second})).status,404);
 });

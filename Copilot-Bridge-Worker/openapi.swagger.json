@@ -149,6 +149,59 @@
           }
         }
       }
+    },
+    "/v1/trinity/project-actions": {
+      "post": {
+        "operationId": "ProposeTrinityProjectChange",
+        "summary": "Propose a source edit, build or test; requires Trinity.Execute and separate project enablement",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ProjectActionInput"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Proposed action; not an executed code change",
+            "schema": {
+              "$ref": "#/definitions/ProjectActionReceipt"
+            }
+          },
+          "403": {
+            "description": "Execute permission required"
+          },
+          "503": {
+            "description": "Project editing disabled"
+          }
+        }
+      }
+    },
+    "/v1/trinity/project-actions/{id}": {
+      "get": {
+        "operationId": "GetTrinityProjectChange",
+        "summary": "Read an action belonging to this Copilot client",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Action state; completed only after a gateway receipt",
+            "schema": {
+              "$ref": "#/definitions/ProjectActionReceipt"
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -243,6 +296,57 @@
         },
         "result": {
           "type": "string"
+        }
+      }
+    },
+    "ProjectActionInput": {
+      "type": "object",
+      "required": [
+        "operation",
+        "rationale"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "type": "string",
+          "enum": [
+            "edit",
+            "build",
+            "test"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "description": "Required for edit: relative Trinity/src, public or tests source path",
+          "maxLength": 300
+        },
+        "content": {
+          "type": "string",
+          "description": "Required for edit: full replacement source",
+          "maxLength": 100000
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 800
+        }
+      }
+    },
+    "ProjectActionReceipt": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "status": {
+          "type": "string"
+        },
+        "approval_required": {
+          "type": "boolean"
+        },
+        "completed": {
+          "type": "boolean"
         }
       }
     }

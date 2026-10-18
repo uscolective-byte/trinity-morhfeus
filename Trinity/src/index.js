@@ -5,6 +5,7 @@ import {TrinityOperations} from './workflow.js';
 import {AGENTS,SKILLS,shouldDelegate} from './registry.js';
 import {createJob,getJob} from './jobs.js';
 import {planTask} from './planner.js';
+import {proposeCopilotProjectAction,readCopilotProjectAction} from './copilot-project.js';
 import {authenticate,checkOrigin,hash,HttpError,rateLimit,readJSON,secure,validKey,issueSession,allowDevConnection,sessionCookie} from './security.js';
 import {callModel,serviceStatus,runScheduledHealth,readiness} from './services.js';
 import {searchMemory,runTool} from './tools.js';
@@ -71,6 +72,17 @@ async function route(request,env,ctx){
     return json({service:'Trinity',version:TRINITY_VERSION,...state},state.ready?200:503);
   }
   // Microsoft Copilot Studio scoped access: no owner/admin privilege is inherited.
+  const copilotProject=path.match(/^\/api\/integrations\/copilot\/project-actions(?:\/([0-9a-f-]{36}))?$/i);
+  if(copilotProject){
+    const client=await authenticateApiKey(request,env,'mcp:write');
+    await rateLimit(env,`copilot:project:${client.id}`,6,60);
+    if(request.method==='POST'&&!copilotProject[1]){
+      assertRunning(await readControl(env));
+      return json(await proposeCopilotProjectAction(env,client,await readJSON(request,610000)),202);
+    }
+    if(request.method==='GET'&&copilotProject[1])return json(await readCopilotProjectAction(env,client,uuid.parse(copilotProject[1])));
+    throw new HttpError(405,'Method not allowed');
+  }
   if(path==='/api/integrations/copilot/agents'&&request.method==='GET'){
     await authenticateApiKey(request,env,'mcp:read');
     return json({agents:AGENTS.map(({id,name,cluster})=>({id,name,cluster}))});

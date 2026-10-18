@@ -99,3 +99,13 @@ Authenticated Trinity owners should not be asked to send a second `SCHVÁĽ` com
 - The Copilot Bridge is **not deployed** and no Entra OAuth handshake has been verified.
 - GitHub Actions are failing before runners allocate; unit tests/builds have **not** been confirmed passing.
 - The `main` branch has no enforced required checks. Keep this integration in a **draft PR** until a security review, test evidence and staging verification are complete.
+
+## Scoped project edit proposals
+
+The connector now exposes POST `/v1/trinity/project-actions` and GET `/v1/trinity/project-actions/{id}`. They require Entra `Trinity.Execute`, the single-user task gate and `ENTRA_ENABLE_PROJECT_EDITS=true` on the bridge. Trinity additionally requires `COPILOT_PROJECT_CONTROL=development` in its own environment. Leave both project gates absent until staging validation and consent are complete.
+
+Payloads support only `edit`, `build` and `test`. Edits are full-file source proposals confined to relative `Trinity/src`, `Trinity/public` and `Trinity/tests` paths (maximum 100000 characters). Build/test commands are fixed; arbitrary shell commands, deploy, delete and secret-management operations are rejected. The existing gateway still validates workspace paths and proposals.
+
+Write/build/test proposals do not inherit owner privileges and wait for the existing authenticated owner review. They are not silently approved. An accepted proposal is not an edit performed or a test passed. Polling is tied to the originating Trinity API key and exposes only the action status, without source contents or arbitrary logs. Configure the gateway to the intended development worktree before approving a write. Do not enable this on a production workspace.
+
+Local verification covers signed Execute denial, closed default gates, source path restrictions, fixed commands, client-bound polling and proposal receipts. Live Microsoft OAuth, code application and gateway execution remain unverified.
