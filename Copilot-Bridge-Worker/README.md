@@ -45,6 +45,17 @@ The main Trinity Worker adds isolated `/api/integrations/copilot/agents`, `/api/
 
 ## 3. Configure Cloudflare separately from production Trinity
 
+### Development pilot (start here)
+
+Use `wrangler.staging.jsonc` for the first deployment. It names a separate `trinity-copilot-bridge-development` Worker, binds only `trinity-development` and sets `ENTRA_ENABLE_TASKS=false`. The default config below still targets production; do not use it for this pilot.
+
+```sh
+node --test tests/*.test.mjs
+npx wrangler@4.149.0 deploy --config wrangler.staging.jsonc --dry-run --outdir dist-staging
+```
+
+Before actual deployment, verify that `trinity-development` exists and includes the scoped Copilot routes from this PR. Configure the real tenant, audience, user and client IDs and the read-only key on this separate Worker using secure platform configuration. No task key is required for this read-only pilot. Do not treat a successful build or configured binding as a verified Entra connection. Deploy only this staging configuration after authentication and review; import only the three read operations into the initial Copilot Studio tool.
+
 The provided `wrangler.jsonc` binds `TRINITY` to service `trinity` and does **not** add any custom production route. In Worker Variables and Secrets set:
 
 | Name | Role |
