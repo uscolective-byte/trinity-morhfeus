@@ -10,6 +10,9 @@ Prototypy/
 *.dpapi
 .env
 .env.*
+Local-Desktop/Data/
+Local-Desktop/runtime/
+Local-Desktop/Workspace/
 .dev.vars
 
 **/dist-integrations/
@@ -19,3 +22,5 @@ Prototypy/
 trinity-local-node-fixed/
 **/trinity-local-node-fixed/
 dawn-wildflower-688f/
+
+/Trinity/dist-mcp/

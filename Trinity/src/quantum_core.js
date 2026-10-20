@@ -1,9 +1,17 @@
-/**
- * Trinity Quantum Core Engine
- * Matematický aparát pre superpozíciu myšlienkových stavov, fázovú interferenciu a vlnový kolaps.
- */
+import { QCA } from './qca.js';
+export { QCA };
 
 export class QuantumCoreEngine {
+  /**
+   * Spustí Quantum Cognitive Accelerator (QCA) meta-vrstvy Trinity / Aura.
+   * @param {string} query
+   * @param {object} [context]
+   * @param {object} [env]
+   */
+  static async accelerate(query, context = {}, env = null) {
+    return await QCA(query, context, env);
+  }
+
   /**
    * Vypočíta interferenčný faktor medzi dvoma stavmi na základe amplitúd a fázového posunu.
    * @param {{amplitude: number, phaseAngle: number}} stateA
@@ -76,4 +84,117 @@ export class QuantumCoreEngine {
       destructiveInterferenceCount,
     };
   }
+
+  /**
+   * Paralelné uvažovanie: vyhodnotí 3 až 7 paralelných myšlienkových vetiev a vyberie najlepšiu.
+   * @param {Array<{id: string, hypothesis: string, amplitude: number, phaseAngle: number, tags?: string[]}>} branches
+   * @param {{preference?: 'creative'|'analytical'|'balanced'}} [options]
+   */
+  static parallelReasoning(branches = [], options = { preference: 'creative' }) {
+    if (!Array.isArray(branches) || branches.length === 0) {
+      return { selectedBranch: null, coherence: 0, branchCount: 0 };
+    }
+
+    const scoredBranches = branches.map((b, idx) => {
+      const amp = Math.max(0.1, Math.min(1.0, Number(b.amplitude) || 0.7));
+      const phase = Number(b.phaseAngle) || (idx * (Math.PI / 4));
+      // Pre kreatívnu preferenciu dávame bonus vetvám s inovatívnymi tagmi alebo divergentnou fázou
+      const isCreativeBonus = options.preference === 'creative' && (b.tags?.includes('innovative') || b.tags?.includes('creative') || (phase > 0 && phase < Math.PI));
+      const finalScore = Number((amp * (isCreativeBonus ? 1.25 : 1.0)).toFixed(4));
+      return {
+        ...b,
+        calculatedScore: finalScore,
+        phaseAngle: phase
+      };
+    });
+
+    // Zoradenie podľa skóre zostupne
+    scoredBranches.sort((a, b) => b.calculatedScore - a.calculatedScore);
+    const winner = scoredBranches[0];
+
+    const avgCoherence = scoredBranches.reduce((acc, cur) => acc + cur.calculatedScore, 0) / scoredBranches.length;
+
+    return {
+      selectedBranch: winner,
+      branchesEvaluated: scoredBranches.length,
+      averageCoherence: Number(avgCoherence.toFixed(3)),
+      manifestedSolution: winner.hypothesis,
+      allRanked: scoredBranches.map(b => ({ id: b.id, score: b.calculatedScore, hypothesis: b.hypothesis }))
+    };
+  }
+
+  /**
+   * Multi-Agent Fusion: Zjednotí výstupy špecialistov (Guardian, Sentinel, Planner, Optimizer, Analyzer).
+   * @param {Record<string, {content: string, confidence?: number}>} agentOutputs
+   * @param {Record<string, number>} [weights]
+   */
+  static fuseAgentOutputs(agentOutputs = {}, weights = {}) {
+    const roles = Object.keys(agentOutputs);
+    if (roles.length === 0) {
+      return { fusedContent: '', consensusScore: 0, contributingRoles: [] };
+    }
+
+    const defaultWeights = {
+      guardian: 1.2,
+      sentinel: 1.1,
+      planner: 1.0,
+      optimizer: 1.05,
+      analyzer: 1.0,
+      ...weights
+    };
+
+    let totalWeight = 0;
+    const states = [];
+
+    for (const [role, data] of Object.entries(agentOutputs)) {
+      const weight = defaultWeights[role.toLowerCase()] || 1.0;
+      totalWeight += weight;
+      states.push({
+        dimension: role,
+        content: data.content || '',
+        phaseAngle: (states.length * Math.PI) / (roles.length || 1),
+        amplitude: Math.min(1.0, (Number(data.confidence) || 0.8) * (weight / 1.2))
+      });
+    }
+
+    const collapse = this.collapseSuperposition(states);
+    const consensusScore = Number((collapse.coherenceScore * (totalWeight / roles.length)).toFixed(3));
+
+    // Syntetizovaný konsenzus
+    const fusedInsights = states.map(s => `[${s.dimension.toUpperCase()}]: ${s.content}`).join('\n');
+
+    return {
+      fusedContent: fusedInsights,
+      consensusScore,
+      dominantRole: collapse.dominantDimension,
+      contributingRoles: roles,
+      leadInsight: collapse.manifestedText
+    };
+  }
+
+  /**
+   * Error-Correction Layer: Fázovo koriguje a odstraňuje chyby v návrhu riešenia.
+   * @param {string} draft
+   * @param {Array<{pattern: RegExp|string, fix: string, reason: string}>} corrections
+   */
+  static errorCorrectionLayer(draft = '', corrections = []) {
+    let corrected = String(draft);
+    const appliedFixes = [];
+
+    for (const corr of corrections) {
+      const regex = typeof corr.pattern === 'string' ? new RegExp(corr.pattern, 'gi') : corr.pattern;
+      if (regex.test(corrected)) {
+        corrected = corrected.replace(regex, corr.fix);
+        appliedFixes.push({ reason: corr.reason, appliedAt: new Date().toISOString() });
+      }
+    }
+
+    return {
+      correctedOutput: corrected,
+      fixesAppliedCount: appliedFixes.length,
+      fixes: appliedFixes,
+      clean: appliedFixes.length === 0
+    };
+  }
 }
+

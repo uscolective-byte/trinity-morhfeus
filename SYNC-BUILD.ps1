@@ -42,8 +42,8 @@ function Test-Prerequisites {
 
     $tools = @{
         "node" = "Node.js"
-        "npm" = "NPM"
-        "git" = "Git"
+        "npm"  = "NPM"
+        "git"  = "Git"
     }
 
     $missing = @()
@@ -246,10 +246,10 @@ function Verify-Security {
 
         foreach ($pattern in $secretFiles) {
             $found = Get-ChildItem -Path $ScriptPath -Recurse -Force -File -Filter $pattern -ErrorAction SilentlyContinue |
-                Where-Object {
-                    $_.FullName -notmatch '[\\/](node_modules|\.wrangler|\.git)[\\/]' -and
-                    $_.Name -notmatch '^\.env\.(example|sample|template|dist)(\..*)?$'
-                }
+            Where-Object {
+                $_.FullName -notmatch '[\\/](node_modules|\.wrangler|\.git)[\\/]' -and
+                $_.Name -notmatch '^\.env\.(example|sample|template|dist)(\..*)?$'
+            }
             if ($found) {
                 Log "Potential security issue: $pattern found" "WARN"
                 $violations++
@@ -364,25 +364,25 @@ if (-not (Sync-Repository)) {
 Verify-Security | Out-Null
 
 $discoveredModules = Get-ChildItem -Path $ScriptPath -Directory |
-    Where-Object {
-        $_.Name -notin @('.git', '.vscode', 'logs', 'node_modules') -and
-        (Test-Path (Join-Path $_.FullName 'package.json'))
-    } |
-    Sort-Object Name |
-    ForEach-Object {
-        $pkgPath = Join-Path $_.FullName 'package.json'
-        $packageJson = Get-Content -Path $pkgPath -Raw | ConvertFrom-Json
-        $scriptNames = @($packageJson.scripts.PSObject.Properties.Name)
-        $buildCmd = if ($scriptNames -contains 'build') { 'build' }
-                    elseif ($scriptNames -contains 'start' -and $($_.Name -notmatch 'Local-Gateway|Gateway|gateway')) { 'start' }
-                    else { $null }
+Where-Object {
+    $_.Name -notin @('.git', '.vscode', 'logs', 'node_modules') -and
+    (Test-Path (Join-Path $_.FullName 'package.json'))
+} |
+Sort-Object Name |
+ForEach-Object {
+    $pkgPath = Join-Path $_.FullName 'package.json'
+    $packageJson = Get-Content -Path $pkgPath -Raw | ConvertFrom-Json
+    $scriptNames = @($packageJson.scripts.PSObject.Properties.Name)
+    $buildCmd = if ($scriptNames -contains 'build') { 'build' }
+    elseif ($scriptNames -contains 'start' -and $($_.Name -notmatch 'Local-Gateway|Gateway|gateway')) { 'start' }
+    else { $null }
 
-        [pscustomobject]@{
-            Path = $_.FullName
-            Name = $_.Name
-            BuildCmd = $buildCmd
-        }
+    [pscustomobject]@{
+        Path     = $_.FullName
+        Name     = $_.Name
+        BuildCmd = $buildCmd
     }
+}
 
 $modules = @($discoveredModules)
 if (-not $modules -or $modules.Count -eq 0) {
@@ -436,8 +436,8 @@ foreach ($module in $buildResults.Keys) {
 
 Log "" "INFO"
 Update-ProjectStatus -Updates @{
-    "last_sync" = (Get-Date -Format "yyyy-MM-ddTHH:mm:sszzz")
-    "build_status" = if ($successCount -eq $totalCount) { "success" } else { "partial_failure" }
+    "last_sync"     = (Get-Date -Format "yyyy-MM-ddTHH:mm:sszzz")
+    "build_status"  = if ($successCount -eq $totalCount) { "success" } else { "partial_failure" }
     "modules_built" = $successCount
 }
 

@@ -1,15 +1,19 @@
-# Morhfeus / Trinity 10.2
+# Morhfeus / Trinity 10.3
 
 [![CodeQL Security](https://github.com/uscolective-byte/trinity-morhfeus/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/uscolective-byte/trinity-morhfeus/actions/workflows/codeql.yml?query=branch%3Amain)
-![Trinity Version](https://img.shields.io/badge/version-10.2.0-blue.svg)
-![Tests](https://img.shields.io/badge/tests-213%2F213%20passing-brightgreen.svg)
-![Deployment Status](https://img.shields.io/badge/status-serving-success.svg)
+![Trinity Version](https://img.shields.io/badge/version-10.3.0-blue.svg)
+![Validation](https://img.shields.io/badge/validation-see_PR-blue.svg)
+![Deployment](https://img.shields.io/badge/deployment-verify_health-yellow.svg)
 
-Hlavný pracovný priečinok autonómneho ekosystému **Trinity 10.2**. Trinity predstavuje osobnú AI asistentku s jednotnou stálou identitou, 45 odbornými špecializáciami, 57 zručnosťami a distribuovanou cloudovou aj desktopovou architektúrou.
+Hlavný pracovný priečinok autonómneho ekosystému **Trinity 10.3**. Trinity predstavuje osobnú AI asistentku s jednotnou stálou identitou, 45 odbornými špecializáciami, 57 zručnosťami a distribuovanou cloudovou aj desktopovou architektúrou.
 
 ---
 
-## 🌐 Živé prostredia a prístup
+## 🌐 Prostredia a evidencia nasadenia
+
+Zdrojové vydanie: **10.3.0**. Produkčný `/health` počas prípravy stále vracal **10.2.0**; nasadenie 10.3 sa musí potvrdiť verziou a commit tagom. Podrobnosti zmien a aktivácie: [EVOLUTION-10.3](Dokumentacia/EVOLUTION-10.3.md).
+
+Tabuľka nižšie je historická evidencia, nie nová kontrola pripravenosti všetkých služieb.
 
 | Prostredie | Doména | Worker | Cloudflare Version ID | Stav |
 |---|---|---|---|---|
@@ -23,7 +27,7 @@ Hlavný pracovný priečinok autonómneho ekosystému **Trinity 10.2**. Trinity 
 
 Celý projekt pozostáva zo 7 synchronizovaných modulov:
 
-1. **`Trinity/`** – Hlavné operačné centrum a backendový Cloudflare Worker (v10.2.0).
+1. **`Trinity/`** – Hlavné operačné centrum a backendový Cloudflare Worker (zdrojové vydanie v10.3.0).
    - Riadenie chatu a workflows (Cloudflare Workflow, Durable Objects `Brain`, `CHAT_AGENT`, `GUARDIAN_AGENT`).
    - Perzistentná pamäť (Cloudflare D1 `trinity-v03`), rýchla vyrovnávacia pamäť (Workers KV `Mastermind`) a archív artefaktov (Cloudflare R2 `trinity-artifacts`).
    - Webové rozhranie Trinity 10.2 (`/` pre chat asistent a `/ops` pre operačné centrum).
@@ -69,7 +73,7 @@ Celý ekosystém je možné zostaviť a overiť jedným príkazom:
 cd Trinity
 npm test
 ```
-*(Všetkých 213 testov overuje bezpečnosť, routing, RBAC, nástroje, pravdivosť a PC akcie).*
+*(Aktuálny počet a výsledok testov je v protokole testovania a PR; staré počty nie sú dôkaz aktuálneho stavu.)*
 
 ---
 

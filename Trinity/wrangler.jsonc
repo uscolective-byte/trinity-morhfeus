@@ -62,7 +62,11 @@
     "TRINITY_OWNER_EMAIL": "saboivan2008@gmail.com",
     "TRINITY_OWNER_EMAILS": "saboivan2008@gmail.com,uscolective@gmail.com,usc31@auru.space",
     "GOOGLE_REDIRECT_URI": "https://auru.space/api/auth/google/callback",
-    "TRINITY_ENV": "production"
+    "TRINITY_ENV": "production",
+    "TRINITY_GITHUB_REPO": "uscolective-byte/trinity-morhfeus",
+    "TRINITY_GITHUB_BRANCH": "main",
+    "TRINITY_AUTO_IMPROVE": "true",
+    "TRINITY_AUTO_MERGE": "true"
   },
   "ai": {
     "binding": "AI"
@@ -269,7 +273,11 @@
         "TRINITY_OWNER_EMAIL": "saboivan2008@gmail.com",
         "TRINITY_OWNER_EMAILS": "saboivan2008@gmail.com,uscolective@gmail.com,usc31@auru.space",
         "GOOGLE_REDIRECT_URI": "https://auru.dev/api/auth/google/callback",
-        "TRINITY_ENV": "development"
+        "TRINITY_ENV": "development",
+        "TRINITY_GITHUB_REPO": "uscolective-byte/trinity-morhfeus",
+        "TRINITY_GITHUB_BRANCH": "main",
+        "TRINITY_AUTO_IMPROVE": "true",
+        "TRINITY_AUTO_MERGE": "true"
       },
       "ai": {
         "binding": "AI"

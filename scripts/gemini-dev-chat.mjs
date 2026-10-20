@@ -346,10 +346,9 @@ const toolHandlers = {
     if (!['development', 'production'].includes(environment)) return { success: false, error: 'Choose development or production explicitly.' };
     const isDev = environment === 'development';
     try {
-      const { stdout: commitHash } = await execAsync('git rev-parse --short HEAD', { cwd: ROOT_DIR });
+      const { stdout: commitHash } = await execAsync('git rev-parse HEAD', { cwd: ROOT_DIR });
       const tag = commitHash.trim();
-      const envArg = isDev ? '--env development' : '--env=""';
-      const cmd = `npx wrangler deploy ${envArg} --tag ${tag}`;
+      const cmd = `npm run ${isDev ? 'deploy:development' : 'deploy'} -- --tag ${tag}`;
       const { stdout, stderr } = await execAsync(cmd, { cwd: TRINITY_DIR, timeout: 90000 });
       return {
         success: true,

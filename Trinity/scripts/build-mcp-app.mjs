@@ -1,0 +1,6 @@
+import {build} from 'esbuild';
+import {mkdir,writeFile} from 'node:fs/promises';
+const result=await build({entryPoints:['mcp-app/control.js'],bundle:true,write:false,format:'esm',platform:'browser',minify:true});
+const script=result.outputFiles[0].text.replace(/<\/script/gi,'<\\/script');
+const html=`<!doctype html><html lang="sk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Trinity Control</title><style>body{margin:0;padding:20px;font:15px system-ui;background:#101928;color:#e8f1fa}h1{font-size:22px}button{background:#143e50;color:#9ef3df;border:1px solid #35746f;padding:10px;border-radius:9px;margin:4px;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#172436;padding:14px;border-radius:10px;max-height:420px;overflow:auto}</style></head><body><h1>Trinity · Stav a možnosti</h1><p>Over pripravenosť systému a infraštruktúry.</p><button data-tool="trinity_status">Stav Trinity</button><button data-tool="infrastructure_status">Domény a hosting</button><button data-tool="list_improvements">Vylepšenia</button><pre id="output" aria-live="polite">Načítavam…</pre><script type="module">${script}</script></body></html>`;
+await mkdir('dist-mcp',{recursive:true});await writeFile('dist-mcp/control.html',html);

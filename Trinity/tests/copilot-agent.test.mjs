@@ -424,7 +424,7 @@ test('CopilotPluginRegistry spravuje vstavané aj vlastné pluginy', () => {
 // 5️⃣ TRINITY COPILOT AGENT KOMPLETNÝ INTEGRAČNÝ TEST
 // ─────────────────────────────────────────────────────────────
 
-test('TrinityCopilotAgent vykoná kompletný tok: validácia, audit, cache, rich response', async () => {
+test('TrinityCopilotAgent isolates dialogue and never caches contextual answers', async () => {
   const mockDB = createMockDB();
   const mockKV = createMockKV();
   const env = {
@@ -437,7 +437,7 @@ test('TrinityCopilotAgent vykoná kompletný tok: validácia, audit, cache, rich
   const query = 'Ako začať s Trinity a nastaviť skilly?';
 
   // 1. Prvé volanie
-  const res1 = await TrinityCopilotAgent(query, env, { sessionId, noCache: false });
+  const res1 = await TrinityCopilotAgent(query, env, { userId:'owner-a',sessionId, noCache: false });
   assert.equal(res1.cached, false);
   assert.ok(res1.duration_ms >= 0);
   assert.ok(res1.request_id);
@@ -449,14 +449,15 @@ test('TrinityCopilotAgent vykoná kompletný tok: validácia, audit, cache, rich
   assert.ok(mockDB.auditLogs.some(log => log.message.includes('Agent called')));
 
   // Overenie uloženia do histórie dialógu
-  const sessionHistory = await skills.dialogManagement.getContext(sessionId, env);
+  const sessionHistory = JSON.parse([...mockDB.sessions.values()][0]);
   assert.equal(sessionHistory.length, 2);
   assert.equal(sessionHistory[0].content, query);
 
-  // 2. Druhé volanie s rovnakým dotazom -> overenie Cache Hit
-  const res2 = await TrinityCopilotAgent(query, env, { sessionId, noCache: false });
-  assert.equal(res2.cached, true);
+  // Contextual replies must see the updated history instead of a cached response.
+  const res2 = await TrinityCopilotAgent(query, env, { userId:'owner-a',sessionId, noCache: false });
+  assert.equal(res2.cached, false);
   assert.deepEqual(res2.content, res1.content);
+  assert.equal(JSON.parse([...mockDB.sessions.values()][0]).length,4);
 });
 
 test('TrinityCopilotAgent spracuje Power Platform volanie s fallbackom pri nedostupnosti', async () => {

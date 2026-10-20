@@ -1,26 +1,18 @@
 import {DurableObject} from "cloudflare:workers";
+import {NeuralBrainAgent} from "./neural_brain.js";
+
 export class TrinityAgent extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env);
+    this.agent = new NeuralBrainAgent(ctx, env);
+  }
+
   async fetch(request) {
-    const url = new URL(request.url);
-    if (url.pathname === "/websocket") {
-      if (request.headers.get("Upgrade") !== "websocket") {
-        return new Response("Expected WebSocket", { status: 400 });
-      }
-      const pair = new WebSocketPair();
-      const [client, server] = Object.values(pair);
-      this.ctx.acceptWebSocket(server);
-      return new Response(null, { status: 101, webSocket: client });
-    }
-    return new Response("Trinity Agent DO", { status: 200 });
+    return this.agent.fetch(request);
   }
 
   async webSocketMessage(ws, message) {
-    try {
-      const data = JSON.parse(message);
-      ws.send(JSON.stringify({ type: "ack", id: data.id }));
-    } catch {
-      ws.send(JSON.stringify({ type: "error", message: "Invalid message format" }));
-    }
+    return this.agent.webSocketMessage(ws, message);
   }
 
   async webSocketClose(ws, code, reason) {
@@ -31,6 +23,7 @@ export class TrinityAgent extends DurableObject {
     console.error("TrinityAgent WebSocket error:", error);
   }
 }
+
 
 export class ChatAgent extends DurableObject {
   async fetch(request) {

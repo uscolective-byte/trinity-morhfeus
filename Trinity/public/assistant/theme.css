@@ -1,4 +1,4 @@
-/* Trinity 10.2 Assistant Theme Styles */
+/* Trinity 10.3 Assistant Theme Styles */
 :root {
   --navy: #080c14;
   --navy2: #0f1626;
@@ -147,3 +147,12 @@
   color: #38bdf8;
   font-size: 13px;
 }
+
+/* Domain management shares the active theme instead of hard-coded light cards. */
+.domain-card,.domain-how article,.domain-form-card,.domain-detail-card{background:var(--paper);border-color:var(--line);color:var(--ink)}
+.domain-card-info b,.domain-how b{color:var(--ink)}
+.domain-card-info small,.domain-how small{color:var(--muted)}
+#domains-view .panel{margin-top:16px}
+#hosting-form{grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) auto}
+#hosting-list a{overflow-wrap:anywhere;color:var(--blue)}
+@media(max-width:760px){#hosting-form,#subdomain-form{grid-template-columns:1fr}.domain-action-bar button{flex:1 1 180px}.domain-card{align-items:flex-start;flex-direction:column}}

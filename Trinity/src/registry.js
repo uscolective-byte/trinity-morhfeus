@@ -89,10 +89,12 @@ export function selectSkills(agent,task='') {
 
 export const AGENTS = groups.flatMap(([cluster, roles]) => roles.map(([id, name, role]) => ({
   id, name, cluster, role,
-  tools: ['knowledge_search','plan_work','search_memory','project_snapshot','calculate','analyze_text','current_time','json_tool','hash_text','convert_units','extract_entities','format_text',...PRACTICAL_TOOL_NAMES,'list_capabilities','list_skills','list_connectors','install_plugin','execute_skill','copilot_chat','ecosystem_synthesize','ecosystem_search', ...(['Výskum','Obchod a rast'].includes(cluster)||id==='orchestrator' ? ['web_search'] : []),
+  tools: [...(id==='orchestrator'||['Vývoj','Cloud a prevádzka'].includes(cluster)?['project_inspect','project_read','improvement_submit','infrastructure_status','hosting_deploy','hosting_list','domain_search','domain_registration_status','domain_subdomain','domain_sync']:[]),'knowledge_search','plan_work','search_memory','project_snapshot','calculate','analyze_text','current_time','json_tool','hash_text','convert_units','extract_entities','format_text',...PRACTICAL_TOOL_NAMES,'list_capabilities','list_skills','list_connectors','install_plugin','execute_skill','copilot_chat','ecosystem_synthesize','ecosystem_search','quantum_deliberate','quantum_accelerate','brain_mode','brain_reflect','brain_memory','quantum_parallel','quantum_fusion','domain_check','domain_list','domain_inspect','domain_marketplace','create_file','create_pdf','list_artifacts','read_artifact', ...(['Výskum','Obchod a rast'].includes(cluster)||id==='orchestrator' ? ['web_search','web_fetch'] : []),
     ...(['ui','writer','orchestrator'].includes(id)?['generate_image']:[]),
     ...(['market-research','orchestrator'].includes(id)?['portfolio_summary']:[]),
     ...(['Riadenie','Cloud a prevádzka','Dáta a pamäť','Kvalita a bezpečnosť','Podpora a automatizácia'].includes(cluster) ? ['service_status'] : []),
+    ...(['Cloud a prevádzka','Riadenie'].includes(cluster)||['backend','architect','cloudflare','orchestrator'].includes(id)?['domain_add','domain_register','domain_set_dns','domain_delete_dns']:[]),
+    ...(['Obchod a rast','Riadenie'].includes(cluster)||['business-development','market-research','cloudflare','orchestrator'].includes(id)?['domain_list_for_sale','domain_sell','domain_list_for_lease','domain_lease','domain_end_lease']:[]),
     ...(id==='orchestrator'?['request_system_action','system_action_status','pc_screenshot','pc_run_script','pc_run','pc_file_read','pc_file_write','pc_file_append','pc_file_edit','pc_directory_create','pc_open_app','pc_app_control','pc_notify','pc_system_info','pc_scrape','pc_web_fetch','pc_download','pc_git_commit','pc_git_pr']:[]),
     ...(['backend','release','cloudflare'].includes(id)?['pc_git_commit','pc_git_pr','pc_run']:[])]
 })));
@@ -106,7 +108,8 @@ export function selectTeam(task, mode = 'single', agent = 'auto') {
   let selected = agent;
   if (selected === 'auto') {
     const normalized = task.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-    selected = /cloudflare|worker|binding|deploy/.test(normalized) ? 'cloudflare'
+    selected = /domena|domeny|domenu|dns|nameserver|tld|registracia domen/.test(normalized) ? 'cloudflare'
+      : /cloudflare|worker|binding|deploy/.test(normalized) ? 'cloudflare'
       : /kod|code|python|javascript|program|api/.test(normalized) ? 'backend'
       : /zakaznik|klient|lead|ponuk|predaj|webstrank|linkedin|outreach|zarob|prijem|trzb/.test(normalized) ? 'business-development'
       : /invest|portfolio|akci|krypto|trh|trading|stock|crypto/.test(normalized) ? 'market-research'

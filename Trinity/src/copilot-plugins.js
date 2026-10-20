@@ -6,9 +6,12 @@
  * - Podpora pre dynamické zapínanie / vypínanie pluginov
  */
 
-import {skills} from './skillRegistry.js';
-
 export const BUILTIN_COPILOT_PLUGINS = [
+  {
+    id:'integration-diagnostics',name:'Integration Configuration Diagnostics',version:'1.0.0',
+    description:'Kontrola konfigurácie AI, Copilot Studio a PC Bridge bez odhalenia tajomstiev; živé spojenie vyžaduje samostatný test.',
+    skills:['integrationReadiness'],category:'integration',enabled:true,required:false
+  },
   {
     id: 'core-copilot',
     name: 'Core Copilot Pack',
@@ -223,3 +226,8 @@ class CopilotPluginRegistry {
 
 export const copilotPluginRegistry = new CopilotPluginRegistry();
 export const copilotPlugins = BUILTIN_COPILOT_PLUGINS;
+
+export function assertCopilotSkillEnabled(name) {
+  const owners=copilotPluginRegistry.list().filter(plugin=>plugin.skills?.includes(name));
+  if(owners.length&&!owners.some(plugin=>plugin.enabled))throw new Error(`Plugin pre skill '${name}' je vypnutý.`);
+}

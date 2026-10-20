@@ -5,24 +5,26 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --ip 127.0.0.1",
-    "build": "wrangler deploy --dry-run --env=\"\" --outdir dist",
-    "deploy": "wrangler deploy --env=\"\"",
+    "build": "node scripts/build-mcp-app.mjs && wrangler deploy --dry-run --env=\"\" --outdir dist",
+    "deploy": "node scripts/build-mcp-app.mjs && wrangler deploy --env=\"\"",
     "types": "wrangler types",
     "test": "npm run build && node --test tests/*.test.mjs",
     "test:truth-live": "node scripts/live-truth-test.mjs",
-    "build:development": "wrangler deploy --dry-run --env development --outdir dist-development",
-    "deploy:development": "wrangler deploy --env development",
+    "build:development": "node scripts/build-mcp-app.mjs && wrangler deploy --dry-run --env development --outdir dist-development",
+    "deploy:development": "node scripts/build-mcp-app.mjs && wrangler deploy --env development",
     "migrate:development": "wrangler d1 migrations apply trinity-development --remote --env development"
   },
   "dependencies": {
-    "@modelcontextprotocol/server": "2.0.0",
-    "agents": "0.24.0",
-    "zod": "4.6.5"
+    "@modelcontextprotocol/ext-apps": "2.0.3",
+    "@modelcontextprotocol/server": "2.3.1",
+    "agents": "0.28.1",
+    "zod": "4.6.7"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "5.20261014.1",
+    "@cloudflare/workers-types": "5.20261019.1",
+    "esbuild": "0.28.2",
     "miniflare": "5.20261006.1-alpha",
-    "wrangler": "4.149.0"
+    "wrangler": "4.151.1"
   },
   "overrides": {
     "@modelcontextprotocol/client": "2.3.1",
@@ -33,6 +35,7 @@
     "esbuild@0.28.2": true,
     "esbuild@0.28.1": true,
     "workerd@1.20260930.2": true,
-    "workerd@1.20261006.1": true
+    "workerd@1.20261006.1": true,
+    "workerd@1.20261012.1": true
   }
 }

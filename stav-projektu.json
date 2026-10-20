@@ -3,14 +3,15 @@
   "source_of_truth": "C:\\Users\\saboi\\Documents\\Codex\\Morhfeus\\Trinity",
   "production": {
     "version": "10.2.0",
-    "cloudflare_version_id": "fc77de09-aabf-473b-8d33-2d83b186de01",
+    "cloudflare_version_id": "b07fd772-142a-497c-ae76-bd71093ec971",
     "development_cloudflare_version_id": "ad654534-4efd-4bc2-ac14-be07add85799",
-    "deployment_tag": "c9c9f67645f78810ebc238b1fec001b9ca9c2401",
+    "deployment_tag": null,
     "worker_url": "https://trinity.saboivan2008.workers.dev/",
     "primary_url": "https://auru.space",
     "development_url": "https://auru.dev",
-    "live_check": "passed",
-    "automated_tests": "213/213 Trinity full test suite passing"
+    "live_check": "public health only; authenticated provider and integration checks not performed",
+    "automated_tests": "Historical counts are not a deployment receipt; see release PR for current local validation",
+    "checked_at": "2026-10-20"
   },
   "features": {
     "copilot_agent": "active",
@@ -22,6 +23,20 @@
     "autonomous_brain": "active",
     "evolution_engine": "active",
     "agents_count": 45
+  },
+  "integrations": {
+    "gemini_mcp": {
+      "status": "verified",
+      "checked_at": "2026-10-19T01:06:17.9432827Z",
+      "evidence": "authenticated handshake and tool catalog returned HTTP 200"
+    },
+    "gemini_inference": {
+      "status": "degraded",
+      "checked_at": "2026-10-19T01:04:59Z",
+      "error": "Gemini Worker secret is rejected with HTTP 403",
+      "fallback": "workers-ai",
+      "verification_job_id": "b6934c79-f464-4716-af6c-4f1c5f90ccf2"
+    }
   },
   "steps": [
     {
@@ -79,7 +94,13 @@
     "admin_confirmation_required": true
   },
   "build_status": "success",
-  "last_sync": "2026-10-18T16:43:33.585Z",
+  "last_sync": "2026-10-19T05:43:12+02:00",
   "modules_built": 7,
-  "updated_at": "2026-10-18T16:43:33.587Z"
+  "updated_at": "2026-10-19T05:43:12+02:00",
+  "source_release": {
+    "version": "10.3.0",
+    "status": "prepared-not-deployed",
+    "canonical_source": "Trinity/src",
+    "details": "Dokumentacia/EVOLUTION-10.3.md"
+  }
 }

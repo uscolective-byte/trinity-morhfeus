@@ -110,3 +110,86 @@ test('processTeleologicalPrompt: end-to-end telemetry and execution', async () =
   assert.ok(res.coherenceScore > 0);
   assert.equal(aiCalls, 3);
 });
+
+test('QuantumBrain: harmonizeSystem and runBrainCycle with quantum telemetry', async () => {
+  const events = [];
+  const mockEnv = {
+    DB: {
+      prepare: (sql) => ({
+        bind: (...params) => ({
+          run: async () => {
+            if (sql.includes('ops_events')) {
+              events.push({ action: params[0], details: params[1] });
+            }
+            return { success: true };
+          },
+          first: async () => null,
+          all: async () => ({ results: [] })
+        }),
+        first: async () => ({ emergency_stop: 0, maintenance_mode: 0, reason: null, updated_at: new Date().toISOString() }),
+        all: async () => ({ results: [{ status: 'queued', count: 2 }] })
+      })
+    }
+  };
+
+  const cycle = await runBrainCycle(mockEnv);
+  assert.equal(cycle.brain_status, 'operational');
+  assert.equal(cycle.emergency_stop, false);
+  assert.ok(cycle.quantum);
+  assert.ok(cycle.quantum.coherenceScore > 0);
+  assert.equal(cycle.quantum.dominantDimension, 'synthesis');
+  assert.ok(events.some(e => e.action === 'brain_cycle_heartbeat'));
+  assert.ok(events.some(e => e.action === 'quantum_brain_cycle'));
+});
+
+test('Quantum Skills and quantum_deliberate tool execute correctly', async () => {
+  // 1. SkillRegistry quantum skills
+  assert.ok(skillRegistry.has('quantumCollapse'));
+  assert.ok(skillRegistry.has('quantumInterference'));
+  assert.ok(skillRegistry.has('quantumDeliberate'));
+
+  const collapseRes = await skillRegistry.execute('quantumCollapse', {
+    states: [
+      { dimension: 'thesis', content: 'Krok A', phaseAngle: 0, amplitude: 0.8 },
+      { dimension: 'antithesis', content: 'Krok B', phaseAngle: Math.PI, amplitude: 0.5 }
+    ]
+  });
+  assert.equal(collapseRes.dominantDimension, 'thesis');
+  assert.equal(collapseRes.manifestedText, 'Krok A');
+
+  // 2. runTool quantum_deliberate
+  const mockEnv = {
+    AI: {
+      run: async (_model, input) => {
+        const sys = input.messages[0].content;
+        if (sys.includes('Téza')) return { response: 'Téza: Vybudovať kvantové jadro.' };
+        if (sys.includes('Antitéza')) return { response: 'Antitéza: Overiť koherenciu a empirické fakty.' };
+        return { response: 'Syntéza: Kvantový mozog úspešne integrovaný.' };
+      }
+    },
+    DB: {
+      prepare: () => ({
+        bind: () => ({
+          first: async () => ({ installed: 1, enabled: 1 }),
+          all: async () => ({ results: [] })
+        }),
+        first: async () => ({ installed: 1, enabled: 1 }),
+        all: async () => ({ results: [] })
+      })
+    }
+  };
+
+  const toolRes = await runTool(
+    mockEnv,
+    { tools: ['quantum_deliberate'] },
+    'quantum_deliberate',
+    { query: 'Ako posunúť inteligenciu Trinity?' }
+  );
+
+  assert.ok(toolRes.manifestedText.includes('Kvantový mozog'));
+  assert.equal(toolRes.dominantDimension, 'synthesis');
+  assert.ok(toolRes.coherenceScore > 0);
+  assert.ok(toolRes._evidence?.receipt_id?.startsWith('quantum:'));
+});
+
+

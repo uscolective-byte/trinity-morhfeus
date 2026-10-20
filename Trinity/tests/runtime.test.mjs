@@ -135,3 +135,35 @@ test('read-only MCP token can inspect readiness but cannot access private admin 
   assert.equal(response.status,200);assert.ok((await response.text()).includes('not-checked'));
   assert.equal((await mf.dispatchFetch(url+'/api/ops/status',{headers:{Authorization:'Bearer '+created.secret}})).status,401);
 });
+
+test('Trinity OS: /api/os/status a /api/os/processes vracia stav jadra a zoznam procesov',async()=>{
+  const statusRes=await req('/api/os/status');
+  assert.equal(statusRes.status,200);
+  const statusData=await statusRes.json();
+  assert.equal(statusData.os_name,'Trinity Cognitive Cloud OS');
+  assert.equal(statusData.kernel_version,'10.3.0-cloud-kernel');
+  assert.ok(statusData.telemetry);
+  assert.ok(statusData.storage);
+  assert.ok(statusData.processes);
+
+  const procRes=await req('/api/os/processes');
+  assert.equal(procRes.status,200);
+  const procData=await procRes.json();
+  assert.ok(Array.isArray(procData.tasks));
+  assert.ok(Array.isArray(procData.jobs));
+});
+
+
+test('MCP App exposes a bundled view and useful text fallback',async()=>{
+ const headers={Accept:'application/json, text/event-stream'};
+ const tools=await req('/mcp',{jsonrpc:'2.0',id:201,method:'tools/list',params:{}},true,headers);assert.match(await tools.text(),/trinity_control_panel/);
+ const resource=await req('/mcp',{jsonrpc:'2.0',id:202,method:'resources/read',params:{uri:'ui://trinity/control.html'}},true,headers);
+ assert.equal(resource.status,200);const text=await resource.text();assert.match(text,/text\/html;profile=mcp-app/);assert.match(text,/Trinity Control/);assert.match(text,/infrastructure_status/);
+ const result=await req('/mcp',{jsonrpc:'2.0',id:203,method:'tools/call',params:{name:'trinity_control_panel',arguments:{}}},true,headers);assert.equal(result.status,200);assert.match(await result.text(),/configured/);
+});
+test('infrastructure APIs require auth and reject unconfirmed purchases',async()=>{
+ assert.equal((await req('/api/assistant/infrastructure',undefined,false)).status,401);
+ const status=await(await req('/api/assistant/infrastructure')).json();assert.equal(status.evolution.configured,false);assert.equal(status.web.pc_required,false);
+ const purchase=await req('/api/assistant/domains/register',{domain_name:'unconfirmed.test',live_register:true});assert.equal(purchase.status,400);assert.match(await purchase.text(),/max_price/);
+ const inventory=await req('/api/assistant/hosting');assert.equal(inventory.status,200);assert.deepEqual((await inventory.json()).items,[]);
+});

@@ -26,6 +26,7 @@ case "${1:-check}" in
     bash "$TASK_ROOT/scripts/trinity-environment.sh" check
     # Unlike whoami, this command fails when deployment credentials are unavailable.
     (cd Trinity && npx --no-install wrangler deployments list --name trinity > /dev/null)
+    TASK_RELEASE_SHA="$(git rev-parse HEAD)"
     umask 077
     mkdir -p .deployment-backups
     TASK_BACKUP="$TASK_ROOT/.deployment-backups/trinity-$(date -u +%Y%m%dT%H%M%SZ).sql"
@@ -33,7 +34,7 @@ case "${1:-check}" in
     test -s "$TASK_BACKUP"
     (cd Knowledge-Worker && npx --no-install wrangler deploy)
     (cd Integrations-Worker && npx --no-install wrangler deploy)
-    (cd Trinity && npx --no-install wrangler d1 migrations apply DB --remote && npx --no-install wrangler deploy)
+    (cd Trinity && npx --no-install wrangler d1 migrations apply DB --remote && npm run deploy -- --tag "$TASK_RELEASE_SHA" && node scripts/verify-deployment.mjs https://auru.space "$TASK_RELEASE_SHA")
     printf '%s\n' 'Deployment commands completed. Verify authenticated readiness and live provider receipts before declaring integrations operational.'
     ;;
   *) printf '%s\n' 'Usage: bash scripts/trinity-environment.sh setup|check|login|deploy' >&2; exit 2 ;;

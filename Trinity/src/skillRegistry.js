@@ -7,6 +7,19 @@
  */
 
 import { runPracticalTool } from './practical-skills.js';
+import {integrationReadiness} from './integration-readiness.js';
+import {assertCopilotSkillEnabled} from './copilot-plugins.js';
+import { QuantumCoreEngine } from './quantum_core.js';
+import { processTeleologicalPrompt } from './quantum_pipeline.js';
+import { NeuralBrain, BRAIN_MODES } from './neural_brain.js';
+import { QCA } from './qca.js';
+import {
+  listDomains, getDomain, createDomain, registerDomain, updateDomain, deleteDomain,
+  listDomainForSale, sellDomain, listDomainForLease, leaseDomain, endDomainLease,
+  listDomainTransactions, getDomainMarketplace, listDnsRecords, addDnsRecord, deleteDnsRecord
+} from './domains.js';
+import { memorySkills } from './memorySkill.js';
+export { memorySkills };
 
 // In-memory cache a fallback stav circuit-breakeru
 const memoryCache = new Map();
@@ -1529,7 +1542,97 @@ export const productivityPlusSkills = {
   }
 };
 
+export const quantumSkills = {
+  quantumCollapse: (params = {}) => {
+    return QuantumCoreEngine.collapseSuperposition(params.states || [], params.empiricalAnchor || { exists: true });
+  },
+  quantumInterference: (params = {}) => {
+    return { interference: QuantumCoreEngine.computeInterference(params.stateA || {}, params.stateB || {}) };
+  },
+  quantumDeliberate: async (params = {}, env = {}) => {
+    const query = params.query || params.prompt || '';
+    const sessionId = params.session_id || 'quantum-skill';
+    const bridgeActive = Boolean(params.bridgeActive || env.BRIDGE_SHARED_SECRET);
+    return await processTeleologicalPrompt(env, query, sessionId, bridgeActive);
+  },
+  quantumParallelReason: (params = {}) => {
+    return QuantumCoreEngine.parallelReasoning(params.branches || [], { preference: params.preference || 'creative' });
+  },
+  quantumMultiAgentFusion: (params = {}) => {
+    return QuantumCoreEngine.fuseAgentOutputs(params.agentOutputs || {}, params.weights || {});
+  },
+  quantumErrorCorrection: (params = {}) => {
+    return QuantumCoreEngine.errorCorrectionLayer(params.draft || '', params.corrections || []);
+  },
+  quantumQca: async (params = {}, env = null) => {
+    return await QCA(params.query || params.prompt || '', params.context || {}, env);
+  }
+};
+
+export const neuralBrainSkills = {
+  brainSetMode: (params = {}) => {
+    const brain = new NeuralBrain();
+    const result = brain.setMode(params.mode || BRAIN_MODES.CREATIVITY);
+    return { ...result, directive: brain.getModeDirective() };
+  },
+  brainReflect: async (params = {}) => {
+    const brain = new NeuralBrain();
+    if (params.mode) brain.setMode(params.mode);
+    return await brain.reflectOnExecution(params.report || { task: params.task, outcome: params.outcome });
+  },
+  brainMemoryQuery: (params = {}) => {
+    const brain = new NeuralBrain();
+    return brain.memory.getMemorySnapshot();
+  }
+};
+
+export const domainSkills = {
+  domainList: async (params = {}, env) => {
+    return await listDomains(env, params);
+  },
+  domainInspect: async (params = {}, env) => {
+    const domain = await getDomain(env, params.domain || params.id || params.name);
+    if (!domain) throw new Error(`Doména '${params.domain || params.id || params.name}' nebola nájdená.`);
+    const [dns_records, transactions] = await Promise.all([
+      listDnsRecords(env, domain.id),
+      listDomainTransactions(env, domain.id)
+    ]);
+    return { domain, dns_records, transactions };
+  },
+  domainCreate: async (params = {}, env) => {
+    return await createDomain(env, params);
+  },
+  domainRegister: async (params = {}, env) => {
+    return await registerDomain(env, params);
+  },
+  domainSaleListing: async (params = {}, env) => {
+    return await listDomainForSale(env, params.domain || params.id || params.name, params);
+  },
+  domainSell: async (params = {}, env) => {
+    return await sellDomain(env, params.domain || params.id || params.name, params);
+  },
+  domainLeaseListing: async (params = {}, env) => {
+    return await listDomainForLease(env, params.domain || params.id || params.name, params);
+  },
+  domainLease: async (params = {}, env) => {
+    return await leaseDomain(env, params.domain || params.id || params.name, params);
+  },
+  domainEndLease: async (params = {}, env) => {
+    return await endDomainLease(env, params.domain || params.id || params.name, params);
+  },
+  domainMarketplace: async (params = {}, env) => {
+    return await getDomainMarketplace(env);
+  },
+  domainSetDns: async (params = {}, env) => {
+    return await addDnsRecord(env, params.domain || params.id || params.name, params);
+  },
+  domainDeleteDns: async (params = {}, env) => {
+    return await deleteDnsRecord(env, params.domain || params.id || params.name, params.record_id || params.id);
+  }
+};
+
 export const skills = {
+  integrationReadiness,
   ...coreSkills,
   ...integrationSkills,
   ...dataverseSkills,
@@ -1538,6 +1641,10 @@ export const skills = {
   ...copilotStudioSkills,
   ...productivityPlusSkills,
   ...extendedEngineeringSkills,
+  ...quantumSkills,
+  ...neuralBrainSkills,
+  ...domainSkills,
+  ...memorySkills,
   ...chatGptSkills,
   ...userSkills
 };
@@ -1573,7 +1680,7 @@ class SkillRegistry {
     const builtinList = Object.keys(skills).map(name => ({
       name,
       type: 'builtin',
-      category: Object.keys(coreSkills).includes(name) ? 'core' : Object.keys(integrationSkills).includes(name) ? 'integration' : Object.keys(extendedEngineeringSkills).includes(name) ? 'engineering' : 'user'
+      category: Object.keys(coreSkills).includes(name) ? 'core' : Object.keys(integrationSkills).includes(name) ? 'integration' : Object.keys(extendedEngineeringSkills).includes(name) ? 'engineering' : Object.keys(domainSkills).includes(name) ? 'domains' : Object.keys(quantumSkills).includes(name) ? 'quantum' : Object.keys(memorySkills).includes(name) ? 'memory' : 'user'
     }));
     const customList = [...this._customSkills.entries()].map(([name, item]) => ({
       name,
@@ -1585,6 +1692,7 @@ class SkillRegistry {
   }
 
   async execute(name, ...args) {
+    assertCopilotSkillEnabled(name);
     const fn = this.get(name);
     if (!fn) throw new Error(`Skill '${name}' nebol nájdený v registry.`);
     return await fn(...args);

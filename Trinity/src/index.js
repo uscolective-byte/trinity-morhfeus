@@ -1,3 +1,7 @@
+import {scanForImprovements} from './maintenance-scan.js';
+import {inspectProject,readProjectSource} from './project-evolution.js';
+import {searchDomainNames,refreshDomainRegistration,createSubdomain,syncCloudflareDomains} from './domains.js';
+import {infrastructureStatus,hostStudioProject,listHostedSites} from './infrastructure.js';
 import {capabilityStatus} from './capability-status.js';
 import {handleKnowledge} from '../services/knowledge-api.js';
 import {z} from 'zod';
@@ -28,11 +32,16 @@ import {getWallet,transactWallet} from './wallet.js';
 import {handleInboundEmail} from './email.js';
 import {TRINITY2_CAPABILITIES,rolePermissions,requireCapability,updateRolePermission,analyzeImage,transcribeAudio,synthesizeSpeech,listVisualWorkflows,saveVisualWorkflow,listIncidents,resolveIncident,recordHealthIncident,exportAudit} from './trinity2.js';
 import {TrinityCopilotAgent} from './copilot-agent.js';
+import {copilotChatOptionsSchema} from './copilot-options.js';
+import {assertCopilotSkillEnabled} from './copilot-plugins.js';
 import {skillRegistry} from './skillRegistry.js';
 import {copilotPluginRegistry} from './copilot-plugins.js';
 import {universalEcosystem,UNIVERSAL_DOMAINS,APPLICATION_TEMPLATES} from './universal-ecosystem.js';
 import {runBrainCycle} from './brain.js';
 import {runEvolutionCycle} from './evolution.js';
+import {listSelfImprovementProposals,createSelfImprovementProposal,approveSelfImprovementProposal,applySelfImprovementProposal} from './self-improvement.js';
+import {listDomains,getDomain,createDomain,registerDomain,checkDomainAvailability,updateDomain,deleteDomain,listDomainForSale,sellDomain,listDomainForLease,leaseDomain,endDomainLease,listDomainTransactions,getDomainMarketplace,listDnsRecords,addDnsRecord,deleteDnsRecord} from './domains.js';
+import {listArtifacts,createArtifact,createPdfArtifact,getArtifact} from './artifacts.js';
 import html from '../public/index.html';
 import appJS from '../public/app.js.txt';
 import css from '../public/style.css';
@@ -46,7 +55,7 @@ export {TrinityAgent,ChatAgent,GuardianAgent,TrinityOperations};
 const json=(data,status=200)=>Response.json(data,{status});
 const runtimeEnvironment=(request,env)=>['localhost','127.0.0.1','::1'].includes(new URL(request.url).hostname)?'local':env.TRINITY_ENV||'local';
 const uuid=z.string().uuid();
-const MCP_READ_TOOLS=new Set(['get_capability_status','trinity_status','list_agents','get_task','list_tasks','search_memory','check_services','get_source_file','list_project_files','get_project_action','list_system_actions','pc_status','ecosystem_stats','search_ecosystem']);
+const MCP_READ_TOOLS=new Set(['trinity_control_panel','infrastructure_status','project_inspect','project_read','list_improvements','get_capability_status','trinity_status','list_agents','get_task','list_tasks','search_memory','check_services','get_source_file','list_project_files','get_project_action','list_system_actions','pc_status','ecosystem_stats','search_ecosystem']);
 function requireAdmin(user){if(!['admin','owner'].includes(user.role))throw new HttpError(403,'Táto operácia je dostupná iba správcovi Trinity.');}
 function requireOwner(user){if(user.role!=='owner')throw new HttpError(403,'Táto operácia je dostupná iba vlastníkovi Trinity.');}
 async function handleScopedMcp(request,env,ctx){
@@ -237,6 +246,161 @@ async function route(request,env,ctx){
     if(request.method==='POST'&&studioRoute[2]==='revise'){await rateLimit(env,`studio-revise:${user.id}`,8,300);return json({project:await reviseStudioProject(env,'primary',id,await readJSON(request,20000))});}
     if(request.method==='GET'&&studioRoute[2]==='export'){const project=await getStudioProject(env,'primary',id);return new Response(project.html,{headers:{'Content-Type':'text/html; charset=utf-8','Content-Disposition':`attachment; filename="${project.name.replace(/[^a-z0-9_-]+/gi,'-').slice(0,50)||'trinity-web'}.html"`}});}
   }
+  if(path==='/api/assistant/infrastructure'&&request.method==='GET'){requireAdmin(user);return json(infrastructureStatus(env));}
+  if(path==='/api/assistant/hosting'){
+    requireOwner(user);
+    if(request.method==='GET')return json({items:await listHostedSites(env)});
+    if(request.method==='POST'){await rateLimit(env,`hosting:${user.id}`,5,300);return json(await hostStudioProject(env,await readJSON(request,1000)),201);}
+  }
+  if(path==='/api/assistant/project/inspect'&&request.method==='POST'){requireAdmin(user);await rateLimit(env,`project:${user.id}`,20,300);const data=z.object({query:z.string().max(2000).default('')}).parse(await readJSON(request));return json(await inspectProject(env,data.query));}
+  if(path==='/api/assistant/project/source'&&request.method==='POST'){requireAdmin(user);const data=z.object({path:z.string().max(500),ref:z.string().regex(/^[a-f0-9]{40}$/).optional()}).parse(await readJSON(request));return json(await readProjectSource(env,data.path,data.ref));}
+  if(path==='/api/assistant/domains/search'&&request.method==='GET'){requireAdmin(user);return json(await searchDomainNames(env,url.searchParams.get('q')));}
+  if(path==='/api/assistant/domains/sync'&&request.method==='POST'){requireAdmin(user);return json(await syncCloudflareDomains(env));}
+  if(path==='/api/assistant/domains/registration-status'&&request.method==='POST'){requireAdmin(user);const data=z.object({domain:z.string()}).parse(await readJSON(request));return json(await refreshDomainRegistration(env,data.domain));}
+  if(path==='/api/assistant/domains/subdomain'&&request.method==='POST'){requireAdmin(user);return json(await createSubdomain(env,await readJSON(request)));}
+  if(path==='/api/assistant/domains'){
+    if(request.method==='GET'){
+      const filter={
+        status:url.searchParams.get('status')||undefined,
+        listing_type:url.searchParams.get('listing_type')||undefined,
+        search:url.searchParams.get('search')||undefined
+      };
+      return json({items:await listDomains(env,filter)});
+    }
+    if(request.method==='POST'){requireAdmin(user);return json({item:await createDomain(env,await readJSON(request,10000))},201);}
+  }
+  if(path==='/api/assistant/domains/check'){
+    if(request.method==='GET'){
+      const dName=url.searchParams.get('domain');
+      if(!dName)throw new HttpError(400,'Parameter ?domain= je povinný.');
+      return json(await checkDomainAvailability(env,dName));
+    }
+    if(request.method==='POST'){
+      const b=await readJSON(request,1000);
+      if(!b.domain)throw new HttpError(400,'Pole domain je povinné.');
+      return json(await checkDomainAvailability(env,b.domain));
+    }
+  }
+  if(path==='/api/assistant/domains/register'&&request.method==='POST'){
+    const payload=await readJSON(request,10000);
+    if(payload.live_register)requireOwner(user);
+    else requireAdmin(user);
+    return json(await registerDomain(env,payload),201);
+  }
+  if(path==='/api/assistant/domains/marketplace'&&request.method==='GET'){
+    return json(await getDomainMarketplace(env));
+  }
+  const domainDetailRoute=path.match(/^\/api\/assistant\/domains\/([0-9a-f-]+|[a-z0-9.-]+\.[a-z]{2,})$/i);
+  if(domainDetailRoute){
+    const domainIdOrName=domainDetailRoute[1];
+    if(request.method==='GET'){
+      const item=await getDomain(env,domainIdOrName);
+      if(!item)throw new HttpError(404,'Doména nebola nájdená.');
+      const [dns_records,transactions]=await Promise.all([
+        listDnsRecords(env,item.id),
+        listDomainTransactions(env,item.id)
+      ]);
+      return json({item,dns_records,transactions});
+    }
+    if(request.method==='POST'||request.method==='PUT'){
+      requireAdmin(user);
+      return json({item:await updateDomain(env,domainIdOrName,await readJSON(request,10000))});
+    }
+    if(request.method==='DELETE'){
+      requireAdmin(user);
+      return json(await deleteDomain(env,domainIdOrName));
+    }
+  }
+  const domainDeleteRoute=path.match(/^\/api\/assistant\/domains\/([0-9a-f-]+|[a-z0-9.-]+\.[a-z]{2,})\/delete$/i);
+  if(domainDeleteRoute&&request.method==='POST'){
+    requireAdmin(user);
+    return json(await deleteDomain(env,domainDeleteRoute[1]));
+  }
+  const domainSaleRoute=path.match(/^\/api\/assistant\/domains\/([0-9a-f-]+|[a-z0-9.-]+\.[a-z]{2,})\/(sale|sell)$/i);
+  if(domainSaleRoute&&request.method==='POST'){
+    requireAdmin(user);
+    const domainIdOrName=domainSaleRoute[1],action=domainSaleRoute[2];
+    const payload=await readJSON(request,10000);
+    if(action==='sale')return json({item:await listDomainForSale(env,domainIdOrName,payload)});
+    if(action==='sell')return json(await sellDomain(env,domainIdOrName,payload));
+  }
+  const domainLeaseRoute=path.match(/^\/api\/assistant\/domains\/([0-9a-f-]+|[a-z0-9.-]+\.[a-z]{2,})\/lease(?:\/(end))?$/i);
+  if(domainLeaseRoute&&request.method==='POST'){
+    requireAdmin(user);
+    const domainIdOrName=domainLeaseRoute[1],isEnd=Boolean(domainLeaseRoute[2]);
+    const payload=await readJSON(request,10000);
+    if(isEnd)return json(await endDomainLease(env,domainIdOrName,payload));
+    if(payload.tenant)return json(await leaseDomain(env,domainIdOrName,payload));
+    return json({item:await listDomainForLease(env,domainIdOrName,payload)});
+  }
+  const domainTransactionsRoute=path.match(/^\/api\/assistant\/domains\/([0-9a-f-]+|[a-z0-9.-]+\.[a-z]{2,})\/transactions$/i);
+  if(domainTransactionsRoute&&request.method==='GET'){
+    return json({items:await listDomainTransactions(env,domainTransactionsRoute[1])});
+  }
+  const domainDnsDeleteRoute=path.match(/^\/api\/assistant\/domains\/([0-9a-f-]+|[a-z0-9.-]+\.[a-z]{2,})\/dns\/([0-9a-f-]+)\/delete$/i);
+  if(domainDnsDeleteRoute&&request.method==='POST'){
+    requireAdmin(user);
+    return json(await deleteDnsRecord(env,domainDnsDeleteRoute[1],domainDnsDeleteRoute[2]));
+  }
+  const domainDnsRoute=path.match(/^\/api\/assistant\/domains\/([0-9a-f-]+|[a-z0-9.-]+\.[a-z]{2,})\/dns(?:\/([0-9a-f-]+))?$/i);
+  if(domainDnsRoute){
+    const domainIdOrName=domainDnsRoute[1],recordId=domainDnsRoute[2];
+    if(request.method==='GET'&&!recordId){
+      return json({items:await listDnsRecords(env,domainIdOrName)});
+    }
+    if(request.method==='POST'&&!recordId){
+      requireAdmin(user);
+      return json({item:await addDnsRecord(env,domainIdOrName,await readJSON(request,10000))},201);
+    }
+    if(request.method==='DELETE'&&recordId){
+      requireAdmin(user);
+      return json(await deleteDnsRecord(env,domainIdOrName,recordId));
+    }
+  }
+  if(path==='/api/os/status'&&request.method==='GET'){
+    const [services,readinessState,memoryCount,taskCount,jobCount,pcBridge]=await Promise.all([
+      serviceStatus(env),
+      readiness(env),
+      env.DB?.prepare?env.DB.prepare('SELECT (SELECT COUNT(*) FROM ops_memory)+(SELECT COUNT(*) FROM memory_long) AS count').first().catch(()=>({count:0})):{count:0},
+      env.DB?.prepare?env.DB.prepare('SELECT COUNT(*) AS count FROM tasks').first().catch(()=>({count:0})):{count:0},
+      env.DB?.prepare?env.DB.prepare('SELECT COUNT(*) AS count FROM ops_jobs').first().catch(()=>({count:0})):{count:0},
+      getPCBridgeStatus(env)
+    ]);
+    const reachableServices=services.filter(s=>s.status==='reachable').length;
+    return json({
+      os_name:'Trinity Cognitive Cloud OS',
+      kernel_version:TRINITY_VERSION+'-cloud-kernel',
+      architecture:'Distributed Microservices & Neural Workers',
+      environment:runtimeEnvironment(request,env),
+      uptime:'continuous',
+      readiness:readinessState,
+      telemetry:{
+        total_workers:services.length,
+        reachable_workers:reachableServices,
+        healthy:reachableServices===services.length,
+        services
+      },
+      storage:{
+        database:'Cloudflare D1 (trinity-v03)',
+        cache:'Cloudflare KV (Mastermind)',
+        filesystem:'Cloudflare R2 (trinity-artifacts)',
+        memory_records:memoryCount?.count||0
+      },
+      processes:{
+        tasks_count:taskCount?.count||0,
+        jobs_count:jobCount?.count||0
+      },
+      hardware_bridge:pcBridge
+    });
+  }
+  if(path==='/api/os/processes'&&request.method==='GET'){
+    let tasks=[];let jobs=[];
+    if(env.DB?.prepare){
+      try{const tRows=await env.DB.prepare('SELECT id, title, status, assigned_agent, priority, created_at, updated_at FROM tasks ORDER BY created_at DESC LIMIT 50').all();tasks=tRows.results||[];}catch{}
+      try{const jRows=await env.DB.prepare('SELECT id, task, team, provider, status, created_at, updated_at FROM ops_jobs ORDER BY created_at DESC LIMIT 50').all();jobs=jRows.results||[];}catch{}
+    }
+    return json({tasks,jobs,total:tasks.length+jobs.length});
+  }
   if(path==='/api/assistant/settings'&&request.method==='GET'){
     const [plugins,memory,apis,keys,portfolios,pcBridge,secrets]=await Promise.all([
       listPlugins(env),env.DB.prepare('SELECT (SELECT COUNT(*) FROM ops_memory)+(SELECT COUNT(*) FROM memory_long) AS count').first(),
@@ -245,7 +409,7 @@ async function route(request,env,ctx){
       env.DB.prepare('SELECT COUNT(*) AS count FROM trading_portfolios WHERE owner_id=?').bind(ownerId).first(),getPCBridgeStatus(env),listSecrets(env,ownerId)
     ]);
     const secretStatus=provider=>secrets.find(item=>item.provider===provider)?.status||'not-configured';
-    return json({plugins,truth_policy_version:TRUTH_POLICY_VERSION,version:TRINITY_VERSION,model:env.AI_MODEL||'@cf/openai/gpt-oss-120b',image_model:env.IMAGE_MODEL||'@cf/black-forest-labs/flux-1-schnell',permissions:{manage_api_keys:['admin','owner'].includes(user.role),manage_secrets:['admin','owner'].includes(user.role),manage_users:user.role==='owner',manage_trading:['admin','owner'].includes(user.role),use_local_ai:['admin','owner'].includes(user.role)},storage:{database:'Cloudflare D1',cache:'Workers KV · Mastermind',artifacts:'Cloudflare R2 · trinity-artifacts',strategy:'indexed-relational + cache + object archive',scalable:true,memory_records:memory.count||0},counts:{api_projects:apis.count||0,active_api_keys:keys.count||0,paper_portfolios:portfolios.count||0},internet:{web_search:plugins.some(p=>p.id==='web'&&p.enabled),mode:'outbound-only',always_on_gateway:pcBridge.connected===true},pc_bridge:pcBridge,integrations:[{id:'mcp',name:'MCP most',status:plugins.some(p=>p.id==='mcp'&&p.enabled)?'ready':'disabled'},{id:'api',name:'Trinity API',status:'ready'},{id:'web',name:'Webový výskum',status:plugins.some(p=>p.id==='web'&&p.enabled)?'ready':'disabled'},{id:'cloudflare',name:'Cloudflare',status:secretStatus('cloudflare')==='verified'?'verified':'platform-connected'},{id:'openai',name:'OpenAI / ChatGPT API',status:env.OPENAI_API_KEY?'configured':'not-configured'},{id:'ollama',name:'Ollama Cloud',status:env.OLLAMA_SECRET||env.OLLAMA_API_KEY?'configured':'not-configured'},{id:'gemini',name:'Google Gemini',status:env.GEMINI_API_KEY?'configured':secretStatus('gemini')},{id:'google',name:'Google OAuth',status:googleOAuthConfigured(env)?'configured':'not-configured'},{id:'github',name:'GitHub',status:secretStatus('github')}]});
+    return json({plugins,truth_policy_version:TRUTH_POLICY_VERSION,version:TRINITY_VERSION,model:env.AI_MODEL||'@cf/openai/gpt-oss-120b',image_model:env.IMAGE_MODEL||'@cf/black-forest-labs/flux-1-schnell',permissions:{manage_api_keys:['admin','owner'].includes(user.role),manage_secrets:['admin','owner'].includes(user.role),manage_users:user.role==='owner',manage_trading:['admin','owner'].includes(user.role),use_local_ai:['admin','owner'].includes(user.role),manage_domains:['admin','owner'].includes(user.role)},storage:{database:'Cloudflare D1',cache:'Workers KV · Mastermind',artifacts:'Cloudflare R2 · trinity-artifacts',strategy:'indexed-relational + cache + object archive',scalable:true,memory_records:memory.count||0},counts:{api_projects:apis.count||0,active_api_keys:keys.count||0,paper_portfolios:portfolios.count||0},internet:{web_search:plugins.some(p=>p.id==='web'&&p.enabled),mode:'outbound-only',always_on_gateway:pcBridge.connected===true},pc_bridge:pcBridge,integrations:[{id:'mcp',name:'MCP most',status:plugins.some(p=>p.id==='mcp'&&p.enabled)?'ready':'disabled'},{id:'api',name:'Trinity API',status:'ready'},{id:'web',name:'Webový výskum',status:plugins.some(p=>p.id==='web'&&p.enabled)?'ready':'disabled'},{id:'cloudflare',name:'Cloudflare',status:secretStatus('cloudflare')==='verified'?'verified':'platform-connected'},{id:'openai',name:'OpenAI / ChatGPT API',status:env.OPENAI_API_KEY?'configured':'not-configured'},{id:'ollama',name:'Ollama Cloud',status:env.OLLAMA_SECRET||env.OLLAMA_API_KEY?'configured':'not-configured'},{id:'gemini',name:'Google Gemini',status:env.GEMINI_API_KEY?'configured':secretStatus('gemini')},{id:'google',name:'Google OAuth',status:googleOAuthConfigured(env)?'configured':'not-configured'},{id:'github',name:'GitHub',status:secretStatus('github')}]});
   }
   const settingPlugin=path.match(/^\/api\/assistant\/settings\/plugins\/([a-z0-9-]+)$/);
   if(settingPlugin&&request.method==='POST'){
@@ -348,8 +512,8 @@ async function route(request,env,ctx){
   }
   if(path==='/api/copilot/chat'&&request.method==='POST'){
     await rateLimit(env,`copilot:${user.id}`,30,60);
-    const d=z.object({message:z.string().min(1).max(12000),session_id:z.string().uuid().optional(),agent:z.string().optional(),options:z.record(z.string(),z.unknown()).optional()}).strict().parse(await readJSON(request));
-    const response=await TrinityCopilotAgent(d.message,env,{userId:user.id,sessionId:d.session_id,agentName:d.agent,...d.options});
+    const d=z.object({message:z.string().min(1).max(12000),session_id:z.string().uuid().optional(),agent:z.string().max(100).optional(),options:copilotChatOptionsSchema.optional()}).strict().parse(await readJSON(request));
+    const response=await TrinityCopilotAgent(d.message,env,{...d.options,userId:user.email||user.id,sessionId:d.session_id,agentName:d.agent});
     return json(response);
   }
   if(path==='/api/copilot/plugins'&&request.method==='GET')return json({plugins:copilotPluginRegistry.list()});
@@ -367,6 +531,7 @@ async function route(request,env,ctx){
     requireAdmin(user);
     await rateLimit(env,`skill-exec:${user.id}`,20,60);
     const body=await readJSON(request);
+    assertCopilotSkillEnabled(copilotSkillExec[1]);
     const result=await skillRegistry.execute(copilotSkillExec[1],body?.input??body,env,body?.options||{});
     return json({result});
   }
@@ -402,6 +567,50 @@ async function route(request,env,ctx){
     const d=z.object({name:z.string().min(2).max(100),domain:z.string().default('software-dev'),type:z.string().default('web-app'),prompt:z.string().optional(),features:z.array(z.string()).optional()}).parse(await readJSON(request));
     return json(universalEcosystem.synthesizeApp(d.name,d.domain,d),201);
   }
+  if(path==='/api/ops/self-improvement'&&request.method==='GET'){
+    requireAdmin(user);
+    return json({
+      items: await listSelfImprovementProposals(env),
+      can_approve: user.role === 'owner',
+      capabilities: {
+        plugin_installation: true,
+        source_inspection: true,
+        code_changes: 'GitHub branch + PR + CI; no in-place runtime rewrite',
+        github_configured: Boolean(env.TRINITY_GITHUB_TOKEN||env.GITHUB_TOKEN),
+        audited_approval: true,
+        self_modifying_runtime: false,
+        deployment: 'GitHub Actions: test-gated development deployment; production requires an explicit workflow approval or TRINITY_AUTO_DEPLOY_PRODUCTION=true repository variable.'
+      }
+    });
+  }
+  if(path==='/api/ops/self-improvement'&&request.method==='POST'){
+    requireAdmin(user);
+    await rateLimit(env,`self-improvement:${user.id}`,20,300);
+    const input=z.object({
+      title:z.string().trim().min(3).max(120),
+      description:z.string().trim().min(10).max(4000),
+      kind:z.enum(['plugin_install','code_improvement','deployment','behavior_rule']),
+      plugin_id:z.string().regex(/^[a-z0-9-]{2,80}$/).optional()
+    }).strict().parse(await readJSON(request,6000));
+    if(input.kind==='plugin_install'&&!PLUGINS.some(p=>p.id===input.plugin_id))throw new HttpError(404,'Modul sa nenašiel v existujúcom katalógu Trinity.');
+    return json(await createSelfImprovementProposal(env,input,user.email||user.id),201);
+  }
+  const selfImprovementRoute=path.match(/^\/api\/ops\/self-improvement\/([0-9a-f-]+)\/(approve|apply)$/i);
+  if(selfImprovementRoute&&request.method==='POST'){
+    const id=uuid.parse(selfImprovementRoute[1]);
+    if(selfImprovementRoute[2]==='approve'){
+      requireOwner(user);
+      z.object({}).strict().parse(await readJSON(request));
+      return json(await approveSelfImprovementProposal(env,id,user.email||user.id));
+    }
+    requireAdmin(user);
+    z.object({}).strict().parse(await readJSON(request));
+    return json(await applySelfImprovementProposal(env,id,user.email||user.id,async pluginId=>{
+      const plugin=PLUGINS.find(p=>p.id===pluginId);
+      if(!plugin)throw new HttpError(404,'Modul už nie je dostupný v katalógu Trinity.');
+      return await installPlugin(env,plugin.id);
+    }));
+  }
   if(path==='/api/assistant/brain/run'&&request.method==='POST'){requireAdmin(user);return json(await runBrainCycle(env));}
   if(path==='/api/assistant/evolution/run'&&request.method==='POST'){requireAdmin(user);return json(await runEvolutionCycle(env));}
   const mediaRoute=path.match(/^\/api\/assistant\/media\/images\/([0-9a-f-]+)$/i);
@@ -410,6 +619,46 @@ async function route(request,env,ctx){
     if(!object)throw new HttpError(404,'Obrázok neexistuje.');
     const headers=new Headers();object.writeHttpMetadata(headers);headers.set('Cache-Control','private, max-age=86400');headers.set('Content-Disposition',`inline; filename="trinity-${id}.jpg"`);
     return new Response(object.body,{headers});
+  }
+  const fileRoute=path.match(/^\/api\/assistant\/files\/([0-9a-f-]+|[a-zA-Z0-9_\-.]+)\/([^/]+)$/i);
+  if(fileRoute&&request.method==='GET'){
+    const id=fileRoute[1];
+    const fname=decodeURIComponent(fileRoute[2]);
+    let key=`artifacts/${id}/${fname}`;
+    let object=await env.ARTIFACTS.get(key);
+    if(!object&&env.DB?.prepare){
+      try{
+        const row=await env.DB.prepare('SELECT r2_key,content_type FROM ops_artifacts WHERE id=? OR filename=?').bind(id,fname).first();
+        if(row&&row.r2_key){
+          key=row.r2_key;
+          object=await env.ARTIFACTS.get(key);
+        }
+      }catch{}
+    }
+    if(!object){
+      object=await env.ARTIFACTS.get(`artifacts/${id}`);
+      if(!object)object=await env.ARTIFACTS.get(fname);
+    }
+    if(!object)throw new HttpError(404,`Súbor '${fname}' nebol nájdený v archíve.`);
+    const isDownload=url.searchParams.get('download')==='1';
+    const headers=new Headers();
+    if(typeof object.writeHttpMetadata==='function')object.writeHttpMetadata(headers);
+    if(!headers.has('Content-Type')&&object.httpMetadata?.contentType)headers.set('Content-Type',object.httpMetadata.contentType);
+    if(!headers.has('Content-Type'))headers.set('Content-Type','application/octet-stream');
+    headers.set('Cache-Control','private, max-age=86400');
+    headers.set('Content-Disposition',`${isDownload?'attachment':'inline'}; filename="${fname}"`);
+    headers.set('X-Content-Type-Options','nosniff');
+    return new Response(object.body,{headers});
+  }
+  if(path==='/api/assistant/artifacts'){
+    if(request.method==='GET'){
+      return json({items:await listArtifacts(env,{limit:Number(url.searchParams.get('limit')||20),search:url.searchParams.get('search')||''})});
+    }
+    if(request.method==='POST'){
+      const body=await readJSON(request,10_000_000);
+      if(body.type==='pdf')return json({item:await createPdfArtifact(env,body)},201);
+      return json({item:await createArtifact(env,body)},201);
+    }
   }
   if(path==='/api/assistant/memory'){
     if(request.method==='GET')return json((await searchMemory(env,url.searchParams.get('q')||'')).records);
@@ -431,7 +680,7 @@ async function route(request,env,ctx){
       if(body.method==='tools/call'&&body.params?.name==='dispatch_task')await rateLimit(env,`job:${user.id}`,12);
       request=new Request(request.url,{method:'POST',headers:request.headers,body:JSON.stringify(body)});
     }
-    return handleMcp(request,env,ctx);
+    return handleMcp(request,env,ctx,{projectControl:['admin','owner'].includes(user.role)});
   }
   if(path==='/api/ops/status'&&request.method==='GET'){
     const counts=await env.DB.prepare('SELECT status,COUNT(*) AS count FROM ops_jobs GROUP BY status').all();
@@ -540,6 +789,6 @@ export default {
       if(status===500)console.error(JSON.stringify({event:'request_failed',path:new URL(request.url).pathname}));
       return secure(json({error:status===500?'Interná chyba. Pozri záznamy služby.':e instanceof z.ZodError?'Neplatné údaje požiadavky.':e.message},status));}
   },
-  async scheduled(controller,env,ctx){if(isBuildOnlyPreview(env))return;ctx.waitUntil((async()=>{const summary=await runScheduledHealth(env,controller.cron);await recordHealthIncident(env,summary);await runBrainCycle(env);await runEvolutionCycle(env);})());},
+  async scheduled(controller,env,ctx){if(isBuildOnlyPreview(env))return;ctx.waitUntil((async()=>{const summary=await runScheduledHealth(env,controller.cron);await recordHealthIncident(env,summary);await runBrainCycle(env);await runEvolutionCycle(env);await scanForImprovements(env);})());},
   async email(message,env){if(isBuildOnlyPreview(env)){message.setReject('Build-only Preview does not accept email.');return;}await handleInboundEmail(message,env);}
 };

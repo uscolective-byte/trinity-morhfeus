@@ -1,3 +1,8 @@
+import {registerAppResource,registerAppTool,RESOURCE_MIME_TYPE} from '@modelcontextprotocol/ext-apps/server';
+import controlAppHtml from '../dist-mcp/control.html';
+import {infrastructureStatus} from './infrastructure.js';
+import {inspectProject,readProjectSource} from './project-evolution.js';
+import {createSelfImprovementProposal,approveSelfImprovementProposal,applySelfImprovementProposal,listSelfImprovementProposals} from './self-improvement.js';
 import {capabilityStatus} from './capability-status.js';
 import {McpServer} from '@modelcontextprotocol/server';
 import {TRINITY_VERSION,releaseMetadata} from './version.js';
@@ -14,12 +19,23 @@ import {TrinityCopilotAgent} from './copilot-agent.js';
 import {universalEcosystem} from './universal-ecosystem.js';
 import {runBrainCycle} from './brain.js';
 import {runEvolutionCycle} from './evolution.js';
+import {sharedNotesInput,syncSharedNotes} from './shared-notes.js';
 
 const result=data=>({content:[{type:'text',text:JSON.stringify(data,null,2)}]});
 
 export function handleMcp(request,env,ctx,access={}){
   return createMcpHandler(()=>{
   const server=new McpServer({name:'trinity',version:TRINITY_VERSION});
+    const requireProjectAccess=()=>{if(access.projectControl!==true)throw new Error('Tento MCP klient nemá projektové oprávnenie.');};
+    server.registerTool('infrastructure_status',{description:'Stav konfigurácie domén, hostingu a vývoja Trinity.',inputSchema:{}},async()=>result(infrastructureStatus(env)));
+    server.registerTool('project_inspect',{description:'Nájde relevantné zdrojové súbory a presný commit Trinity.',inputSchema:{query:z.string().max(2000).default('')}},async({query})=>{requireProjectAccess();return result(await inspectProject(env,query));});
+    server.registerTool('project_read',{description:'Číta zdroj z GitHubu bez zapnutého PC.',inputSchema:{path:z.string().max(500),ref:z.string().regex(/^[a-f0-9]{40}$/).optional()}},async({path,ref})=>{requireProjectAccess();return result(await readProjectSource(env,path,ref));});
+    server.registerTool('list_improvements',{description:'Zoznam návrhov, stav ich integrácie a odkazy na PR.',inputSchema:{}},async()=>{requireProjectAccess();return result({items:await listSelfImprovementProposals(env)});});
+    server.registerTool('propose_improvement',{description:'Z bežného opisu pripraví opravu vo vetve a PR; testy a deploy sú samostatne evidované.',inputSchema:{title:z.string().min(3).max(120),description:z.string().min(10).max(4000)}},async args=>{requireProjectAccess();const p=await createSelfImprovementProposal(env,{...args,kind:'code_improvement'},'authenticated-mcp');await approveSelfImprovementProposal(env,p.id,'authenticated-mcp');return result(await applySelfImprovementProposal(env,p.id,'authenticated-mcp'));});
+    const ui='ui://trinity/control.html';
+    registerAppTool(server,'trinity_control_panel',{description:'Interaktívny panel Trinity pre MCP Apps; poskytuje aj plný textový stav.',inputSchema:z.object({}),_meta:{ui:{resourceUri:ui}}},async()=>result(infrastructureStatus(env)));
+    registerAppResource(server,'Trinity Control',ui,{},async()=>({contents:[{uri:ui,mimeType:RESOURCE_MIME_TYPE,text:controlAppHtml,_meta:{ui:{csp:{connectDomains:[],resourceDomains:[]}}}}]}));
+    server.registerTool('sync_shared_notes',{description:'Synchronizuje spoločné lokálne a cloudové poznámky s revíziami; konflikt neprepíše novšiu verziu.',inputSchema:sharedNotesInput.shape},async args=>result(await syncSharedNotes(env,args)));
     const projectControlAllowed=()=>access.projectControl?Promise.resolve(true):geminiProjectControlEnabled(env,env.TRINITY_OWNER_EMAIL||'');
 
     server.registerTool('trinity_status',{description:'Overí aktuálnu pripravenosť jadra a stav registra pluginov. Netvrdí prístup k PC ani ROOT_ADMIN.',inputSchema:{}},

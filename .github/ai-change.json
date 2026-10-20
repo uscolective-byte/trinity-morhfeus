@@ -1,8 +1,8 @@
 {
-  "generated_by": "openai-assistant",
+  "generated_by": "openai-codex",
   "reviewed": false,
   "risk": "high",
-  "component": "Audit-Worker",
-  "description": "Adds audited, allowlisted CI ingestion and repository governance infrastructure. Pending human CODEOWNER review and staging validation.",
+  "component": "Trinity/evolution-infrastructure",
+  "description": "Trinity 10.3: natural-language tool execution, GitHub source inspection and patch PRs, daily rotating maintenance scan, checked integration for UI/docs only, cloud web reader, price-capped Registrar workflow, domain sync/subdomains, private Studio hosting, bundled MCP App, and archival of raw multipart exports and duplicate SQL. Production deployment and provider access are not claimed.",
   "source_pr": null
 }

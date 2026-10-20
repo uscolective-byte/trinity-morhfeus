@@ -8,6 +8,10 @@ on:
       - 'Audit-Worker/**'
       - 'PC-Bridge-Worker/**'
       - 'Local-Gateway/**'
+      - 'Local-Desktop/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'package.json'
       - '.github/**'
   pull_request:
     branches: [main]
@@ -16,6 +20,10 @@ on:
       - 'Audit-Worker/**'
       - 'PC-Bridge-Worker/**'
       - 'Local-Gateway/**'
+      - 'Local-Desktop/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'package.json'
       - '.github/**'
   workflow_dispatch:
 
@@ -61,6 +69,12 @@ jobs:
 
       - name: Run signed Audit Worker tests
         run: node --test Audit-Worker/tests/*.test.mjs
+
+      - name: Validate legacy root entry points against canonical sources
+        run: node --test tests/*.test.mjs
+
+      - name: Validate unified local desktop and provider adapters
+        run: node --test Local-Desktop/tests/*.test.mjs
 
       - name: Validate PC Bridge Worker
         run: |

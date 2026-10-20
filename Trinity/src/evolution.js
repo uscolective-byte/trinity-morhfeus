@@ -3,12 +3,16 @@
  * Automatická analýza chýb a kontinuálne seba-zdokonaľovanie Trinity.
  */
 import {readControl, assertRunning} from './control.js';
+import {createSelfImprovementProposal,approveSelfImprovementProposal,applySelfImprovementProposal,reconcileSelfImprovements} from './self-improvement.js';
 
 export async function runEvolutionCycle(env) {
   if (!env || !env.DB) return {status: 'db_not_available'};
 
   const control = await readControl(env);
   assertRunning(control);
+
+  try { await reconcileSelfImprovements(env); }
+  catch(error){ await env.DB.prepare("INSERT INTO ops_events(action,details) VALUES('evolution_reconcile_failed',?)").bind(JSON.stringify({error:error.message})).run(); }
 
   // Nájde posledné zlyhané úlohy
   const failedRows = await env.DB.prepare(
@@ -39,6 +43,13 @@ export async function runEvolutionCycle(env) {
       analyzed_at: new Date().toISOString(),
       lesson: `Pri vykonávaní úlohy nastala chyba: ${errorText}. Odporúčanie: Overiť parametre nástrojov a dostupnosť poskytovateľa ${job.provider}.`
     };
+
+    if (env.TRINITY_AUTO_IMPROVE === 'true' && (env.TRINITY_GITHUB_TOKEN || env.GITHUB_TOKEN)) {
+      const proposal=await createSelfImprovementProposal(env,{title:`Oprava zlyhanej úlohy ${job.id}`.slice(0,120),description:`Nájdi príčinu a priprav najmenšiu opravu s testom. Úloha: ${String(job.task).slice(0,2000)}. Chyba: ${errorText}`,kind:'code_improvement'},'evolution-engine');
+      await approveSelfImprovementProposal(env,proposal.id,'owner-standing-policy:TRINITY_AUTO_IMPROVE');
+      try { diagnosis.execution=await applySelfImprovementProposal(env,proposal.id,'evolution-engine'); }
+      catch(error){ diagnosis.execution={status:'failed',error:error.message}; }
+    }
 
     // Uložíme zistenie do pamäte Trinity, aby sa rovnaká chyba neopakovala
     await env.DB.prepare(
