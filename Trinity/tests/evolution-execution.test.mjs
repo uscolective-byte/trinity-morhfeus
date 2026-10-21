@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
-import {createSelfImprovementProposal,approveSelfImprovementProposal,applySelfImprovementProposal,reconcileSelfImprovements} from '../src/self-improvement.js';
+import {createSelfImprovementProposal,approveSelfImprovementProposal,applySelfImprovementProposal,reconcileSelfImprovements,preparationLeaseExpired} from '../src/self-improvement.js';
 function environment(){
  const sqlite=new DatabaseSync(':memory:');
  sqlite.exec("CREATE TABLE self_improvement_proposals(id TEXT PRIMARY KEY,title TEXT,description TEXT,kind TEXT,plugin_id TEXT,status TEXT,created_by TEXT,approved_by TEXT,result_json TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP,updated_at TEXT DEFAULT CURRENT_TIMESTAMP);CREATE TABLE ops_events(action TEXT,details TEXT);");
@@ -24,6 +24,7 @@ test('approved proposal executes the branch/PR protocol sequence and records sou
  };
  const proposal=await createSelfImprovementProposal(env,{title:'Fix value calculation',description:'Correct the off by one in sample.js and validate the result.',kind:'code_improvement'},'owner');
  await approveSelfImprovementProposal(env,proposal.id,'owner');
+ env.sqlite.prepare('UPDATE self_improvement_proposals SET result_json=?,updated_at=? WHERE id=?').run(JSON.stringify({status:'preparing',started_at:'2000-01-01T00:00:00.000Z'}),'2000-01-01 00:00:00',proposal.id);
  const result=await applySelfImprovementProposal(env,proposal.id,'owner');assert.equal(result.status,'approved');assert.equal(result.result_json.status,'pull_request_created');assert.equal(result.result_json.deployed,false);
  const count=calls.length;await applySelfImprovementProposal(env,proposal.id,'owner');assert.equal(calls.length,count,'repeated apply must not create a duplicate PR');
  merged=true;const integrated=await reconcileSelfImprovements(env);assert.equal(integrated[0].status,'merged');assert.equal(integrated[0].deployed,false);assert.equal(env.sqlite.prepare('SELECT status FROM self_improvement_proposals').get().status,'applied');
@@ -32,4 +33,12 @@ test('approved proposal executes the branch/PR protocol sequence and records sou
 test('model patch failure is persisted as failed, not applied',async()=>{
  const env=environment();const proposal=await createSelfImprovementProposal(env,{title:'Failed preparation',description:'Demonstrate a disconnected GitHub endpoint without claiming success.',kind:'code_improvement'},'owner');await approveSelfImprovementProposal(env,proposal.id,'owner');
  const old=globalThis.fetch;try{globalThis.fetch=async()=>new Response('unavailable',{status:503});await assert.rejects(()=>applySelfImprovementProposal(env,proposal.id,'owner'),/GitHub/);const row=env.sqlite.prepare('SELECT * FROM self_improvement_proposals').get();assert.equal(row.status,'approved');assert.equal(JSON.parse(row.result_json).status,'failed');}finally{globalThis.fetch=old;env.sqlite.close();}
+});
+
+test('preparation lease expires only for an old in-progress claim',()=>{
+ const now=Date.parse('2026-10-21T18:00:00.000Z');
+ assert.equal(preparationLeaseExpired({result_json:JSON.stringify({status:'preparing',started_at:'2026-10-21T17:50:00.000Z'})},now),false);
+ assert.equal(preparationLeaseExpired({result_json:JSON.stringify({status:'preparing',started_at:'2026-10-21T17:44:59.999Z'})},now),true);
+ assert.equal(preparationLeaseExpired({result_json:JSON.stringify({status:'failed',started_at:'2000-01-01T00:00:00.000Z'})},now),false);
+ assert.equal(preparationLeaseExpired({result_json:JSON.stringify({status:'preparing',started_at:'invalid'})},now),false);
 });

@@ -24,6 +24,15 @@ const present = row => ({
   updated_at: row.updated_at
 });
 
+const PREPARATION_LEASE_MS = 15 * 60 * 1000;
+
+export function preparationLeaseExpired(row, now = Date.now()) {
+  const previous = typeof row?.result_json === 'string' ? JSON.parse(row.result_json) : row?.result_json;
+  if (previous?.status !== 'preparing') return false;
+  const startedAt = Date.parse(previous.started_at);
+  return Number.isFinite(startedAt) && now - startedAt >= PREPARATION_LEASE_MS;
+}
+
 async function audit(env, action, details) {
   await env.DB.prepare('INSERT INTO ops_events(action, details) VALUES(?, ?)')
     .bind(action, JSON.stringify(details)).run();
@@ -81,7 +90,7 @@ export async function applySelfImprovementProposal(env, id, actor, installPlugin
   }
   if (['code_improvement','deployment'].includes(row.kind) && (env.TRINITY_GITHUB_TOKEN || env.GITHUB_TOKEN)) {
     const previous = row.result_json ? JSON.parse(row.result_json) : null;
-    if (previous && !['failed'].includes(previous.status)) return present(row);
+    if (previous && !['failed'].includes(previous.status) && !preparationLeaseExpired(row)) return present(row);
     const claim = JSON.stringify({status:'preparing',started_at:new Date().toISOString()});
     const lock = await env.DB.prepare("UPDATE self_improvement_proposals SET result_json=?,updated_at=datetime('now') WHERE id=? AND status='approved' AND coalesce(result_json,'')=? RETURNING *")
       .bind(claim,id,row.result_json || '').first();
