@@ -152,6 +152,13 @@ export async function reconcileSelfImprovements(env) {
   const results=[];
   for (const proposal of proposals) {
     const pr=await githubRequest(env,`/pulls/${proposal.result_json.pull_request}`);
+    if (!pr.merged_at && pr.state === 'closed') {
+      const receipt={...proposal.result_json,status:'pull_request_closed',closed_at:pr.closed_at||null,deployed:false};
+      await env.DB.prepare("UPDATE self_improvement_proposals SET status='rejected',result_json=?,updated_at=datetime('now') WHERE id=? AND status='approved'").bind(JSON.stringify(receipt),proposal.id).run();
+      await audit(env,'self_improvement_pull_request_closed',{id:proposal.id,pull_request:pr.number,deployed:false});
+      results.push(receipt);
+      continue;
+    }
     if (!pr.merged_at) {
       await mergeVerifiedImprovement(env,pr);
       continue;

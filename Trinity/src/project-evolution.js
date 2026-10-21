@@ -65,7 +65,7 @@ export function validateUIPatch(patch,originalFiles){
 export async function prepareCodeImprovement(env,proposal){
   const branch=`trinity/evolution-${proposal.id}`;
   const existing=await githubRequest(env,`/pulls?head=${encodeURIComponent((env.TRINITY_GITHUB_REPO||PROJECT_REPOSITORY).split('/')[0]+':'+branch)}&state=all`);
-  if(existing.length)return {status:existing[0].merged_at?'merged':'pull_request_created',pull_request:existing[0].number,url:existing[0].html_url,head_sha:existing[0].head.sha,branch};
+  if(existing.length)return {status:existing[0].merged_at?'merged':existing[0].state==='closed'?'pull_request_closed':'pull_request_created',pull_request:existing[0].number,url:existing[0].html_url,head_sha:existing[0].head.sha,branch,deployed:false};
   const scope=improvementScope(proposal);
   const snapshot=await inspectProject(env,proposal.title+' '+proposal.description,scope);
   const files=await Promise.all(snapshot.candidates.slice(0,4).map(f=>readProjectSource(env,f.path,snapshot.base_sha)));

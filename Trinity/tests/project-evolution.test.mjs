@@ -84,3 +84,19 @@ test('UI patch keeps existing controls and rejects removal, duplicate IDs and so
  }
  assert.throws(()=>validateUIPatch({files:[{path:'Trinity/src/engine.js',content:'changed'}]},original),/mimo/);
 });
+
+test('existing closed PR is not reported as open or regenerated; merged PR remains merged',async()=>{
+ const original=globalThis.fetch;
+ try{
+  for(const [pr,status] of [
+   [{number:7,state:'closed',merged_at:null,head:{sha:'abc'},html_url:'https://github.com/example/pull/7'},'pull_request_closed'],
+   [{number:7,state:'closed',merged_at:'2026-10-21T10:00:00Z',head:{sha:'abc'},html_url:'https://github.com/example/pull/7'},'merged'],
+   [{number:7,state:'open',merged_at:null,head:{sha:'abc'},html_url:'https://github.com/example/pull/7'},'pull_request_created']
+  ]){
+   let calls=0;
+   globalThis.fetch=async(url,options)=>{calls++;assert.equal(options.method,'GET');return Response.json([pr]);};
+   const result=await prepareCodeImprovement({TRINITY_GITHUB_TOKEN:'test-token'},{id:'test-id'});
+   assert.equal(result.status,status);assert.equal(result.deployed,false);assert.equal(calls,1);
+  }
+ }finally{globalThis.fetch=original;}
+});
