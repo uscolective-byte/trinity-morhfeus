@@ -28,9 +28,14 @@ function mockEnv() {
             if (state.sql.includes("SELECT * FROM self_improvement_proposals")) {
               const row = rows.get(state.params[0]); return row && row.status==='approved' ? {...row} : null;
             }
+            if (state.sql.includes("SET result_json=?") && state.sql.includes("coalesce(result_json,'')")) {
+              const [claim,id,expected] = state.params, row=rows.get(id);
+              if (!row || row.status!=='approved' || (row.result_json||'')!==expected) return null;
+              row.result_json=claim; return {...row};
+            }
             if (state.sql.includes("UPDATE self_improvement_proposals SET status='applied'")) {
-              const [result,id] = state.params, row=rows.get(id);
-              if (!row || row.status!=='approved') return null;
+              const [result,id,claim] = state.params, row=rows.get(id);
+              if (!row || row.status!=='approved' || (claim!==undefined&&row.result_json!==claim)) return null;
               Object.assign(row,{status:'applied',result_json:result}); return {...row};
             }
             return null;

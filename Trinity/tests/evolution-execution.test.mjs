@@ -53,6 +53,30 @@ test('an expired worker cannot overwrite the result of a newer preparation lease
  }finally{globalThis.fetch=old;env.sqlite.close();}
 });
 
+test('concurrent plugin application installs and audits exactly once',async()=>{
+ const env=environment();
+ const proposal=await createSelfImprovementProposal(env,{title:'Install audit plugin',description:'Install one trusted plugin without duplicate side effects.',kind:'plugin_install',plugin_id:'audit'},'owner');
+ await approveSelfImprovementProposal(env,proposal.id,'owner');
+ let installs=0,releaseInstall,markStarted;
+ const started=new Promise(resolve=>{markStarted=resolve;});
+ const release=new Promise(resolve=>{releaseInstall=resolve;});
+ const installer=async id=>{installs+=1;markStarted();await release;return {id,status:'installed'};};
+ try{
+  const first=applySelfImprovementProposal(env,proposal.id,'owner',installer);
+  await started;
+  const concurrent=await applySelfImprovementProposal(env,proposal.id,'owner',installer);
+  assert.equal(concurrent.status,'approved');
+  assert.equal(concurrent.result_json.status,'preparing');
+  assert.equal(installs,1);
+  releaseInstall();
+  const applied=await first;
+  assert.equal(applied.status,'applied');
+  assert.equal(installs,1);
+  const audits=env.sqlite.prepare("SELECT count(*) AS count FROM ops_events WHERE action='self_improvement_plugin_installed'").get();
+  assert.equal(audits.count,1);
+ }finally{releaseInstall?.();env.sqlite.close();}
+});
+
 test('preparation lease expires only for an old in-progress claim',()=>{
  const now=Date.parse('2026-10-21T18:00:00.000Z');
  assert.equal(preparationLeaseExpired({result_json:JSON.stringify({status:'preparing',started_at:'2026-10-21T17:50:00.000Z'})},now),false);

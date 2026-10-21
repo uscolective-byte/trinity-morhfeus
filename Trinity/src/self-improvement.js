@@ -114,17 +114,31 @@ export async function applySelfImprovementProposal(env, id, actor, installPlugin
       throw error;
     }
   }
+  if (row.kind === 'plugin_install') {
+    const previous = row.result_json ? JSON.parse(row.result_json) : null;
+    if (previous && previous.status !== 'failed' && !preparationLeaseExpired(row)) return present(row);
+    const claim = JSON.stringify({status:'preparing',started_at:new Date().toISOString()});
+    const lock = await env.DB.prepare("UPDATE self_improvement_proposals SET result_json=?,updated_at=datetime('now') WHERE id=? AND status='approved' AND coalesce(result_json,'')=? RETURNING *")
+      .bind(claim,id,row.result_json || '').first();
+    if (!lock) throw new HttpError(409,'Návrh už spracúva iný proces.');
+    try {
+      const result = await installPluginById(row.plugin_id);
+      const updated = await env.DB.prepare(
+        "UPDATE self_improvement_proposals SET status='applied',result_json=?,updated_at=datetime('now') WHERE id=? AND status='approved' AND result_json=? RETURNING *"
+      ).bind(JSON.stringify(result),id,claim).first();
+      if (!updated) throw new HttpError(409,'Prenájom návrhu prevzal novší proces.');
+      await audit(env, 'self_improvement_plugin_installed', {
+        id, plugin_id: row.plugin_id, actor, result_status: result?.status || 'installed'
+      });
+      return present(updated);
+    } catch (error) {
+      await settlePreparationLease(env,id,claim,{status:'failed',error:error.message});
+      throw error;
+    }
+  }
   if (row.kind !== 'plugin_install') {
     throw new HttpError(503, 'Chýba prepojenie GitHub: nastav Worker Secret TRINITY_GITHUB_TOKEN. Kódové návrhy používajú vetvu a PR, nasadenie vykonáva GitHub Actions.');
   }
-  const result = await installPluginById(row.plugin_id);
-  const updated = await env.DB.prepare(
-    "UPDATE self_improvement_proposals SET status='applied',result_json=?,updated_at=datetime('now') WHERE id=? AND status='approved' RETURNING *"
-  ).bind(JSON.stringify(result), id).first();
-  await audit(env, 'self_improvement_plugin_installed', {
-    id, plugin_id: row.plugin_id, actor, result_status: result?.status || 'installed'
-  });
-  return present(updated);
 }
 
 export async function listActiveBehaviorRules(env) {
