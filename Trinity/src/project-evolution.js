@@ -8,7 +8,11 @@ export async function githubRequest(env,path,method='GET',body){
   const token=env.TRINITY_GITHUB_TOKEN||env.GITHUB_TOKEN;
   if(!token)throw new HttpError(503,'Chýba Worker Secret TRINITY_GITHUB_TOKEN s prístupom k repozitáru Trinity.');
   const response=await fetch(root(env)+path,{method,headers:{Authorization:`Bearer ${token}`,Accept:'application/vnd.github+json','Content-Type':'application/json','User-Agent':'Trinity-Evolution','X-GitHub-Api-Version':'2022-11-28'},body:body===undefined?undefined:JSON.stringify(body),redirect:'error',signal:AbortSignal.timeout(20000)});
-  if(!response.ok)throw new HttpError(502,`GitHub ${method} ${path.split('?')[0]}: HTTP ${response.status}`);
+  if(!response.ok){
+    const error=new HttpError(502,`GitHub ${method} ${path.split('?')[0]}: HTTP ${response.status}`);
+    error.providerStatus=response.status;
+    throw error;
+  }
   return response.status===204?{}:JSON.parse(await boundedText(response,1500000));
 }
 export function editableSource(path){
@@ -66,6 +70,16 @@ export async function prepareCodeImprovement(env,proposal){
   const branch=`trinity/evolution-${proposal.id}`;
   const existing=await githubRequest(env,`/pulls?head=${encodeURIComponent((env.TRINITY_GITHUB_REPO||PROJECT_REPOSITORY).split('/')[0]+':'+branch)}&state=all`);
   if(existing.length)return {status:existing[0].merged_at?'merged':existing[0].state==='closed'?'pull_request_closed':'pull_request_created',pull_request:existing[0].number,url:existing[0].html_url,head_sha:existing[0].head.sha,branch,deployed:false};
+  const branchRef=await githubRequest(env,`/git/ref/heads/${encodeURIComponent(branch)}`).catch(error=>{
+    if(error.providerStatus===404)return null;
+    throw error;
+  });
+  if(branchRef){
+    const commit=await githubRequest(env,`/git/commits/${branchRef.object.sha}`);
+    if(!String(commit.message||'').split(/\r?\n/).includes(`Proposal: ${proposal.id}`))throw new HttpError(409,'Existujúca vetva návrhu nemá overiteľný pôvod Trinity.');
+    const pr=await githubRequest(env,'/pulls','POST',{title:proposal.title,head:branch,base:env.TRINITY_GITHUB_BRANCH||'main',body:`Obnovenie PR po prerušení vytvárania pôvodného návrhu.\n\nProposal: ${proposal.id}\nSource: Trinity Evolution Engine\nRisk: source change; human review required for protected components.\nValidation: pending CI for commit ${branchRef.object.sha}.\nRollback: revert the merged commit.`,draft:false});
+    return {status:'pull_request_created',pull_request:pr.number,url:pr.html_url,head_sha:branchRef.object.sha,branch,tests:'pending',deployed:false};
+  }
   const scope=improvementScope(proposal);
   const snapshot=await inspectProject(env,proposal.title+' '+proposal.description,scope);
   const files=await Promise.all(snapshot.candidates.slice(0,4).map(f=>readProjectSource(env,f.path,snapshot.base_sha)));
@@ -76,7 +90,7 @@ export async function prepareCodeImprovement(env,proposal){
   if(scope==='ui')validateUIPatch(patch,files);
   // Never overwrite a branch; GitHub rejects an existing ref after concurrent work.
   const tree=await githubRequest(env,'/git/trees','POST',{base_tree:snapshot.tree_sha,tree:patch.files.map(f=>({path:f.path,mode:'100644',type:'blob',content:f.content}))});
-  const commit=await githubRequest(env,'/git/commits','POST',{message:`Trinity improvement: ${proposal.title}`,tree:tree.sha,parents:[snapshot.base_sha]});
+  const commit=await githubRequest(env,'/git/commits','POST',{message:`Trinity improvement: ${proposal.title}\n\nProposal: ${proposal.id}`,tree:tree.sha,parents:[snapshot.base_sha]});
   await githubRequest(env,'/git/refs','POST',{ref:`refs/heads/${branch}`,sha:commit.sha});
   const pr=await githubRequest(env,'/pulls','POST',{title:proposal.title,head:branch,base:env.TRINITY_GITHUB_BRANCH||'main',body:`${patch.summary}\n\nProposal: ${proposal.id}\nSource: Trinity Evolution Engine\nRisk: source change; human review required for protected components.\nValidation: pending CI for commit ${commit.sha}.\nRollback: revert the merged commit.`,draft:false});
   return {status:'pull_request_created',pull_request:pr.number,url:pr.html_url,head_sha:commit.sha,base_sha:snapshot.base_sha,branch,files:patch.files.map(f=>f.path),scope,tests:'pending',visual_verification:scope==='ui'?'pending':'not_applicable',deployed:false};

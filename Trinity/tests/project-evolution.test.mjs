@@ -23,6 +23,48 @@ test('repeated proposal returns existing PR without generating or overwriting co
  const original=globalThis.fetch;try{globalThis.fetch=async()=>Response.json([{number:7,html_url:'https://github.com/example/pull/7',head:{sha:'abc'}}]);
  const r=await prepareCodeImprovement({TRINITY_GITHUB_TOKEN:'test-token'},{id:'test-id'});assert.equal(r.pull_request,7);assert.equal(r.status,'pull_request_created');}finally{globalThis.fetch=original;}
 });
+test('proposal retry reuses a verified orphan branch after PR creation failed',async()=>{
+ const original=globalThis.fetch;let branchSha=null,modelCalls=0,prAttempts=0;
+ const env={TRINITY_GITHUB_TOKEN:'test-token',AI:{async run(){modelCalls++;return {response:JSON.stringify({summary:'Correct a verified calculation regression.',changes:[{path:'Trinity/src/sample.js',before:'return 1;',after:'return 2;'}]})};}}};
+ try{
+  globalThis.fetch=async(url,options)=>{
+   const method=options.method;
+   if(url.includes('/pulls?'))return Response.json([]);
+   if(url.includes('/git/ref/heads/trinity%2Fevolution-retry-id'))return branchSha?Response.json({object:{sha:branchSha}}):Response.json({message:'Not Found'},{status:404});
+   if(url.includes('/git/ref/heads/main'))return Response.json({object:{sha:'a'.repeat(40)}});
+   if(url.includes('/git/trees/')&&url.includes('recursive'))return Response.json({sha:'b'.repeat(40),tree:[{path:'Trinity/src/sample.js',type:'blob',sha:'c'.repeat(40),size:40}],truncated:false});
+   if(url.includes('/contents/'))return Response.json({sha:'c'.repeat(40),encoding:'base64',size:40,content:Buffer.from('export function value(){return 1;}').toString('base64')});
+   if(url.endsWith('/git/trees'))return Response.json({sha:'d'.repeat(40)});
+   if(url.endsWith('/git/commits')){assert.match(JSON.parse(options.body).message,/Proposal: retry-id/);return Response.json({sha:'e'.repeat(40)});}
+   if(url.endsWith('/git/refs')){branchSha='e'.repeat(40);return Response.json({});}
+   if(url.endsWith(`/git/commits/${'e'.repeat(40)}`))return Response.json({message:'Trinity improvement: Retry PR\n\nProposal: retry-id'});
+   if(url.endsWith('/pulls')&&method==='POST'){
+    prAttempts++;
+    if(prAttempts===1)return Response.json({message:'temporary failure'},{status:503});
+    return Response.json({number:23,html_url:'https://github.com/test/pull/23'});
+   }
+   throw new Error('Unexpected test request '+url);
+  };
+  const proposal={id:'retry-id',title:'Retry PR',description:'Recover a verified branch without regenerating code.'};
+  await assert.rejects(()=>prepareCodeImprovement(env,proposal),/GitHub POST \/pulls: HTTP 503/);
+  const recovered=await prepareCodeImprovement(env,proposal);
+  assert.equal(recovered.pull_request,23);assert.equal(recovered.head_sha,'e'.repeat(40));assert.equal(modelCalls,1);assert.equal(prAttempts,2);
+ }finally{globalThis.fetch=original;}
+});
+test('proposal retry rejects an existing branch without its proposal receipt',async()=>{
+ const original=globalThis.fetch;let calls=0;
+ try{
+  globalThis.fetch=async url=>{
+   calls++;
+   if(url.includes('/pulls?'))return Response.json([]);
+   if(url.includes('/git/ref/heads/'))return Response.json({object:{sha:'e'.repeat(40)}});
+   if(url.includes('/git/commits/'))return Response.json({message:'Unrelated commit'});
+   throw new Error('Unexpected test request '+url);
+  };
+  await assert.rejects(()=>prepareCodeImprovement({TRINITY_GITHUB_TOKEN:'test-token'},{id:'foreign-id',title:'Foreign branch',description:'Do not trust unrelated branch content.'}),/overiteľný pôvod/);
+  assert.equal(calls,3);
+ }finally{globalThis.fetch=original;}
+});
 test('public web rejects credentials, private literals, numeric IP aliases and local hosts',()=>{
  for(const url of ['file:///etc/passwd','https://user:pass@example.com','http://127.1','http://2130706433','http://0x7f000001','http://[::1]','http://10.0.0.1','http://service.internal','http://localhost','https://example.com:8080'])assert.throws(()=>publicWebUrl(url),url);
  assert.equal(publicWebUrl('https://example.com/a#b').href,'https://example.com/a');

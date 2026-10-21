@@ -12,7 +12,8 @@ test('approved proposal executes the branch/PR protocol sequence and records sou
  const env=environment(),old=globalThis.fetch,calls=[];let merged=false;
  try{globalThis.fetch=async(url,options)=>{const method=options.method;calls.push({url,method});
  if(url.includes('/pulls?'))return Response.json([]);
- if(url.includes('/git/ref/heads/'))return Response.json({object:{sha:'a'.repeat(40)}});
+ if(url.includes('/git/ref/heads/main'))return Response.json({object:{sha:'a'.repeat(40)}});
+ if(url.includes('/git/ref/heads/'))return Response.json({message:'Not Found'},{status:404});
  if(url.includes('/git/trees/')&&url.includes('recursive'))return Response.json({sha:'b'.repeat(40),tree:[{path:'Trinity/src/sample.js',type:'blob',sha:'c'.repeat(40),size:40}],truncated:false});
  if(url.includes('/contents/'))return Response.json({sha:'c'.repeat(40),encoding:'base64',size:40,content:Buffer.from('export function value(){return 1;}').toString('base64')});
  if(url.endsWith('/git/trees')){const body=JSON.parse(options.body);assert.match(body.tree[0].content,/return 2/);assert.equal(body.base_tree,'b'.repeat(40));return Response.json({sha:'d'.repeat(40)});}

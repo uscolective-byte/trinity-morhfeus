@@ -3,6 +3,6 @@
   "reviewed": false,
   "risk": "high",
   "component": "Trinity/platform",
-  "description": "Restores Trinity UI, platform and scoped self-development alongside the daily planner. Adds isolated preview DO bindings, truthful evolution PR states, recoverable stale preparation leases, ID attribute validation and retryable task cancellation. Renders completed workflow replies once from original Markdown to preserve links and generated-file cards. Includes regression tests; latest full-suite and live deployment remain unverified.",
+  "description": "Restores Trinity UI, platform and scoped self-development alongside the daily planner. Adds isolated preview DO bindings, truthful evolution PR states, recoverable stale preparation leases and verified orphan-branch recovery, ID attribute validation and retryable task cancellation. Renders completed workflow replies once from original Markdown to preserve links and generated-file cards. Includes regression tests; live deployment remains unverified.",
   "source_pr": 46
 }
