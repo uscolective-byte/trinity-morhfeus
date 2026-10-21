@@ -212,8 +212,8 @@ $('chat-form').onsubmit=safe(async()=>{
     bottom();
    }
    progress.textContent='Odpoveď prijatá';
+   renderReply(reply.content,reply.content.textContent);
   }
-  renderReply(reply.content,reply.content.textContent);
   const copy=node('button',t('copy'),'copy');copy.onclick=async()=>{await navigator.clipboard.writeText(reply.content.innerText||reply.content.textContent);copy.textContent=t('copied');};reply.wrap.append(copy);
   localStorage.setItem('trinity-chat-session',session);await sessions();
  }catch(error){
