@@ -249,6 +249,7 @@ $('api-key-form').onsubmit=safe(async()=>{const {apiKeySettings}=await import('/
 $('self-improvement-form').onsubmit=safe(async()=>{
   const kind=$('self-improvement-kind').value,pluginId=$('self-improvement-plugin-id').value.trim();
   const payload={title:$('self-improvement-title').value.trim(),description:$('self-improvement-description').value.trim(),kind};
+  if(kind==='code_improvement')payload.scope=$('self-improvement-scope').value;
   if(kind==='plugin_install'){if(!pluginId)throw new Error('Zadaj ID modulu z existujúceho katalógu.');payload.plugin_id=pluginId;}
   await api('/self-improvement',payload);$('self-improvement-form').reset();await loadSettings();notice('Návrh bol uložený. Inštalácia modulu vyžaduje schválenie vlastníka.');
 });

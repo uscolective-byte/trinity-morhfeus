@@ -37,9 +37,9 @@ export const TOOL_SCHEMAS={
   sales_offer_create:offerInput,
   sales_pipeline:z.object({}).strict(),
   web_fetch:z.object({url:z.string().url()}).strict(),
-  project_inspect:z.object({query:z.string().max(2000).default('')}).strict(),
+  project_inspect:z.object({query:z.string().max(2000).default(''),scope:z.enum(['code','ui']).default('code')}).strict(),
   project_read:z.object({path:z.string().max(500),ref:z.string().regex(/^[a-f0-9]{40}$/).optional()}).strict(),
-  improvement_submit:z.object({title:z.string().min(3).max(120),description:z.string().min(10).max(4000),kind:z.enum(['code_improvement','deployment','behavior_rule']).default('code_improvement'),execute:z.boolean().default(true)}).strict(),
+  improvement_submit:z.object({title:z.string().min(3).max(120),description:z.string().min(10).max(4000),kind:z.enum(['code_improvement','deployment','behavior_rule']).default('code_improvement'),scope:z.enum(['code','ui']).optional(),execute:z.boolean().default(true)}).strict(),
   infrastructure_status:z.object({}).strict(),
   hosting_list:z.object({}).strict(),
   hosting_deploy:hostingInput,
@@ -171,7 +171,7 @@ export async function runTool(env, agent, name, input, executionContext={}) {
     return {...item,_evidence:{effect:'mutation',actions:['change'],receipt_id:item.id}};
   }
   if(name==='web_fetch')return fetchPublicWeb(args.url);
-  if(name==='project_inspect')return inspectProject(env,args.query);
+  if(name==='project_inspect')return inspectProject(env,args.query,args.scope);
   if(name==='project_read')return readProjectSource(env,args.path,args.ref);
   if(name==='infrastructure_status')return infrastructureStatus(env);
   if(name==='hosting_domain')return {...await attachHostedDomain(env,args),_evidence:{effect:'mutation',actions:['change'],receipt_id:crypto.randomUUID()}};
@@ -602,9 +602,9 @@ export const TOOL_HELP={
   sales_offer_create:'Uloží neodoslaný návrh ponuky s cenou v najmenších menových jednotkách a odkazom používateľa z Revolut Pro: {title,deliverable,amount_cents,currency:EUR|USD|GBP|CZK,payment_link}. Nikdy nepotvrdzuje úhradu.',
   sales_pipeline:'Prečíta uložené leady a ponuky aktuálneho vlastníka bez bankových tajomstiev: {}',
   web_fetch:'Prečíta konkrétnu verejnú webovú adresu priamo z cloudu bez PC: {url}',
-  project_inspect:'Sama nájde aktuálny commit a relevantné súbory Trinity podľa problému: {query}',
+  project_inspect:'Sama nájde aktuálny commit a relevantné súbory Trinity podľa problému: {query,scope?:code|ui}',
   project_read:'Prečíta konkrétny zdroj Trinity z GitHubu: {path,ref?:commit SHA}',
-  improvement_submit:'Uloží návrh a pri execute:true pripraví kódovú opravu vo vetve a PR, alebo aktivuje behavior_rule. PR ešte nie je nasadenie: {title,description,kind:code_improvement|deployment|behavior_rule,execute?:boolean}',
+  improvement_submit:'Uloží návrh a pri execute:true pripraví kódovú opravu vo vetve a PR, alebo aktivuje behavior_rule. PR ešte nie je nasadenie: {title,description,kind:code_improvement|deployment|behavior_rule,scope?:code|ui,execute?:boolean}. Na zmenu vlastného rozhrania použi kind:code_improvement a scope:ui; výsledok obsahuje PR a neoverené nasadenie.',
   infrastructure_status:'Skutočný stav konfigurácie domén, hostingu, webu a evolúcie: {}',
   hosting_domain:'Pripojí voľnú doménu zo svojej aktívnej Cloudflare zóny k webu vytvorenému Trinity; existujúce DNS sa neprepisuje. TLS a HTTP zostávajú pending do overenia: {site_id,domain,hostname}',
   hosting_deploy:'Nasadí existujúci Studio projekt na Cloudflare. Súkromný predvolene; publish:true iba po výslovnej požiadavke verejného publikovania: {project_id,publish?:boolean}',
