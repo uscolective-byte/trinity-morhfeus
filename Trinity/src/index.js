@@ -1,3 +1,4 @@
+import settingsStateJS from '../public/assistant/settings-state.js.txt';
 import {cancelWorkflowJob} from './task-cancellation.js';
 import taskControlJS from '../public/assistant/task-control.js.txt';
 import {salesPipeline,createSalesOffer,saveSalesLead} from './commerce.js';
@@ -86,6 +87,7 @@ async function route(request,env,ctx){
     'Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"}});
   if(request.method==='GET'&&path==='/app.js')return new Response(appJS,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});
   if(request.method==='GET'&&path==='/style.css')return new Response(css+'\n'+refreshCSS,{headers:{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});
+  if(request.method==='GET'&&path==='/settings-state.js')return new Response(settingsStateJS,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});
   if(request.method==='GET'&&path==='/task-control.js')return new Response(taskControlJS,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});
   if(request.method==='GET'&&path==='/chat.js')return new Response(assistantJS,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});
   if(request.method==='GET'&&path==='/chat.css')return new Response(assistantCSS,{headers:{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});

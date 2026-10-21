@@ -21,7 +21,7 @@ export async function revokeApiKey(env,ownerId,id){const row=await env.DB.prepar
 export async function authenticateApiKey(request,env,scope='api:invoke'){
   const secret=request.headers.get('Authorization')?.replace(/^Bearer\s+/i,'')||request.headers.get('X-Trinity-API-Key')||'';
   if(!secret.startsWith('trn_live_')||secret.length<40)throw new HttpError(401,'Neplatný Trinity API kľúč.');
-  const row=await env.DB.prepare("SELECT * FROM ops_api_access_keys WHERE key_hash=? AND status='active' AND (expires_at IS NULL OR expires_at>datetime('now'))").bind(await hash(secret)).first();
+  const row=await env.DB.prepare("SELECT * FROM ops_api_access_keys WHERE key_hash=? AND status='active' AND (expires_at IS NULL OR julianday(expires_at)>julianday('now'))").bind(await hash(secret)).first();
   if(!row)throw new HttpError(401,'Neplatný alebo zrušený Trinity API kľúč.');
   const scopes=JSON.parse(row.scopes_json);if(!scopes.includes(scope))throw new HttpError(403,'API kľúč nemá potrebné oprávnenie.');
   const window=Math.floor(Date.now()/60000);const usage=await env.DB.prepare(`INSERT INTO ops_api_key_usage(key_id,minute_window,request_count) VALUES(?,?,1) ON CONFLICT(key_id,minute_window) DO UPDATE SET request_count=request_count+1 RETURNING request_count`).bind(row.id,window).first();

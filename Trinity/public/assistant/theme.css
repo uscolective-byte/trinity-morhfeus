@@ -156,3 +156,15 @@
 #hosting-form{grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) auto}
 #hosting-list a{overflow-wrap:anywhere;color:var(--blue)}
 @media(max-width:760px){#hosting-form,#subdomain-form{grid-template-columns:1fr}.domain-action-bar button{flex:1 1 180px}.domain-card{align-items:flex-start;flex-direction:column}}
+
+.readiness-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:16px 0}
+.readiness-card{border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--paper);color:var(--ink);display:flex;flex-direction:column;gap:10px;min-width:0}
+.readiness-card h3,.readiness-card p{margin:0}
+.readiness-card p,.readiness-card small{color:var(--muted);line-height:1.5}
+.readiness-card button{margin-top:auto}
+.readiness-card[data-status="verified"]{border-color:#15803d}
+.settings-load-error{opacity:.65}
+#settings-partial-errors,.section-load-message{color:var(--ink);border-left:3px solid #b45309;padding:10px;overflow-wrap:anywhere}
+.api-key-form{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));align-items:end}
+.api-key-form label{display:grid;gap:6px}
+@media(max-width:560px){.readiness-grid,.api-key-form{grid-template-columns:1fr}}
