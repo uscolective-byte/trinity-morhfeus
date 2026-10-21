@@ -100,3 +100,55 @@ test('existing closed PR is not reported as open or regenerated; merged PR remai
   }
  }finally{globalThis.fetch=original;}
 });
+
+test('UI ID guard distinguishes data attributes and recognizes HTML attribute casing',async()=>{
+ const {validateUIPatch}=await import('../src/project-evolution.js');
+ const path='Trinity/public/assistant/chat.html';
+ const cases=[
+  {
+    "before": "<button id=\"send\">Send</button>",
+    "after": "<button data-id=\"send\">Send</button>",
+    "reject": true
+  },
+  {
+    "before": "<button id=\"send\">Send</button>",
+    "after": "<button id=\"send\" data-id=\"send\">Send</button>",
+    "reject": false
+  },
+  {
+    "before": "<button ID=\"send\">Send</button>",
+    "after": "<button data-id=\"send\">Send</button>",
+    "reject": true
+  },
+  {
+    "before": "<button id=\"send\">Send</button>",
+    "after": "<button ID=\"send\">Send</button>",
+    "reject": false
+  },
+  {
+    "before": "<button id=\"send\">Send</button>",
+    "after": "<button id=\"send\"></button><input ID=\"send\">",
+    "reject": true
+  },
+  {
+    "before": "<button id=\"send\">Send</button>",
+    "after": "<button\nid='send'>Send</button>",
+    "reject": false
+  },
+  {
+    "before": "<button data-id=\"send\">Send</button>",
+    "after": "<button data-id=\"other\">Send</button>",
+    "reject": false
+  },
+  {
+    "before": "<button id=\"send\">Send</button>",
+    "after": "<button id=\"other\">Send</button>",
+    "reject": true
+  }
+];
+ for(const item of cases){
+  const run=()=>validateUIPatch({files:[{path,content:item.after}]},[{path,content:item.before}]);
+  if(item.reject)assert.throws(run,/ID/,item.after);
+  else assert.doesNotThrow(run,item.after);
+ }
+});

@@ -56,7 +56,7 @@ export function validateSourcePatch(input,files){
 export function validateUIPatch(patch,originalFiles){
   if(patch.files.some(f=>!isUISource(f.path)))throw new HttpError(400,'UI úprava smeruje mimo rozhranie Trinity.');
   for(const file of patch.files.filter(f=>f.path.endsWith('.html'))){
-    const ids=text=>[...text.matchAll(/\bid\s*=\s*["']([^"']+)["']/g)].map(m=>m[1]);
+    const ids=text=>[...text.matchAll(/(?:^|[\t\n\f\r ])id\s*=\s*["']([^"']+)["']/gi)].map(m=>m[1]);
     const before=ids(originalFiles.find(f=>f.path===file.path)?.content||''),after=ids(file.content);
     if(new Set(after).size!==after.length||before.some(id=>!after.includes(id)))throw new HttpError(422,'UI úprava odstraňuje existujúce ID alebo vytvára duplicitné ID.');
   }
