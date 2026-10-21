@@ -36,6 +36,23 @@ test('model patch failure is persisted as failed, not applied',async()=>{
  const old=globalThis.fetch;try{globalThis.fetch=async()=>new Response('unavailable',{status:503});await assert.rejects(()=>applySelfImprovementProposal(env,proposal.id,'owner'),/GitHub/);const row=env.sqlite.prepare('SELECT * FROM self_improvement_proposals').get();assert.equal(row.status,'approved');assert.equal(JSON.parse(row.result_json).status,'failed');}finally{globalThis.fetch=old;env.sqlite.close();}
 });
 
+test('an expired worker cannot overwrite the result of a newer preparation lease',async()=>{
+ const env=environment();
+ const proposal=await createSelfImprovementProposal(env,{title:'Competing deployment',description:'Keep the newest deployment preparation receipt.',kind:'deployment'},'owner');
+ await approveSelfImprovementProposal(env,proposal.id,'owner');
+ const newer=JSON.stringify({status:'deployment_queued',source:'newer-process'});
+ const old=globalThis.fetch;
+ try{
+  globalThis.fetch=async(url,options)=>{
+   assert.match(url,/actions\/workflows\/self-deploy\.yml\/dispatches$/);assert.equal(options.method,'POST');
+   env.sqlite.prepare('UPDATE self_improvement_proposals SET result_json=? WHERE id=?').run(newer,proposal.id);
+   return new Response(null,{status:204});
+  };
+  await assert.rejects(()=>applySelfImprovementProposal(env,proposal.id,'owner'),/Prenájom návrhu prevzal novší proces/);
+  assert.equal(env.sqlite.prepare('SELECT result_json FROM self_improvement_proposals WHERE id=?').get(proposal.id).result_json,newer);
+ }finally{globalThis.fetch=old;env.sqlite.close();}
+});
+
 test('preparation lease expires only for an old in-progress claim',()=>{
  const now=Date.parse('2026-10-21T18:00:00.000Z');
  assert.equal(preparationLeaseExpired({result_json:JSON.stringify({status:'preparing',started_at:'2026-10-21T17:50:00.000Z'})},now),false);

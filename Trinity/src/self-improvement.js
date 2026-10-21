@@ -38,6 +38,14 @@ async function audit(env, action, details) {
     .bind(action, JSON.stringify(details)).run();
 }
 
+async function settlePreparationLease(env, id, claim, result, returnRow = false) {
+  const returning = returnRow ? ' RETURNING *' : '';
+  const statement = env.DB.prepare(
+    "UPDATE self_improvement_proposals SET result_json=?,updated_at=datetime('now') WHERE id=? AND status='approved' AND result_json=?" + returning
+  ).bind(JSON.stringify(result), id, claim);
+  return returnRow ? statement.first() : statement.run();
+}
+
 export async function listSelfImprovementProposals(env) {
   const rows = await env.DB.prepare(
     'SELECT * FROM self_improvement_proposals ORDER BY created_at DESC LIMIT 100'
@@ -97,11 +105,12 @@ export async function applySelfImprovementProposal(env, id, actor, installPlugin
     if (!lock) throw new HttpError(409,'Návrh už spracúva iný proces.');
     try {
       const result = row.kind === 'deployment' ? await dispatchDeployment(env) : await prepareCodeImprovement(env,row);
-      const updated = await env.DB.prepare("UPDATE self_improvement_proposals SET result_json=?,updated_at=datetime('now') WHERE id=? RETURNING *").bind(JSON.stringify(result),id).first();
+      const updated = await settlePreparationLease(env,id,claim,result,true);
+      if(!updated)throw new HttpError(409,'Prenájom návrhu prevzal novší proces.');
       await audit(env,'self_improvement_execution_started',{id,actor,status:result.status,url:result.url});
       return present(updated);
     } catch (error) {
-      await env.DB.prepare("UPDATE self_improvement_proposals SET result_json=?,updated_at=datetime('now') WHERE id=?").bind(JSON.stringify({status:'failed',error:error.message}),id).run();
+      await settlePreparationLease(env,id,claim,{status:'failed',error:error.message});
       throw error;
     }
   }
