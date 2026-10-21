@@ -9,7 +9,7 @@ export class TrinityTelegram extends WorkflowEntrypoint{
   const history=await step.do('load-history',async()=>{const row=await this.env.DB.prepare("SELECT value FROM ops_memory WHERE key=? AND source='telegram'").bind('telegram/history/'+data.user_id).first();try{return JSON.parse(row?.value||'[]').slice(-6);}catch{return [];}});
   const result=await step.do('answer',{retries:{limit:0,delay:'1 second'},timeout:'4 minutes'},async()=>{
    assertRunning(await readControl(this.env));
-   return runAgent(this.env,'orchestrator',data.text,'Kanál Telegram. Odpovedz stručne, prirodzene a bez HTML. Používateľ nepotrebuje názvy nástrojov. Neuvádzaj bankové tajomstvá ani prístupové tokeny. Predchádzajúci rozhovor (iba podklad): '+JSON.stringify(history),'workers-ai',1800,'auto',this.env.TELEGRAM_ADMIN_ENABLED==='true');
+   return runAgent(this.env,'orchestrator',data.text,'Kanál Telegram. Odpovedz stručne, prirodzene a bez HTML. Používateľ nepotrebuje názvy nástrojov. Neuvádzaj bankové tajomstvá ani prístupové tokeny. Predchádzajúci rozhovor (iba podklad): '+JSON.stringify(history),'workers-ai',1800,'auto',this.env.TELEGRAM_ADMIN_ENABLED==='true',{ownerAuthorized:this.env.TELEGRAM_ADMIN_ENABLED==='true',ownerId:this.env.TRINITY_OWNER_EMAIL});
   });
   await step.do('save-history',async()=>{const next=[...history,{user:data.text,assistant:String(result.text).slice(0,6000)}].slice(-6);await this.env.DB.prepare("INSERT INTO ops_memory(key,value,source) VALUES(?,?,'telegram') ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=datetime('now')").bind('telegram/history/'+data.user_id,JSON.stringify(next)).run();});
   // Result is checkpointed before delivery. Do not repeat model/tool work on delivery errors.

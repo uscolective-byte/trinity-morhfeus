@@ -41,7 +41,7 @@ export class TrinityOperations extends WorkflowEntrypoint {
           await this.env.DB.prepare(`INSERT INTO ops_steps(id,job_id,position,agent_id,status) VALUES(?,?,?,?,'running')
             ON CONFLICT(id) DO UPDATE SET status='running',error=NULL,updated_at=datetime('now')`).bind(stepId,id,position,agent).run();
           try {
-            const result=await runAgent(this.env,agent,job.task,[history,...outputs.map(o=>`${o.agent_id}: ${o.text}`)].join('\n'),job.provider,tokenBudget(agent,job.task),job.language||'auto',job.owner_mode===1);
+            const result=await runAgent(this.env,agent,job.task,[history,...outputs.map(o=>`${o.agent_id}: ${o.text}`)].join('\n'),job.provider,tokenBudget(agent,job.task),job.language||'auto',job.owner_mode===1,event.payload.commerce_principal||{});
             await this.env.DB.prepare("UPDATE ops_steps SET status='completed',result=?,model=?,tool_log=?,duration_ms=?,updated_at=datetime('now') WHERE id=?")
               .bind(result.text,result.model,JSON.stringify(result.tool_log),result.duration_ms,stepId).run();
             return result;
