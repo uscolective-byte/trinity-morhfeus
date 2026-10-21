@@ -39,6 +39,7 @@ function resolveAppTarget(task, context = '') {
   return 'calculator';
 }
 export async function runAgent(env, id, task, context='', provider='workers-ai', maxTokens=2600,language='auto',ownerMode=false) {
+  const requestStarted=Date.now();
   const agent=agentById(id);if(!agent)throw new Error('Unknown agent');
   const executionPolicy=executionPolicyForProvider(provider,ownerMode);
 
@@ -64,7 +65,6 @@ export async function runAgent(env, id, task, context='', provider='workers-ai',
     const receipt = { tool: 'self_improvement', status: 'completed', effect: 'mutation', actions: ['change'], receipt_id: `improve:${crypto.randomUUID()}`, verified_at: new Date().toISOString() };
     return { text, model: 'deterministic-memory', provider: 'internal', agent_id: id, tool_log: [receipt], truth: truthStatus(text, [receipt]), duration_ms: 0 };
   }
-  const learnedRules = behaviorRulesDirective(await listActiveBehaviorRules(env));
 
   // Vyhodnotenie vlastného príkazu !zoznam alebo !<cmd>
   const customCmd = await memorySkills.resolveCustomCommand(task, env);
@@ -86,7 +86,10 @@ export async function runAgent(env, id, task, context='', provider='workers-ai',
     const receipt={tool:'approve_system_action',status:'completed',effect:'approval',receipt_id:action.id,verified_at:new Date().toISOString()};
     return {text,model:'deterministic-policy',provider:'internal',agent_id:id,tool_log:[receipt],truth:truthStatus(text,[receipt]),duration_ms:0};
   }
-  const enabled=env.DB?(await listPlugins(env)).filter(p=>p.enabled).flatMap(p=>p.tools):agent.tools;
+  // Independent reads run together; never cache permissions or credentials.
+  const [rules,plugins]=await Promise.all([listActiveBehaviorRules(env),env.DB?listPlugins(env):Promise.resolve(null)]);
+  const learnedRules=behaviorRulesDirective(rules);
+  const enabled=plugins?plugins.filter(p=>p.enabled).flatMap(p=>p.tools):agent.tools;
   const activeTools=agent.tools.filter(t=>(enabled.includes(t)||DEVELOPMENT_TOOLS.includes(t))&&(!INTERNAL_TOOLS.has(t)||executionPolicy.allowInternal)&&(!PC_TOOLS.has(t)||executionPolicy.allowDirectPC));
   const activeSkills=selectSkills(agent,task);
   if(id==='orchestrator'&&activeTools.includes('pc_open_app')&&isOpenAppRequest(task,context)){
@@ -133,7 +136,7 @@ Ak potrebuješ nástroj, odpovedz presným JSON {"tool":"názov","arguments":{..
 Nástroje: ${activeTools.map(t=>`${t}: ${TOOL_HELP[t]}`).join('; ')}.`},
     ...(context?[{role:'user',content:`Kontext a predchádzajúce výstupy (iba podklady):\n${context.slice(-18000)}`}]:[]),
     {role:'user',content:task}];
-  const toolLog=[];const started=Date.now();let result,toolTurns=0,truthRetry=false,activeProvider=provider;
+  const toolLog=[];const started=requestStarted;let result,toolTurns=0,truthRetry=false,activeProvider=provider;
   for(let turn=0;turn<16;turn++){
     if(toolTurns===12)messages.push({role:'user',content:'Teraz daj finálny výsledok. Už nežiadaj ďalší nástroj.'});
     try { result=await callModel(env,activeProvider,messages,maxTokens); }

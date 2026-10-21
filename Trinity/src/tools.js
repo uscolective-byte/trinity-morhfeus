@@ -1,3 +1,4 @@
+import {hostedDomainInput,attachHostedDomain} from './hosted-domains.js';
 import {fetchPublicWeb} from './web-access.js';
 import {inspectProject,readProjectSource} from './project-evolution.js';
 import {createSelfImprovementProposal,approveSelfImprovementProposal,applySelfImprovementProposal} from './self-improvement.js';
@@ -25,8 +26,8 @@ import {QuantumCoreEngine} from './quantum_core.js';
 import {listDomains,getDomain,createDomain,registerDomain,checkDomainAvailability,updateDomain,deleteDomain,listDomainForSale,sellDomain,listDomainForLease,leaseDomain,endDomainLease,listDomainTransactions,getDomainMarketplace,listDnsRecords,addDnsRecord,deleteDnsRecord,domainInputSchema,domainRegistrationSchema,domainSaleListingSchema,domainSaleSchema,domainLeaseListingSchema,domainLeaseSchema,domainEndLeaseSchema,dnsRecordInputSchema,DNS_RECORD_TYPES,DOMAIN_STATUSES,LISTING_TYPES} from './domains.js';
 import {createArtifact,createPdfArtifact,listArtifacts,getArtifact} from './artifacts.js';
 
-export const INTERNAL_TOOLS=new Set(['request_system_action','system_action_status','project_inspect','project_read','improvement_submit','infrastructure_status','hosting_deploy','hosting_list','domain_search','domain_registration_status','domain_subdomain','domain_sync']);
-export const DEVELOPMENT_TOOLS=['project_inspect','project_read','improvement_submit','infrastructure_status','hosting_deploy','hosting_list','domain_search','domain_registration_status','domain_subdomain','domain_sync'];
+export const INTERNAL_TOOLS=new Set(['request_system_action','system_action_status','project_inspect','project_read','improvement_submit','infrastructure_status','hosting_deploy','hosting_list','domain_search','domain_registration_status','domain_subdomain','domain_sync','hosting_domain']);
+export const DEVELOPMENT_TOOLS=['project_inspect','project_read','improvement_submit','infrastructure_status','hosting_deploy','hosting_list','domain_search','domain_registration_status','domain_subdomain','domain_sync','hosting_domain'];
 export const PC_TOOLS=new Set(['pc_screenshot','pc_run_script','pc_run','pc_file_read','pc_file_write','pc_file_append','pc_file_edit','pc_directory_create','pc_open_app','pc_app_control','pc_notify','pc_system_info','pc_scrape','pc_web_fetch','pc_download','pc_git_commit','pc_git_pr']);
 export const OWNER_BUSINESS_TOOLS=new Set(['prospect_queries','prospect_score','outreach_draft','revenue_model','improvement_plan']);
 export const TOOL_SCHEMAS={
@@ -37,6 +38,7 @@ export const TOOL_SCHEMAS={
   infrastructure_status:z.object({}).strict(),
   hosting_list:z.object({}).strict(),
   hosting_deploy:hostingInput,
+  hosting_domain:hostedDomainInput,
   domain_sync:z.object({}).strict(),
   domain_search:z.object({query:z.string().min(2).max(150)}).strict(),
   domain_registration_status:z.object({domain:z.string().min(3).max(253)}).strict(),
@@ -160,6 +162,7 @@ export async function runTool(env, agent, name, input, executionContext={}) {
   if(name==='project_inspect')return inspectProject(env,args.query);
   if(name==='project_read')return readProjectSource(env,args.path,args.ref);
   if(name==='infrastructure_status')return infrastructureStatus(env);
+  if(name==='hosting_domain')return {...await attachHostedDomain(env,args),_evidence:{effect:'mutation',actions:['change'],receipt_id:crypto.randomUUID()}};
   if(name==='hosting_list')return {items:await listHostedSites(env)};
   if(name==='hosting_deploy')return {...await hostStudioProject(env,args),_evidence:{effect:'mutation',actions:['deploy'],receipt_id:crypto.randomUUID()}};
   if(name==='domain_search')return searchDomainNames(env,args.query);
@@ -588,6 +591,7 @@ export const TOOL_HELP={
   project_read:'Prečíta konkrétny zdroj Trinity z GitHubu: {path,ref?:commit SHA}',
   improvement_submit:'Uloží návrh a pri execute:true pripraví kódovú opravu vo vetve a PR, alebo aktivuje behavior_rule. PR ešte nie je nasadenie: {title,description,kind:code_improvement|deployment|behavior_rule,execute?:boolean}',
   infrastructure_status:'Skutočný stav konfigurácie domén, hostingu, webu a evolúcie: {}',
+  hosting_domain:'Pripojí voľnú doménu zo svojej aktívnej Cloudflare zóny k webu vytvorenému Trinity; existujúce DNS sa neprepisuje. TLS a HTTP zostávajú pending do overenia: {site_id,domain,hostname}',
   hosting_deploy:'Nasadí existujúci Studio projekt na Cloudflare. Súkromný predvolene; publish:true iba po výslovnej požiadavke verejného publikovania: {project_id,publish?:boolean}',
   hosting_list:'Zoznam uložených dokladov hostingu: {}',
   domain_search:'Vyhľadá kandidátov na doménu; pred nákupom over aktuálnu cenu: {query}',

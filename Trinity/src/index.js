@@ -1,6 +1,7 @@
 import {scanForImprovements} from './maintenance-scan.js';
 import {inspectProject,readProjectSource} from './project-evolution.js';
 import {searchDomainNames,refreshDomainRegistration,createSubdomain,syncCloudflareDomains} from './domains.js';
+import {attachHostedDomain,hostedDomainInput} from './hosted-domains.js';
 import {infrastructureStatus,hostStudioProject,listHostedSites} from './infrastructure.js';
 import {capabilityStatus} from './capability-status.js';
 import {handleKnowledge} from '../services/knowledge-api.js';
@@ -246,6 +247,7 @@ async function route(request,env,ctx){
     if(request.method==='POST'&&studioRoute[2]==='revise'){await rateLimit(env,`studio-revise:${user.id}`,8,300);return json({project:await reviseStudioProject(env,'primary',id,await readJSON(request,20000))});}
     if(request.method==='GET'&&studioRoute[2]==='export'){const project=await getStudioProject(env,'primary',id);return new Response(project.html,{headers:{'Content-Type':'text/html; charset=utf-8','Content-Disposition':`attachment; filename="${project.name.replace(/[^a-z0-9_-]+/gi,'-').slice(0,50)||'trinity-web'}.html"`}});}
   }
+  if(path==='/api/assistant/hosting/domain'&&request.method==='POST'){requireAdmin(user);await rateLimit(env,`domain-attach:${user.id}`,5,300);return json(await attachHostedDomain(env,hostedDomainInput.parse(await readJSON(request,2000))),201);}
   if(path==='/api/assistant/infrastructure'&&request.method==='GET'){requireAdmin(user);return json(infrastructureStatus(env));}
   if(path==='/api/assistant/hosting'){
     requireOwner(user);
@@ -434,7 +436,7 @@ async function route(request,env,ctx){
   const promoteGemini=path.match(/^\/api\/assistant\/secrets\/([0-9a-f-]+)\/promote-gemini$/i);
   if(promoteGemini&&request.method==='POST'){requireAdmin(user);await rateLimit(env,`secret-promote:${user.id}`,5,3600);return json({item:await promoteCustomSecretToGemini(env,ownerId,uuid.parse(promoteGemini[1]))});}
   if(path==='/api/assistant/ai-providers'&&request.method==='GET'){requireAdmin(user);return json(await listAIProviders(env,ownerId));}
-  const aiProviderRoute=path.match(/^\/api\/assistant\/ai-providers\/(gemini)$/);
+  const aiProviderRoute=path.match(/^\/api\/assistant\/ai-providers\/(gemini|openai)$/);
   if(aiProviderRoute&&request.method==='POST'){requireAdmin(user);return json({item:await configureAIProvider(env,ownerId,aiProviderRoute[1],await readJSON(request,8000))});}
   if(path==='/api/assistant/wallet'){
     requireAdmin(user);
