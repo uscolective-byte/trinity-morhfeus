@@ -253,7 +253,24 @@
   "preview_urls": true,
   "previews": {
     "vars": {
-      "TRINITY_PREVIEW_MODE": "build-only"
+      "TRINITY_PREVIEW_MODE": "build-only",
+      "TRINITY_ENV": "preview"
+    },
+    "durable_objects": {
+      "bindings": [
+        {
+          "name": "Brain",
+          "class_name": "TrinityAgent"
+        },
+        {
+          "name": "CHAT_AGENT",
+          "class_name": "ChatAgent"
+        },
+        {
+          "name": "GUARDIAN_AGENT",
+          "class_name": "GuardianAgent"
+        }
+      ]
     }
   },
   "env": {
@@ -363,6 +380,22 @@
         "vars": {
           "TRINITY_PREVIEW_MODE": "build-only",
           "TRINITY_ENV": "preview"
+        },
+        "durable_objects": {
+          "bindings": [
+            {
+              "name": "Brain",
+              "class_name": "TrinityAgent"
+            },
+            {
+              "name": "CHAT_AGENT",
+              "class_name": "ChatAgent"
+            },
+            {
+              "name": "GUARDIAN_AGENT",
+              "class_name": "GuardianAgent"
+            }
+          ]
         }
       },
       "triggers": {

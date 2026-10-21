@@ -3,6 +3,6 @@
   "reviewed": false,
   "risk": "high",
   "component": "Trinity/platform",
-  "description": "Restores the unmerged platform, UI, communication and scoped self-development changes from PR #44 onto current main. Preserves daily-planner changes and both create_daily_plan rate limits. Adds a local verified core deployment fallback; GitHub Actions runner failure remains unresolved. No secrets are committed.",
-  "source_pr": null
+  "description": "Restore UI/platform capabilities while preserving daily planner. Fix missing explicit Durable Object bindings in preview configuration after supplied Cloudflare log showed 317 tests passing and preview API error 10061. Production lifecycle is unchanged; live preview fix and GitHub runner availability still require verification.",
+  "source_pr": 46
 }
