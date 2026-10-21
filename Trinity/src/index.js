@@ -1,3 +1,6 @@
+import {salesPipeline,createSalesOffer,saveSalesLead} from './commerce.js';
+import {telegramStatus,configureTelegramWebhook,handleTelegramWebhook} from './telegram.js';
+import {TrinityTelegram} from './telegram-workflow.js';
 import {scanForImprovements} from './maintenance-scan.js';
 import {inspectProject,readProjectSource} from './project-evolution.js';
 import {searchDomainNames,refreshDomainRegistration,createSubdomain,syncCloudflareDomains} from './domains.js';
@@ -52,7 +55,7 @@ import assistantCSS from '../public/assistant/chat.css';
 import builderCSS from '../public/assistant/builder.css';
 import assistantJS from '../public/assistant/chat.js.txt';
 import themeCSS from '../public/assistant/theme.css';
-export {TrinityAgent,ChatAgent,GuardianAgent,TrinityOperations};
+export {TrinityAgent,ChatAgent,GuardianAgent,TrinityOperations,TrinityTelegram};
 const json=(data,status=200)=>Response.json(data,{status});
 const runtimeEnvironment=(request,env)=>['localhost','127.0.0.1','::1'].includes(new URL(request.url).hostname)?'local':env.TRINITY_ENV||'local';
 const uuid=z.string().uuid();
@@ -75,6 +78,7 @@ async function route(request,env,ctx){
   const knowledgeResponse=await handleKnowledge(request,env);
   if(knowledgeResponse)return knowledgeResponse;
   const url=new URL(request.url),path=url.pathname;
+  if(path==='/api/integrations/telegram/webhook')return handleTelegramWebhook(request,env);
   if(request.method==='GET'&&['/','/ops','/dashboard','/index.html'].includes(path))return new Response(path==='/ops'?html:assistantHTML,{headers:{'Content-Type':'text/html; charset=utf-8',
     'Cache-Control':'no-cache, no-store, must-revalidate',
     'Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"}});
@@ -248,6 +252,11 @@ async function route(request,env,ctx){
     if(request.method==='GET'&&studioRoute[2]==='export'){const project=await getStudioProject(env,'primary',id);return new Response(project.html,{headers:{'Content-Type':'text/html; charset=utf-8','Content-Disposition':`attachment; filename="${project.name.replace(/[^a-z0-9_-]+/gi,'-').slice(0,50)||'trinity-web'}.html"`}});}
   }
   if(path==='/api/assistant/hosting/domain'&&request.method==='POST'){requireAdmin(user);await rateLimit(env,`domain-attach:${user.id}`,5,300);return json(await attachHostedDomain(env,hostedDomainInput.parse(await readJSON(request,2000))),201);}
+  if(path==='/api/assistant/commerce'&&request.method==='GET'){requireOwner(user);return json(await salesPipeline(env,ownerId));}
+  if(path==='/api/assistant/commerce/offers'&&request.method==='POST'){requireOwner(user);return json(await createSalesOffer(env,ownerId,await readJSON(request,6000)),201);}
+  if(path==='/api/assistant/commerce/leads'&&request.method==='POST'){requireOwner(user);return json(await saveSalesLead(env,ownerId,await readJSON(request,6000)),201);}
+  if(path==='/api/assistant/telegram'&&request.method==='GET'){requireOwner(user);return json(telegramStatus(env));}
+  if(path==='/api/assistant/telegram/connect'&&request.method==='POST'){requireOwner(user);await rateLimit(env,`telegram-connect:${user.id}`,3,300);return json(await configureTelegramWebhook(env,url.origin));}
   if(path==='/api/assistant/infrastructure'&&request.method==='GET'){requireAdmin(user);return json(infrastructureStatus(env));}
   if(path==='/api/assistant/hosting'){
     requireOwner(user);

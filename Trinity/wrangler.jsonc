@@ -66,7 +66,8 @@
     "TRINITY_GITHUB_REPO": "uscolective-byte/trinity-morhfeus",
     "TRINITY_GITHUB_BRANCH": "main",
     "TRINITY_AUTO_IMPROVE": "true",
-    "TRINITY_AUTO_MERGE": "true"
+    "TRINITY_AUTO_MERGE": "true",
+    "REVOLUT_REVTAG": "isabo"
   },
   "ai": {
     "binding": "AI"
@@ -137,6 +138,11 @@
       "binding": "OPS_WORKFLOW",
       "name": "trinity-operations",
       "class_name": "TrinityOperations"
+    },
+    {
+      "binding": "TELEGRAM_WORKFLOW",
+      "name": "trinity-telegram",
+      "class_name": "TrinityTelegram"
     }
   ],
   "services": [
@@ -277,7 +283,8 @@
         "TRINITY_GITHUB_REPO": "uscolective-byte/trinity-morhfeus",
         "TRINITY_GITHUB_BRANCH": "main",
         "TRINITY_AUTO_IMPROVE": "true",
-        "TRINITY_AUTO_MERGE": "true"
+        "TRINITY_AUTO_MERGE": "true",
+        "REVOLUT_REVTAG": "isabo"
       },
       "ai": {
         "binding": "AI"
@@ -337,6 +344,11 @@
           "binding": "OPS_WORKFLOW",
           "name": "trinity-development-operations",
           "class_name": "TrinityOperations"
+        },
+        {
+          "binding": "TELEGRAM_WORKFLOW",
+          "name": "trinity-development-telegram",
+          "class_name": "TrinityTelegram"
         }
       ],
       "secrets_store_secrets": [
@@ -360,30 +372,102 @@
         "binding": "CF_VERSION_METADATA"
       },
       "services": [
-        {"binding":"KNOWLEDGE_SERVICE","service":"trinity-knowledge-development"},
-        {"binding":"PC_BRIDGE_V2","service":"trinity-pc-bridge-v2"},
-        {"binding":"PC_BRIDGE_SERVICE","service":"trinity-pc-bridge"},
-        {"binding":"CORE","service":"trinity-core"},
-        {"binding":"BUILDER","service":"trinity-builder"},
-        {"binding":"DISPATCHER","service":"trinity-dispatcher"},
-        {"binding":"CONNECTORS","service":"trinity-connectors"},
-        {"binding":"GUARDIAN","service":"trinity-guardian"},
-        {"binding":"MEMORY","service":"trinity-memory"},
-        {"binding":"SENTINEL","service":"trinity-sentinel"},
-        {"binding":"SKILLS","service":"trinity-skills"},
-        {"binding":"admin","service":"aura_sentinel"},
-        {"binding":"admino","service":"aura_architect"},
-        {"binding":"Trinity","service":"aura_deployer"},
-        {"binding":"AURA_ANALYZER","service":"aura_analyzer"},
-        {"binding":"AURA_ARCHITECT","service":"aura_architect"},
-        {"binding":"AURA_CODEGEN","service":"aura_codegen"},
-        {"binding":"AURA_DEPLOYER","service":"aura_deployer"},
-        {"binding":"AURA_EVOLVER","service":"aura_evolver"},
-        {"binding":"AURA_MEMORY","service":"aura_memory"},
-        {"binding":"AURA_OPTIMIZER","service":"aura_optimizer"},
-        {"binding":"AURA_PLANNER","service":"aura_planner"},
-        {"binding":"AURA_SENTINEL","service":"aura_sentinel"},
-        {"binding":"AURA_TESTER","service":"aura_tester"}
+        {
+          "binding": "KNOWLEDGE_SERVICE",
+          "service": "trinity-knowledge-development"
+        },
+        {
+          "binding": "PC_BRIDGE_V2",
+          "service": "trinity-pc-bridge-v2"
+        },
+        {
+          "binding": "PC_BRIDGE_SERVICE",
+          "service": "trinity-pc-bridge"
+        },
+        {
+          "binding": "CORE",
+          "service": "trinity-core"
+        },
+        {
+          "binding": "BUILDER",
+          "service": "trinity-builder"
+        },
+        {
+          "binding": "DISPATCHER",
+          "service": "trinity-dispatcher"
+        },
+        {
+          "binding": "CONNECTORS",
+          "service": "trinity-connectors"
+        },
+        {
+          "binding": "GUARDIAN",
+          "service": "trinity-guardian"
+        },
+        {
+          "binding": "MEMORY",
+          "service": "trinity-memory"
+        },
+        {
+          "binding": "SENTINEL",
+          "service": "trinity-sentinel"
+        },
+        {
+          "binding": "SKILLS",
+          "service": "trinity-skills"
+        },
+        {
+          "binding": "admin",
+          "service": "aura_sentinel"
+        },
+        {
+          "binding": "admino",
+          "service": "aura_architect"
+        },
+        {
+          "binding": "Trinity",
+          "service": "aura_deployer"
+        },
+        {
+          "binding": "AURA_ANALYZER",
+          "service": "aura_analyzer"
+        },
+        {
+          "binding": "AURA_ARCHITECT",
+          "service": "aura_architect"
+        },
+        {
+          "binding": "AURA_CODEGEN",
+          "service": "aura_codegen"
+        },
+        {
+          "binding": "AURA_DEPLOYER",
+          "service": "aura_deployer"
+        },
+        {
+          "binding": "AURA_EVOLVER",
+          "service": "aura_evolver"
+        },
+        {
+          "binding": "AURA_MEMORY",
+          "service": "aura_memory"
+        },
+        {
+          "binding": "AURA_OPTIMIZER",
+          "service": "aura_optimizer"
+        },
+        {
+          "binding": "AURA_PLANNER",
+          "service": "aura_planner"
+        },
+        {
+          "binding": "AURA_SENTINEL",
+          "service": "aura_sentinel"
+        },
+        {
+          "binding": "AURA_TESTER",
+          "service": "aura_tester"
+        }
       ]
     }
   },
