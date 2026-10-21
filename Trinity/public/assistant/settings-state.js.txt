@@ -1,0 +1,23 @@
+export function integrationPresentation(status){
+ const states={
+  verified:{label:'Overené',tone:'verified'},
+  ready:{label:'Pripravené',tone:'ready'},
+  configured:{label:'Nakonfigurované · čaká na test',tone:'configured'},
+  'platform-connected':{label:'Cloudflare platforma · API neoverené',tone:'configured'},
+  failed:{label:'Test zlyhal',tone:'failed'},
+  error:{label:'Chyba pripojenia',tone:'failed'},
+  disabled:{label:'Vypnuté',tone:'disabled'},
+  'not-configured':{label:'Chýba nastavenie',tone:'missing'},
+  'not-verified':{label:'Vykonanie zatiaľ neoverené',tone:'configured'},
+  offline:{label:'Nedostupné',tone:'failed'}
+ };
+ return states[status]||{label:'Stav neoverený',tone:'unknown'};
+}
+export function apiKeySettings(name,purpose,rate,days,now=Date.now()){
+ const scopes={api:['api:invoke'],'mcp-read':['mcp:read'],'mcp-tasks':['mcp:read','mcp:write']}[purpose];
+ if(!scopes)throw new Error('Vyber účel API kľúča.');
+ if(!Number.isInteger(rate)||rate<1||rate>600)throw new Error('Neplatný minútový limit.');
+ if(![7,30,90].includes(days))throw new Error('Vyber platnosť 7, 30 alebo 90 dní.');
+ if(typeof name!=='string'||name.trim().length<2||name.trim().length>80)throw new Error('Zadaj názov pripojenia.');
+ return {name:name.trim(),scopes,rate_limit_per_minute:rate,expires_at:new Date(now+days*86400000).toISOString()};
+}

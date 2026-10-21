@@ -1,3 +1,4 @@
+import {commercePrincipal} from './commerce-context.js';
 import {z} from 'zod';
 import {agentById,selectTeam} from './registry.js';
 import {HttpError} from './security.js';
@@ -8,7 +9,7 @@ export const jobSchema=z.object({task:z.string().trim().min(1).max(12000),
   provider:z.enum(['workers-ai','openai','gemini','ollama','local']).default('workers-ai'),
   session_id:z.string().uuid().optional(),team:z.array(z.string()).min(1).max(5).optional(),
   language:z.string().max(35).default('auto').transform(normalizeLanguage),remember:z.boolean().default(false),owner_mode:z.boolean().default(false),idempotency_key:z.string().uuid().optional()}).strict();
-export async function createJob(env, body) {
+export async function createJob(env, body, executionContext={}) {
   const data=jobSchema.parse(body);
   if(data.agent!=='auto'&&!agentById(data.agent))throw new HttpError(400,'Neznámy agent.');
   const team=data.team?[...new Set(data.team)]:selectTeam(data.task,data.mode,data.agent);
@@ -20,7 +21,7 @@ export async function createJob(env, body) {
   const row=await env.DB.prepare(data.idempotency_key?'SELECT * FROM ops_jobs WHERE idempotency_key=?':'SELECT * FROM ops_jobs WHERE id=?').bind(data.idempotency_key||id).first();
   if(row.id!==id)return {id:row.id,session_id:row.session_id,status:row.status,intent:row.intent,risk_level:row.risk_level,plan:JSON.parse(row.plan_json||'{}'),reused:true};
   if(data.remember)await env.DB.prepare("INSERT INTO ops_memory(key,value,source) VALUES(?,?,'user-explicit')").bind('rozhovor/'+id,data.task).run();
-  try {await env.OPS_WORKFLOW.create({id,params:{job_id:id}});}
+  try {await env.OPS_WORKFLOW.create({id,params:{job_id:id,commerce_principal:data.owner_mode?commercePrincipal(executionContext):null}});}
   catch {await env.DB.prepare("UPDATE ops_jobs SET status='failed', error='Workflow sa nepodarilo spustiť.' WHERE id=?").bind(id).run();throw new HttpError(502,'Workflow sa nepodarilo spustiť.');}
   return {id,session_id:session,status:'queued',team,intent:plan.intent,risk_level:plan.risk,plan};
 }

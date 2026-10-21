@@ -56,3 +56,31 @@ test('automatic merge checks actual GitHub filenames and successful CI for the e
  checksPassed=true;assert.equal((await mergeVerifiedImprovement(env,pr)).status,'merged');assert.equal(mergeCalls,1);
  }finally{globalThis.fetch=old;}
 });
+
+test('UI scope reads only presentation files from the pinned commit',async()=>{
+ const old=globalThis.fetch;let treeRead=false;
+ try{
+  globalThis.fetch=async url=>{
+   if(url.includes('/git/ref/'))return Response.json({object:{sha:'a'.repeat(40)}});
+   assert.match(url,new RegExp('/git/trees/'+'a'.repeat(40)));treeRead=true;
+   return Response.json({sha:'b'.repeat(40),tree:[
+    {path:'Trinity/src/engine.js',type:'blob',size:10},
+    {path:'Trinity/public/assistant/chat.html',type:'blob',size:20},
+    {path:'Trinity/public/assistant/theme.css',type:'blob',size:20},
+    {path:'Trinity/public/assistant/chat.js.txt',type:'blob',size:20}
+   ]});
+  };
+  const result=await inspectProject({TRINITY_GITHUB_TOKEN:'test'},'uprav UI','ui');
+  assert.equal(treeRead,true);assert.equal(result.base_sha,'a'.repeat(40));
+  assert.deepEqual(result.candidates.map(f=>f.path).sort(),['Trinity/public/assistant/chat.html','Trinity/public/assistant/theme.css']);
+ }finally{globalThis.fetch=old;}
+});
+test('UI patch keeps existing controls and rejects removal, duplicate IDs and source escape',async()=>{
+ const {validateUIPatch}=await import('../src/project-evolution.js');
+ const path='Trinity/public/assistant/chat.html',original=[{path,content:'<button id="send">Send</button>'}];
+ assert.doesNotThrow(()=>validateUIPatch({files:[{path,content:'<button class="primary" id="send">Odoslať</button>'}]},original));
+ for(const content of ['<button>Send</button>','<button id="send"></button><input id="send">']){
+  assert.throws(()=>validateUIPatch({files:[{path,content}]},original),/ID/);
+ }
+ assert.throws(()=>validateUIPatch({files:[{path:'Trinity/src/engine.js',content:'changed'}]},original),/mimo/);
+});

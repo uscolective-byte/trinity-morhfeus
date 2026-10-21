@@ -1,6 +1,6 @@
 import {z} from 'zod';
 import {HttpError} from './security.js';
-import {boundedText} from './services.js';
+import {boundedText,SERVICES} from './services.js';
 import {getStudioProject} from './studio.js';
 export const cloudflareToken=env=>env.CLOUDFLARE_API_TOKEN||env.CF_API_TOKEN||env.CLOUDFLARE_TOKEN;
 export const cloudflareAccount=env=>env.CF_ACCOUNT_ID||env.CLOUDFLARE_ACCOUNT_ID;
@@ -14,7 +14,7 @@ export async function cloudflareRequest(env,path,method='GET',body){
 }
 export function infrastructureStatus(env){
   const cf=Boolean(cloudflareToken(env)&&cloudflareAccount(env));
-  return {account_id:cloudflareAccount(env)||null,account_owner:'Cloudflare účet vlastníka Trinity; Trinity vykonáva delegované operácie.',registrar:{configured:cf,requires:['Registrar Write','platobný profil','kontakt registranta','súhlas s registračnými podmienkami'],purchase_policy:'konkrétna doména + potvrdený cenový limit'},hosting:{configured:cf,provider:'Cloudflare Workers',default_visibility:'private',requires:['Workers Scripts Write','R2 + Studio projekt']},evolution:{configured:Boolean(env.TRINITY_GITHUB_TOKEN||env.GITHUB_TOKEN),automatic_proposals:env.TRINITY_AUTO_IMPROVE==='true',flow:'zdroj → vetva → PR → testy → zlúčenie → CI deploy'},web:{cloud_fetch:true,pc_required:false,limits:'čas, veľkosť odpovede a kvóty poskytovateľa'},mcp:{endpoint:'/mcp',source_inspection:true}};
+  return {modules:Object.entries(SERVICES).map(([binding,spec])=>({binding,name:spec.name,configured:!!env[binding],verification:'not_checked'})),credentials:{cloudflare:cf?'configured':'missing',github:env.TRINITY_GITHUB_TOKEN||env.GITHUB_TOKEN?'configured':'missing',firebase:env.FIREBASE_PROJECT_ID&&env.FIREBASE_SERVICE_ACCOUNT_JSON?'configured':'missing',note:'Prítomnosť poverenia nie je potvrdenie jeho platnosti; hodnoty sa nevracajú.'},account_id:cloudflareAccount(env)||null,account_owner:'Cloudflare účet vlastníka Trinity; Trinity vykonáva delegované operácie.',registrar:{configured:cf,requires:['Registrar Write','platobný profil','kontakt registranta','súhlas s registračnými podmienkami'],purchase_policy:'konkrétna doména + potvrdený cenový limit'},hosting:{configured:cf,provider:'Cloudflare Workers',default_visibility:'private',requires:['Workers Scripts Write','R2 + Studio projekt']},evolution:{configured:Boolean(env.TRINITY_GITHUB_TOKEN||env.GITHUB_TOKEN),automatic_proposals:env.TRINITY_AUTO_IMPROVE==='true',flow:'zdroj → vetva → PR → testy → zlúčenie → CI deploy'},web:{cloud_fetch:true,pc_required:false,limits:'čas, veľkosť odpovede a kvóty poskytovateľa'},mcp:{endpoint:'/mcp',source_inspection:true}};
 }
 export const hostingInput=z.object({project_id:z.string().uuid(),publish:z.boolean().default(false)}).strict();
 export async function hostStudioProject(env,input){

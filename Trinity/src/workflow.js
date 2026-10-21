@@ -13,7 +13,8 @@ export class TrinityOperations extends WorkflowEntrypoint {
       const job=await step.do('load-job',async()=>{
         const job=await this.env.DB.prepare('SELECT * FROM ops_jobs WHERE id=?').bind(id).first();
         if(!job)throw new Error('Úloha neexistuje.');
-        await this.env.DB.prepare("UPDATE ops_jobs SET status='running',updated_at=datetime('now') WHERE id=?").bind(id).run();
+        if(job.status==='cancelled')throw new Error('Úloha bola zrušená.');
+        await this.env.DB.prepare("UPDATE ops_jobs SET status='running',updated_at=datetime('now') WHERE id=? AND status IN ('queued','running')").bind(id).run();
         return job;
       });
       assertRunning(await readControl(this.env));
@@ -41,7 +42,7 @@ export class TrinityOperations extends WorkflowEntrypoint {
           await this.env.DB.prepare(`INSERT INTO ops_steps(id,job_id,position,agent_id,status) VALUES(?,?,?,?,'running')
             ON CONFLICT(id) DO UPDATE SET status='running',error=NULL,updated_at=datetime('now')`).bind(stepId,id,position,agent).run();
           try {
-            const result=await runAgent(this.env,agent,job.task,[history,...outputs.map(o=>`${o.agent_id}: ${o.text}`)].join('\n'),job.provider,tokenBudget(agent,job.task),job.language||'auto',job.owner_mode===1);
+            const result=await runAgent(this.env,agent,job.task,[history,...outputs.map(o=>`${o.agent_id}: ${o.text}`)].join('\n'),job.provider,tokenBudget(agent,job.task),job.language||'auto',job.owner_mode===1,event.payload.commerce_principal||{});
             await this.env.DB.prepare("UPDATE ops_steps SET status='completed',result=?,model=?,tool_log=?,duration_ms=?,updated_at=datetime('now') WHERE id=?")
               .bind(result.text,result.model,JSON.stringify(result.tool_log),result.duration_ms,stepId).run();
             return result;
@@ -62,15 +63,17 @@ export class TrinityOperations extends WorkflowEntrypoint {
         const document=`# Trinity\n\n${job.task}\n\n${outputs.map(o=>`## ${o.agent_id}\n\n${o.text}`).join('\n\n')}\n`;
         await this.env.ARTIFACTS.put(key,document,{httpMetadata:{contentType:'text/markdown; charset=utf-8'}});
         await this.env.DB.batch([
-          this.env.DB.prepare("UPDATE ops_jobs SET status='completed',result=?,artifact_key=?,error=NULL,updated_at=datetime('now') WHERE id=?").bind(text,key,id),
-          this.env.DB.prepare("INSERT INTO ops_events(job_id,action,details) VALUES(?,'completed',?)").bind(id,JSON.stringify({team,models:outputs.map(o=>o.model),skipped}))
+          this.env.DB.prepare("UPDATE ops_jobs SET status='completed',result=?,artifact_key=?,error=NULL,updated_at=datetime('now') WHERE id=? AND status<>'cancelled'").bind(text,key,id),
+          this.env.DB.prepare("INSERT INTO ops_events(job_id,action,details) SELECT ?,'completed',? FROM ops_jobs WHERE id=? AND status='completed'").bind(id,JSON.stringify({team,models:outputs.map(o=>o.model),skipped}),id)
         ]);
+        const saved=await this.env.DB.prepare('SELECT status FROM ops_jobs WHERE id=?').bind(id).first();
+        if(saved?.status==='cancelled')return {job_id:id,status:'cancelled'};
         await createFollowupJob(this.env,job,text);
         return {job_id:id,status:'completed',artifact_key:key};
       });
     }catch(e){
       await step.do('record-failure',async()=>{
-        await this.env.DB.prepare("UPDATE ops_jobs SET status='failed',error=?,updated_at=datetime('now') WHERE id=? AND status<>'cancelled'").bind(e.message||'Workflow zlyhal.',id).run();
+        await this.env.DB.prepare("UPDATE ops_jobs SET status='failed',error=?,updated_at=datetime('now') WHERE id=? AND status NOT IN ('cancelled','completed')").bind(e.message||'Workflow zlyhal.',id).run();
       });throw e;
     }
   }

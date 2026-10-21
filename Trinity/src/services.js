@@ -140,7 +140,7 @@ export async function callModel(env, provider, messages, maxTokens = 1200) {
   if(provider==='openai') {
     let apiKey=typeof env.OPENAI_API_KEY==='string'?env.OPENAI_API_KEY.trim():'';
     let model=env.OPENAI_MODEL||'gpt-4o';
-    if(!apiKey){
+    if(env.DB||!apiKey){
       try {
         const vaultProvider=await getConfiguredAIProvider(env,'openai');
         if(vaultProvider?.apiKey){

@@ -1,11 +1,12 @@
 import {z} from 'zod';
 import {HttpError} from './security.js';
-import {prepareCodeImprovement,dispatchDeployment,githubRequest,mergeVerifiedImprovement} from './project-evolution.js';
+import {prepareCodeImprovement,dispatchDeployment,githubRequest,mergeVerifiedImprovement,UI_SCOPE_MARKER} from './project-evolution.js';
 
 const proposalSchema = z.object({
   title: z.string().trim().min(3).max(120),
   description: z.string().trim().min(10).max(4000),
   kind: z.enum(['plugin_install', 'code_improvement', 'deployment', 'behavior_rule']),
+  scope: z.enum(['code','ui']).optional(),
   plugin_id: z.string().regex(/^[a-z0-9-]{2,80}$/).optional()
 }).strict();
 
@@ -37,6 +38,8 @@ export async function listSelfImprovementProposals(env) {
 
 export async function createSelfImprovementProposal(env, input, actor) {
   const data = proposalSchema.parse(input);
+  if(data.scope&&data.kind!=='code_improvement')throw new HttpError(400,'Rozsah code/ui patrí iba ku kódovému vylepšeniu.');
+  if(data.scope==='ui')data.description=UI_SCOPE_MARKER+'\n'+data.description;
   if (data.kind === 'plugin_install' && !data.plugin_id) {
     throw new HttpError(400, 'Pre inštaláciu modulu je povinné plugin_id z katalógu Trinity.');
   }
