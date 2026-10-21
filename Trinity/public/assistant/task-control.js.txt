@@ -5,7 +5,11 @@ export class TaskControl{
  async stop(){
   this.stopRequested=true;
   if(!this.id)return {status:'waiting_for_id'};
-  if(!this.cancellation)this.cancellation=this.cancel();
+  if(!this.cancellation)this.cancellation=this.cancel().catch(error=>{
+   // Keep one in-flight request, but allow a later explicit Stop to retry.
+   this.cancellation=null;
+   throw error;
+  });
   return this.cancellation;
  }
  async cancel(){

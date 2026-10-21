@@ -3,6 +3,6 @@
   "reviewed": false,
   "risk": "high",
   "component": "Trinity/platform",
-  "description": "Restores Trinity UI/platform capabilities alongside daily planner, fixes explicit preview Durable Object binding configuration, and records closed unmerged evolution PRs as terminal rejections rather than reporting them as open or repeatedly attempting reconciliation. Production lifecycle and deployment checks remain unchanged. UI follow-up fixes confusion between id and data-id attributes and recognizes uppercase ID attribute names. Includes eight regression scenarios; full-suite proof remains tied to source commit 131ee83, not this new change.",
+  "description": "Restores Trinity UI/platform capabilities alongside daily planner, fixes explicit preview Durable Object binding configuration, and records closed unmerged evolution PRs as terminal rejections rather than reporting them as open or repeatedly attempting reconciliation. Production lifecycle and deployment checks remain unchanged. UI follow-up fixes confusion between id and data-id attributes and recognizes uppercase ID attribute names. Includes eight regression scenarios; full-suite proof remains tied to source commit 131ee83, not this new change. Task Stop follow-up releases failed cancellation promises so an explicit retry can send again; UI re-enables Stop and keeps monitoring after cancellation errors. Pending requests remain deduplicated and successful receipts remain cached. Isolated tests passed; latest full suite/deployment not verified.",
   "source_pr": 46
 }

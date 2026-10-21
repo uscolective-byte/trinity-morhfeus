@@ -134,10 +134,17 @@ document.querySelectorAll('[data-open-chat]').forEach(button=>button.onclick=saf
 document.querySelectorAll('[data-owner-prompt]').forEach(button=>button.onclick=safe(async()=>{const prompts={prospects:'Nájdi verejné obchodné príležitosti pre tvorbu moderných webstránok. Vyber vhodný segment a lokalitu, uveď zdroje a nikoho nekontaktuj.',score:'Pomôž mi vyhodnotiť zoznam potenciálnych zákazníkov podľa doložených signálov potreby. Najprv si vypýtaj môj zoznam alebo navrhni spôsob zberu dôkazov.',offer:'Priprav personalizovaný návrh ponuky na tvorbu webstránky. Najprv si vypýtaj názov firmy a verejne overené pozorovania. Správu neodosielaj.',revenue:'Vypočítaj realistický model zárobku pre službu tvorby webstránok: cena, náklady, počet leadov, miera uzavretia, tržby, zisk a bod zvratu. Najprv si vypýtaj chýbajúce čísla.'};await setView('chat');$('message').value=prompts[button.dataset.ownerPrompt];$('message').focus();}));
 document.querySelectorAll('[data-suggestion]').forEach(b=>b.onclick=()=>{const s=b.dataset.suggestion;$('message').value=t(s+'Prompt')||t(s)||b.textContent.trim();$('message').focus();});
 $('message').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('chat-form').requestSubmit();}};
+function reportStopFailure(task,error){
+ if(task!==activeTask||!controller||!task.stopRequested)return;
+ task.stopRequested=false;stopRequested=false;
+ $('stop').disabled=false;
+ $('activity').textContent='Zastavenie nepotvrdené · môžeš skúsiť znova';
+ notice(error.message);
+}
 $('stop').onclick=()=>{
  if(!controller)return;
  stopRequested=true;$('stop').disabled=true;$('activity').textContent='Overujem zastavenie…';
- if(activeTask)activeTask.stop().catch(error=>notice(error.message));
+ if(activeTask){const task=activeTask;task.stop().catch(error=>reportStopFailure(task,error));}
  if(activeStream)controller.abort();
 };
 $('chat-form').onsubmit=safe(async()=>{
@@ -157,11 +164,16 @@ $('chat-form').onsubmit=safe(async()=>{
   const r=await fetch('/api/assistant/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,session,language,engine:$('engine').value,remember:$('remember').checked,allow_files:$('allow-files').checked}),signal:controller.signal});
   if(!r.ok){const d=await r.json();throw new Error(d.error||'Request failed');}
   if(r.headers.get('Content-Type')?.includes('application/json')){
-   const job=await r.json();session=job.session_id;await activeTask.attach(job.id);
+   const job=await r.json();session=job.session_id;await activeTask.attach(job.id).catch(error=>reportStopFailure(activeTask,error));
    let completed=false;
    const showProgress=j=>{const p=taskProgress(j);progress.textContent=p.label+' · '+p.completed+'/'+p.total+' krokov';context.textContent='ID úlohy: '+job.id;};
    for(let i=0;i<120;i++){
-    if(activeTask.stopRequested){const receipt=await activeTask.stop();if(receipt.status==='cancelled')throw new DOMException('Stopped','AbortError');}
+    if(activeTask.stopRequested){
+     let receipt;
+     try{receipt=await activeTask.stop();}
+     catch(error){reportStopFailure(activeTask,error);}
+     if(receipt?.status==='cancelled')throw new DOMException('Stopped','AbortError');
+    }
     const response=await fetch('/api/ops/jobs/'+job.id,{signal:controller.signal});
     if(!response.ok)throw new Error('Stav úlohy nie je dostupný (HTTP '+response.status+').');
     const j=await response.json();showProgress(j);
