@@ -8,7 +8,7 @@ Object.assign(words.sk,{overview:'Prehľad',chat:'Chat',projects:'Projekty',memo
 Object.assign(words.en,{overview:'Overview',chat:'Chat',projects:'Projects',memoryPlain:'Memory',newChatPlain:'New conversation',dashboardHere:'Your space for ideas, work, and creation.',hello:'Hello.',ready:'What will we create today?',dashboardIntro:'Trinity brings conversation, memory, projects, and tools into one calm workspace.',startChat:'Start a conversation',openStudio:'Open AI Studio',today:'Today',tasksDone:'completed tasks',memories:'saved memories',activeProjects:'active spaces',system:'System',cloudServices:'cloud services',quickStart:'QUICK START',whatNeed:'How can I help today?',planWork:'Plan the work',planWorkHint:'Turn a goal into clear steps',createSomething:'Create something',createHint:'Text, idea, code, or project',research:'Research a topic',researchHint:'Current sources and summary',organize:'Organize a project',organizeHint:'Priorities, tasks, and next step',latest:'LATEST',recentActivity:'Recent activity',allChats:'All chats',studioTitle:'One Trinity. A complete creative center.',studioIntro:'Models, specializations, and tools work in the background as capabilities of one assistant.',online:'ONLINE',coreText:'Decides, plans, uses tools, and checks evidence before responding.',specializations:'Specializations',specializationsText:'Development, research, design, security, data, and operations. Still one identity.',seeWork:'View work',persistentMemory:'Persistent memory',persistentMemoryText:'D1 stores only what you choose to share. Passwords and secrets do not belong here.',openMemory:'Open memory',truthGuard:'Truth guard',truthGuardText:'An action is complete only when there is a verifiable receipt.',installedModules:'INSTALLED MODULES',visibleSkills:'Trinity capabilities',workspace:'WORKSPACE',projectsTitle:'Projects and work in progress',projectsIntro:'An overview stored in Trinity shared memory.',recentTasks:'Recent tasks',researchPrompt:'Research this topic using current trustworthy sources: ',organizePrompt:'Help me organize a project. Start with the goal, priorities, and next step.',emptyProjects:'No projects yet.',emptyTasks:'No tasks yet.',running:'running',completed:'completed',failed:'failed'});
 Object.assign(words.sk,{settings:'Nastavenia',builderTitle:'Vytváraj priamo s Trinity',builderIntro:'Opíš web, pozri si živý náhľad a pokračuj ďalšími úpravami.',newStudioProject:'＋ Nový projekt',studioProjects:'PROJEKTY',files:'SÚBORY',untitled:'Nový projekt',download:'Stiahnuť HTML',emptyStudioTitle:'Čo chceš vytvoriť?',emptyStudioText:'Skús napríklad: „Vytvor moderný web pre streetwear značku s obchodom a galériou.“',versions:'VERZIE',studioPlaceholder:'Trinity, vytvor mi web…',generate:'Vytvoriť',settingsLabel:'TRINITY SETTINGS',settingsTitle:'Nastavenia a schopnosti',settingsIntro:'Tu spravuješ viditeľné moduly. Bezpečnostné jadro a systémové oprávnenia sa nedajú vypnúť.',modules:'Moduly',systemInfo:'O Trinity',generating:'Trinity práve vytvára náhľad…',revising:'Trinity zapracováva úpravu…',studioReady:'Náhľad je pripravený.',requiredModule:'Povinný bezpečnostný modul'});
 Object.assign(words.en,{settings:'Settings',builderTitle:'Build directly with Trinity',builderIntro:'Describe a website, inspect the live preview, and continue with revisions.',newStudioProject:'＋ New project',studioProjects:'PROJECTS',files:'FILES',untitled:'New project',download:'Download HTML',emptyStudioTitle:'What do you want to create?',emptyStudioText:'Try: “Create a modern website for a streetwear brand with a store and gallery.”',versions:'VERSIONS',studioPlaceholder:'Trinity, create a website for me…',generate:'Create',settingsLabel:'TRINITY SETTINGS',settingsTitle:'Settings and capabilities',settingsIntro:'Manage visible modules here. The security core and system permissions cannot be disabled.',modules:'Modules',systemInfo:'About Trinity',generating:'Trinity is building the preview…',revising:'Trinity is applying the revision…',studioReady:'Preview is ready.',requiredModule:'Required security module'});
-let language=localStorage.getItem('trinity-language')||'auto',session=localStorage.getItem('trinity-chat-session')||crypto.randomUUID(),state=null,controller=null,currentView='dashboard',currentStudio=null,studioBlobUrl=null,settingsFilter='all';
+let language=localStorage.getItem('trinity-language')||'auto',session=localStorage.getItem('trinity-chat-session')||crypto.randomUUID(),state=null,controller=null,activeTask=null,activeStream=false,stopRequested=false,currentView='dashboard',currentStudio=null,studioBlobUrl=null,settingsFilter='all';
 const uiLanguage=()=>language==='en'?'en':'sk';const t=key=>words[uiLanguage()][key]||key;const node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
 const studioDefaults={provider:'auto',quality:'balanced',preview:'desktop',style:'',accessible:true,responsive:true,draft:true,wrap:true,qualityAlert:true};
 const stored=(key,fallback)=>localStorage.getItem(key)??fallback;
@@ -131,21 +131,85 @@ document.querySelectorAll('[data-open-chat]').forEach(button=>button.onclick=saf
 document.querySelectorAll('[data-owner-prompt]').forEach(button=>button.onclick=safe(async()=>{const prompts={prospects:'Nájdi verejné obchodné príležitosti pre tvorbu moderných webstránok. Vyber vhodný segment a lokalitu, uveď zdroje a nikoho nekontaktuj.',score:'Pomôž mi vyhodnotiť zoznam potenciálnych zákazníkov podľa doložených signálov potreby. Najprv si vypýtaj môj zoznam alebo navrhni spôsob zberu dôkazov.',offer:'Priprav personalizovaný návrh ponuky na tvorbu webstránky. Najprv si vypýtaj názov firmy a verejne overené pozorovania. Správu neodosielaj.',revenue:'Vypočítaj realistický model zárobku pre službu tvorby webstránok: cena, náklady, počet leadov, miera uzavretia, tržby, zisk a bod zvratu. Najprv si vypýtaj chýbajúce čísla.'};await setView('chat');$('message').value=prompts[button.dataset.ownerPrompt];$('message').focus();}));
 document.querySelectorAll('[data-suggestion]').forEach(b=>b.onclick=()=>{const s=b.dataset.suggestion;$('message').value=t(s+'Prompt')||t(s)||b.textContent.trim();$('message').focus();});
 $('message').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('chat-form').requestSubmit();}};
-$('stop').onclick=()=>controller?.abort();
+$('stop').onclick=()=>{
+ if(!controller)return;
+ stopRequested=true;$('stop').disabled=true;$('activity').textContent='Overujem zastavenie…';
+ if(activeTask)activeTask.stop().catch(error=>notice(error.message));
+ if(activeStream)controller.abort();
+};
 $('chat-form').onsubmit=safe(async()=>{
- if(controller)return;const text=$('message').value.trim();if(!text)return;bubble('user',text);const reply=bubble('assistant');const detail=node('details'),summary=node('summary',t('context')),context=node('div');detail.open=localStorage.getItem('trinity-open-details')==='true';detail.append(summary,context);reply.wrap.append(detail);$('message').value='';$('send').disabled=true;$('stop').hidden=false;$('activity').textContent=t('working');controller=new AbortController();
+ if(controller)return;
+ const text=$('message').value.trim();if(!text)return;
+ bubble('user',text);const reply=bubble('assistant');
+ const progress=node('p','Pripravujem úlohu…','task-progress');progress.setAttribute('role','status');reply.wrap.append(progress);
+ const detail=node('details'),summary=node('summary',t('context')),context=node('div');
+ detail.open=localStorage.getItem('trinity-open-details')==='true';detail.append(summary,context);reply.wrap.append(detail);
+ $('message').value='';$('send').disabled=true;$('stop').hidden=false;$('stop').disabled=false;$('activity').textContent=t('working');
+ controller=new AbortController();activeTask=null;activeStream=false;stopRequested=false;
  try{
+  const {TaskControl,taskProgress}=await import('/task-control.js');
+  activeTask=new TaskControl((...args)=>fetch(...args));
+  if(stopRequested)await activeTask.stop();
+  // Keep the initial POST alive until its job ID is known, so Stop can cancel server work.
   const r=await fetch('/api/assistant/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,session,language,engine:$('engine').value,remember:$('remember').checked,allow_files:$('allow-files').checked}),signal:controller.signal});
   if(!r.ok){const d=await r.json();throw new Error(d.error||'Request failed');}
   if(r.headers.get('Content-Type')?.includes('application/json')){
-   const job=await r.json();session=job.session_id;let completed=false;for(let i=0;i<120;i++){if(controller.signal.aborted){await fetch('/api/ops/jobs/'+job.id+'/cancel',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});throw new DOMException('Stopped','AbortError');}const response=await fetch('/api/ops/jobs/'+job.id,{signal:controller.signal});if(!response.ok)throw new Error('Work status unavailable');const j=await response.json();const finished=(j.steps||[]).filter(s=>s.status==='completed').length;context.textContent=`${(j.steps||[]).length} ${t('steps')} · ${finished} ${t('done')}`;if(j.status==='failed')throw new Error(j.error);if(j.status==='cancelled')throw new DOMException('Stopped','AbortError');if(j.status==='completed'){renderReply(reply.content,j.result);completed=true;break;}await new Promise(r=>setTimeout(r,2000));}if(!completed)throw new Error(language==='en'?'The task is still running. Open it in the advanced center.':'Úloha stále beží. Otvor ju v pokročilom centre.');
+   const job=await r.json();session=job.session_id;await activeTask.attach(job.id);
+   let completed=false;
+   const showProgress=j=>{const p=taskProgress(j);progress.textContent=p.label+' · '+p.completed+'/'+p.total+' krokov';context.textContent='ID úlohy: '+job.id;};
+   for(let i=0;i<120;i++){
+    if(activeTask.stopRequested){const receipt=await activeTask.stop();if(receipt.status==='cancelled')throw new DOMException('Stopped','AbortError');}
+    const response=await fetch('/api/ops/jobs/'+job.id,{signal:controller.signal});
+    if(!response.ok)throw new Error('Stav úlohy nie je dostupný (HTTP '+response.status+').');
+    const j=await response.json();showProgress(j);
+    if(j.status==='failed')throw new Error(j.error||'Úloha zlyhala.');
+    if(j.status==='cancelled'){activeTask.receipt={status:'cancelled'};throw new DOMException('Stopped','AbortError');}
+    if(j.status==='completed'){renderReply(reply.content,j.result);completed=true;break;}
+    await new Promise(resolve=>setTimeout(resolve,2000));
+   }
+   if(!completed){
+    progress.textContent='Úloha pokračuje na serveri · ID: '+job.id;
+    reply.content.textContent='Výsledok ešte nie je hotový. Stav môžeš obnoviť bez opakovania zadania.';
+    const refresh=node('button','Obnoviť stav úlohy');
+    refresh.onclick=safe(async()=>{
+     refresh.disabled=true;
+     try{const j=await opsApi('/jobs/'+job.id);showProgress(j);
+      if(j.status==='completed'){renderReply(reply.content,j.result);refresh.remove();}
+      else if(j.status==='failed')reply.content.textContent=j.error||'Úloha zlyhala.';
+      else if(j.status==='cancelled')reply.content.textContent='Server potvrdil zastavenie úlohy.';
+     }finally{refresh.disabled=false;}
+    });
+    reply.wrap.append(refresh);
+   }
   }else{
-   const reader=r.body.getReader(),decoder=new TextDecoder();let buffer='';while(true){const {value,done}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});let end;while((end=buffer.indexOf('\n'))>=0){const line=buffer.slice(0,end);buffer=buffer.slice(end+1);if(!line)continue;const event=JSON.parse(line);if(event.type==='delta')reply.content.textContent+=event.text;if(event.type==='context'){session=event.session;context.textContent=`${event.model} · ${t('memory')}: ${event.memories.length} · ${event.history}`;}if(event.type==='tool'){context.append(node('div',`${t(event.name)} · ${event.status}`));$('activity').textContent=t(event.name);}if(event.type==='status')$('activity').textContent=event.text;if(event.type==='error')throw new Error(event.error);}bottom();}
+   activeStream=true;if(stopRequested)controller.abort();
+   const reader=r.body.getReader(),decoder=new TextDecoder();let buffer='';
+   while(true){
+    const {value,done}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});let end;
+    while((end=buffer.indexOf('\n'))>=0){
+     const line=buffer.slice(0,end);buffer=buffer.slice(end+1);if(!line)continue;const event=JSON.parse(line);
+     if(event.type==='delta')reply.content.textContent+=event.text;
+     if(event.type==='context'){session=event.session;context.textContent=event.model+' · '+t('memory')+': '+event.memories.length+' · '+event.history;}
+     if(event.type==='tool'){context.append(node('div',t(event.name)+' · '+event.status));$('activity').textContent=t(event.name);}
+     if(event.type==='status')progress.textContent=event.text;
+     if(event.type==='error')throw new Error(event.error);
+    }
+    bottom();
+   }
+   progress.textContent='Odpoveď prijatá';
   }
   renderReply(reply.content,reply.content.textContent);
-  const copy=node('button',t('copy'),'copy');copy.onclick=async()=>{await navigator.clipboard.writeText(reply.content.innerText||reply.content.textContent);copy.textContent=t('copied');};reply.wrap.append(copy);localStorage.setItem('trinity-chat-session',session);await sessions();
- }catch(e){if(e.name==='AbortError')$('activity').textContent=t('stopDone');else{reply.content.append(node('span','\n'+e.message,'error'));notice(e.message);}}
- finally{controller=null;$('send').disabled=false;$('stop').hidden=true;$('activity').textContent='';$('remember').checked=false;bottom();}
+  const copy=node('button',t('copy'),'copy');copy.onclick=async()=>{await navigator.clipboard.writeText(reply.content.innerText||reply.content.textContent);copy.textContent=t('copied');};reply.wrap.append(copy);
+  localStorage.setItem('trinity-chat-session',session);await sessions();
+ }catch(error){
+  if(error.name==='AbortError'){
+   const confirmed=activeTask?.receipt?.status==='cancelled';
+   progress.textContent=confirmed?'Server potvrdil zastavenie úlohy':'Zobrazovanie odpovede bolo prerušené';
+   if(!reply.content.textContent)reply.content.textContent=confirmed?'Úloha bola zastavená. Už dokončené akcie zostávajú vykonané.':'Prerušenie čakania nepotvrdzuje zastavenie práce na serveri.';
+  }else{progress.textContent='Výsledok alebo zastavenie nie je potvrdené';reply.content.append(node('span','\n'+error.message,'error'));notice(error.message);}
+ }finally{
+  controller=null;activeTask=null;activeStream=false;stopRequested=false;$('send').disabled=false;$('stop').hidden=true;$('stop').disabled=false;$('activity').textContent='';$('remember').checked=false;bottom();
+ }
 });
 $('memory-button').onclick=safe(async()=>{$('memory-dialog').showModal();await loadMemory();});
 $('memory-nav').onclick=$('memory-button').onclick;$('settings-memory').onclick=$('memory-button').onclick;

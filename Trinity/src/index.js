@@ -1,3 +1,5 @@
+import {cancelWorkflowJob} from './task-cancellation.js';
+import taskControlJS from '../public/assistant/task-control.js.txt';
 import {salesPipeline,createSalesOffer,saveSalesLead} from './commerce.js';
 import {telegramStatus,configureTelegramWebhook,handleTelegramWebhook} from './telegram.js';
 import {TrinityTelegram} from './telegram-workflow.js';
@@ -84,6 +86,7 @@ async function route(request,env,ctx){
     'Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"}});
   if(request.method==='GET'&&path==='/app.js')return new Response(appJS,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});
   if(request.method==='GET'&&path==='/style.css')return new Response(css+'\n'+refreshCSS,{headers:{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});
+  if(request.method==='GET'&&path==='/task-control.js')return new Response(taskControlJS,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});
   if(request.method==='GET'&&path==='/chat.js')return new Response(assistantJS,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});
   if(request.method==='GET'&&path==='/chat.css')return new Response(assistantCSS,{headers:{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});
   if(request.method==='GET'&&path==='/builder.css')return new Response(builderCSS,{headers:{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});
@@ -760,12 +763,7 @@ async function route(request,env,ctx){
   if(jobRoute){
     const id=uuid.parse(jobRoute[1]);
     if(jobRoute[2]==='cancel'&&request.method==='POST'){
-      const job=await getJob(env,id);
-      if(['completed','failed','cancelled'].includes(job.status))return json({status:job.status});
-      await (await env.OPS_WORKFLOW.get(id)).terminate();
-      await env.DB.prepare("UPDATE ops_jobs SET status='cancelled',updated_at=datetime('now') WHERE id=? AND status<>'completed'").bind(id).run();
-      await env.DB.prepare("UPDATE ops_steps SET status='cancelled',updated_at=datetime('now') WHERE job_id=? AND status IN ('pending','running')").bind(id).run();
-      return json({status:'cancelled'});
+      return json(await cancelWorkflowJob(env,id));
     }
     if(request.method==='GET'){
       const job=await getJob(env,id);

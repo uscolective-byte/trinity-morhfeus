@@ -1,0 +1,24 @@
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export class TaskControl{
+ constructor(fetcher){this.fetcher=fetcher;this.id=null;this.stopRequested=false;this.cancellation=null;this.receipt=null;}
+ async attach(id){if(!UUID.test(id))throw new Error('Server vrátil neplatné ID úlohy.');this.id=id;return this.stopRequested?this.stop():null;}
+ async stop(){
+  this.stopRequested=true;
+  if(!this.id)return {status:'waiting_for_id'};
+  if(!this.cancellation)this.cancellation=this.cancel();
+  return this.cancellation;
+ }
+ async cancel(){
+  const response=await this.fetcher('/api/ops/jobs/'+this.id+'/cancel',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+  if(!response.ok)throw new Error('Server nepotvrdil zastavenie úlohy (HTTP '+response.status+'). Obnov jej stav.');
+  const result=await response.json();
+  if(!['cancelled','completed','failed'].includes(result.status))throw new Error('Zastavenie ešte nie je potvrdené. Obnov stav úlohy.');
+  this.receipt=result;
+  return result;
+ }
+}
+export function taskProgress(job){
+ const labels={queued:'Čaká na spustenie',running:'Pracujem',completed:'Úloha dokončená',failed:'Úloha zlyhala',cancelled:'Zastavenie potvrdené'};
+ const steps=Array.isArray(job.steps)?job.steps:[];
+ return {label:labels[job.status]||'Stav sa overuje',completed:steps.filter(s=>s.status==='completed').length,total:steps.length,terminal:['completed','failed','cancelled'].includes(job.status)};
+}
