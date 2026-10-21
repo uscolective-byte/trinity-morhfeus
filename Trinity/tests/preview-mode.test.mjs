@@ -48,7 +48,26 @@ test('production routing is unchanged when build-only mode is absent', () => {
 
 test('production and development domains use isolated Worker resources', () => {
   const config = JSON.parse(readFileSync('wrangler.jsonc', 'utf8').replace(/^\uFEFF/, ''));
-  assert.deepEqual(config.previews, {vars: {TRINITY_PREVIEW_MODE: 'build-only'}});
+  const previewBindings = [
+    {name:'Brain',class_name:'TrinityAgent'},
+    {name:'CHAT_AGENT',class_name:'ChatAgent'},
+    {name:'GUARDIAN_AGENT',class_name:'GuardianAgent'}
+  ];
+  for (const target of [config, config.env.development]) {
+    // Only same-Worker classes: Cloudflare provisions separate Preview namespaces.
+    // Exact shape rejects namespace_id, script_name and production resource bindings.
+    assert.deepEqual(target.previews, {
+      vars: {TRINITY_PREVIEW_MODE:'build-only',TRINITY_ENV:'preview'},
+      durable_objects: {bindings:previewBindings}
+    });
+    for (const binding of previewBindings) {
+      assert.ok(target.durable_objects.bindings.some(item =>
+        item.name === binding.name && item.class_name === binding.class_name));
+      assert.deepEqual(target.exports[binding.class_name], {
+        type:'durable-object',storage:'sqlite'
+      });
+    }
+  }
   assert.equal(config.vars.TRINITY_PREVIEW_MODE, undefined);
   assert.equal(config.vars.TRINITY_ENV, 'production');
   assert.equal(config.ai.binding, 'AI');
