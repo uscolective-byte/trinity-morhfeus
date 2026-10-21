@@ -84,6 +84,17 @@ function resetStudio(){currentStudio=null;$('studio-project-name').textContent=t
 function statusLabel(value){return ({ready:'Pripravené',verified:'Overené',configured:'Nakonfigurované','platform-connected':'Cloudflare pripojený','not-configured':'Nenakonfigurované',planned:'Plánované',stored:'Uložené',failed:'Test zlyhal',disabled:'Vypnuté',available:'Dostupné',unavailable:'Nedostupné'}[value]||value||'—');}
 function renderApiKeys(items){const list=$('api-key-list');list.replaceChildren();$('settings-key-count').textContent=`${items.filter(item=>item.status==='active').length} aktívnych`;for(const item of items){const card=node('article',undefined,'api-key-item'),info=node('div'),meta=node('small',`${item.key_prefix}… · ${item.rate_limit_per_minute}/min · ${item.status} · ${(item.scopes||[]).join(', ')} · ${item.expires_at?'platí do '+new Date(item.expires_at).toLocaleDateString('sk-SK'):'bez expirácie'}`);info.append(node('b',item.name),meta);card.append(info);if(item.last_used_at)info.append(node('small','Naposledy použité: '+item.last_used_at));if(item.status==='active'){const button=node('button','Zrušiť','danger');button.onclick=safe(async()=>{if(!confirm(`Zrušiť API kľúč „${item.name}“?`))return;await api('/api-keys/'+item.id+'/revoke',{});await loadSettings();});card.append(button);}list.append(card);}if(!items.length)list.append(node('p','Zatiaľ nebol vytvorený žiadny API kľúč.','skeleton'));}
 function renderSecrets(items){const list=$('secret-list');list.replaceChildren();for(const item of items){const card=node('article',undefined,'api-key-item'),info=node('div');info.append(node('b',`${item.provider} · ${item.name}`),node('small',`${item.secret_hint} · ${statusLabel(item.status)}`));card.append(info);if(item.provider!=='custom'){const verify=node('button','Overiť');verify.onclick=safe(async()=>{await api('/secrets/'+item.id+'/verify',{});await loadSettings();});card.append(verify);}else if(/gemini/i.test(item.name)){const promote=node('button','Pripojiť ku Gemini','primary');promote.onclick=safe(async()=>{await api('/secrets/'+item.id+'/promote-gemini',{});await loadSettings();notice('Existujúci kľúč bol bezpečne priradený ku Gemini a overený.');});card.append(promote);}const revoke=node('button','Odstrániť','danger');revoke.onclick=safe(async()=>{if(!confirm(`Odstrániť pripojenie „${item.name}“?`))return;await api('/secrets/'+item.id+'/revoke',{});await loadSettings();});card.append(revoke);list.append(card);}if(!items.length)list.append(node('p','Trezor je prázdny.','skeleton'));}
+function selfImprovementApplyLabel(item,now=Date.now()){
+  if(item.status!=='approved')return null;
+  const result=item.result_json;
+  if(!result)return item.kind==='plugin_install'?'Nainštalovať modul':'Vykonať návrh';
+  if(result.status==='failed')return 'Skúsiť znova';
+  if(result.status==='preparing'){
+    const started=Date.parse(result.started_at);
+    if(Number.isFinite(started)&&now-started>=15*60*1000)return 'Obnoviť spracovanie';
+  }
+  return null;
+}
 function renderSelfImprovement(data){
   const status=$('self-improvement-deploy-status'),list=$('self-improvement-list');
   status.textContent=data.capabilities?.deployment||'Nasadenie sa riadi GitHub Actions.';
@@ -99,8 +110,9 @@ function renderSelfImprovement(data){
       approve.onclick=safe(async()=>{await api('/self-improvement/'+item.id+'/approve',{});await loadSettings();notice('Návrh bol schválený a zapísaný do auditu.');});
       card.append(approve);
     }
-    if(item.status==='approved'&&!item.result_json){
-      const apply=node('button',item.kind==='plugin_install'?'Nainštalovať modul':'Vykonať návrh','primary');apply.type='button';
+    const applyLabel=selfImprovementApplyLabel(item);
+    if(applyLabel){
+      const apply=node('button',applyLabel,'primary');apply.type='button';
       apply.onclick=safe(async()=>{await api('/self-improvement/'+item.id+'/apply',{});await loadSettings();notice('Návrh bol spracovaný. Výsledok a prípadné zostávajúce kroky sú pri návrhu.');});
       card.append(apply);
     }
