@@ -1,6 +1,13 @@
+import settingsStateJS from '../public/assistant/settings-state.js.txt';
+import {cancelWorkflowJob} from './task-cancellation.js';
+import taskControlJS from '../public/assistant/task-control.js.txt';
+import {salesPipeline,createSalesOffer,saveSalesLead} from './commerce.js';
+import {telegramStatus,configureTelegramWebhook,handleTelegramWebhook} from './telegram.js';
+import {TrinityTelegram} from './telegram-workflow.js';
 import {scanForImprovements} from './maintenance-scan.js';
 import {inspectProject,readProjectSource} from './project-evolution.js';
 import {searchDomainNames,refreshDomainRegistration,createSubdomain,syncCloudflareDomains} from './domains.js';
+import {attachHostedDomain,hostedDomainInput} from './hosted-domains.js';
 import {infrastructureStatus,hostStudioProject,listHostedSites} from './infrastructure.js';
 import {capabilityStatus} from './capability-status.js';
 import {handleKnowledge} from '../services/knowledge-api.js';
@@ -51,7 +58,7 @@ import assistantCSS from '../public/assistant/chat.css';
 import builderCSS from '../public/assistant/builder.css';
 import assistantJS from '../public/assistant/chat.js.txt';
 import themeCSS from '../public/assistant/theme.css';
-export {TrinityAgent,ChatAgent,GuardianAgent,TrinityOperations};
+export {TrinityAgent,ChatAgent,GuardianAgent,TrinityOperations,TrinityTelegram};
 const json=(data,status=200)=>Response.json(data,{status});
 const runtimeEnvironment=(request,env)=>['localhost','127.0.0.1','::1'].includes(new URL(request.url).hostname)?'local':env.TRINITY_ENV||'local';
 const uuid=z.string().uuid();
@@ -74,11 +81,14 @@ async function route(request,env,ctx){
   const knowledgeResponse=await handleKnowledge(request,env);
   if(knowledgeResponse)return knowledgeResponse;
   const url=new URL(request.url),path=url.pathname;
+  if(path==='/api/integrations/telegram/webhook')return handleTelegramWebhook(request,env);
   if(request.method==='GET'&&['/','/ops','/dashboard','/index.html'].includes(path))return new Response(path==='/ops'?html:assistantHTML,{headers:{'Content-Type':'text/html; charset=utf-8',
     'Cache-Control':'no-cache, no-store, must-revalidate',
     'Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"}});
   if(request.method==='GET'&&path==='/app.js')return new Response(appJS,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});
   if(request.method==='GET'&&path==='/style.css')return new Response(css+'\n'+refreshCSS,{headers:{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});
+  if(request.method==='GET'&&path==='/settings-state.js')return new Response(settingsStateJS,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});
+  if(request.method==='GET'&&path==='/task-control.js')return new Response(taskControlJS,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});
   if(request.method==='GET'&&path==='/chat.js')return new Response(assistantJS,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});
   if(request.method==='GET'&&path==='/chat.css')return new Response(assistantCSS,{headers:{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});
   if(request.method==='GET'&&path==='/builder.css')return new Response(builderCSS,{headers:{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});
@@ -246,6 +256,12 @@ async function route(request,env,ctx){
     if(request.method==='POST'&&studioRoute[2]==='revise'){await rateLimit(env,`studio-revise:${user.id}`,8,300);return json({project:await reviseStudioProject(env,'primary',id,await readJSON(request,20000))});}
     if(request.method==='GET'&&studioRoute[2]==='export'){const project=await getStudioProject(env,'primary',id);return new Response(project.html,{headers:{'Content-Type':'text/html; charset=utf-8','Content-Disposition':`attachment; filename="${project.name.replace(/[^a-z0-9_-]+/gi,'-').slice(0,50)||'trinity-web'}.html"`}});}
   }
+  if(path==='/api/assistant/hosting/domain'&&request.method==='POST'){requireAdmin(user);await rateLimit(env,`domain-attach:${user.id}`,5,300);return json(await attachHostedDomain(env,hostedDomainInput.parse(await readJSON(request,2000))),201);}
+  if(path==='/api/assistant/commerce'&&request.method==='GET'){requireOwner(user);return json(await salesPipeline(env,ownerId));}
+  if(path==='/api/assistant/commerce/offers'&&request.method==='POST'){requireOwner(user);return json(await createSalesOffer(env,ownerId,await readJSON(request,6000)),201);}
+  if(path==='/api/assistant/commerce/leads'&&request.method==='POST'){requireOwner(user);return json(await saveSalesLead(env,ownerId,await readJSON(request,6000)),201);}
+  if(path==='/api/assistant/telegram'&&request.method==='GET'){requireOwner(user);return json(telegramStatus(env));}
+  if(path==='/api/assistant/telegram/connect'&&request.method==='POST'){requireOwner(user);await rateLimit(env,`telegram-connect:${user.id}`,3,300);return json(await configureTelegramWebhook(env,url.origin));}
   if(path==='/api/assistant/infrastructure'&&request.method==='GET'){requireAdmin(user);return json(infrastructureStatus(env));}
   if(path==='/api/assistant/hosting'){
     requireOwner(user);
@@ -434,7 +450,7 @@ async function route(request,env,ctx){
   const promoteGemini=path.match(/^\/api\/assistant\/secrets\/([0-9a-f-]+)\/promote-gemini$/i);
   if(promoteGemini&&request.method==='POST'){requireAdmin(user);await rateLimit(env,`secret-promote:${user.id}`,5,3600);return json({item:await promoteCustomSecretToGemini(env,ownerId,uuid.parse(promoteGemini[1]))});}
   if(path==='/api/assistant/ai-providers'&&request.method==='GET'){requireAdmin(user);return json(await listAIProviders(env,ownerId));}
-  const aiProviderRoute=path.match(/^\/api\/assistant\/ai-providers\/(gemini)$/);
+  const aiProviderRoute=path.match(/^\/api\/assistant\/ai-providers\/(gemini|openai)$/);
   if(aiProviderRoute&&request.method==='POST'){requireAdmin(user);return json({item:await configureAIProvider(env,ownerId,aiProviderRoute[1],await readJSON(request,8000))});}
   if(path==='/api/assistant/wallet'){
     requireAdmin(user);
@@ -508,7 +524,7 @@ async function route(request,env,ctx){
     const delegated=shouldDelegate(d.message);
     const provider=d.engine==='local'?'local':d.engine==='ollama'?'ollama':d.engine==='gemini'?'gemini':d.engine==='openai'?'openai':'workers-ai';
     const ownerMode=user.role==='owner';
-    return json(await createJob(env,{task:d.message,session_id:d.session,agent:delegated?'auto':'orchestrator',mode:delegated?'team':'single',provider,language:d.language,remember:d.remember||wantsMemory,owner_mode:ownerMode,idempotency_key:crypto.randomUUID()}),202);
+    return json(await createJob(env,{task:d.message,session_id:d.session,agent:delegated?'auto':'orchestrator',mode:delegated?'team':'single',provider,language:d.language,remember:d.remember||wantsMemory,owner_mode:ownerMode,idempotency_key:crypto.randomUUID()},{ownerAuthorized:user.role==='owner',ownerId}),202);
   }
   if(path==='/api/copilot/chat'&&request.method==='POST'){
     await rateLimit(env,`copilot:${user.id}`,30,60);
@@ -590,6 +606,7 @@ async function route(request,env,ctx){
       title:z.string().trim().min(3).max(120),
       description:z.string().trim().min(10).max(4000),
       kind:z.enum(['plugin_install','code_improvement','deployment','behavior_rule']),
+      scope:z.enum(['code','ui']).optional(),
       plugin_id:z.string().regex(/^[a-z0-9-]{2,80}$/).optional()
     }).strict().parse(await readJSON(request,6000));
     if(input.kind==='plugin_install'&&!PLUGINS.some(p=>p.id===input.plugin_id))throw new HttpError(404,'Modul sa nenašiel v existujúcom katalógu Trinity.');
@@ -742,19 +759,14 @@ async function route(request,env,ctx){
     catch(e){const check=await recordAIProviderCheck(env,ownerId,{status:'failed',provider,error:e.message,latency_ms:Date.now()-started});return json(check,502);}
   }
   if(path==='/api/ops/jobs'){
-    if(request.method==='POST'){await rateLimit(env,`job:${user.id}`,12);return json(await createJob(env,{...await readJSON(request),owner_mode:user.role==='owner'}),202);}
+    if(request.method==='POST'){await rateLimit(env,`job:${user.id}`,12);return json(await createJob(env,{...await readJSON(request),owner_mode:user.role==='owner'},{ownerAuthorized:user.role==='owner',ownerId}),202);}
     if(request.method==='GET')return json((await env.DB.prepare('SELECT id,session_id,task,team,status,error,created_at,updated_at FROM ops_jobs ORDER BY created_at DESC,rowid DESC LIMIT 50').all()).results);
   }
   const jobRoute=path.match(/^\/api\/ops\/jobs\/([^/]+)(?:\/(artifact|cancel))?$/);
   if(jobRoute){
     const id=uuid.parse(jobRoute[1]);
     if(jobRoute[2]==='cancel'&&request.method==='POST'){
-      const job=await getJob(env,id);
-      if(['completed','failed','cancelled'].includes(job.status))return json({status:job.status});
-      await (await env.OPS_WORKFLOW.get(id)).terminate();
-      await env.DB.prepare("UPDATE ops_jobs SET status='cancelled',updated_at=datetime('now') WHERE id=? AND status<>'completed'").bind(id).run();
-      await env.DB.prepare("UPDATE ops_steps SET status='cancelled',updated_at=datetime('now') WHERE job_id=? AND status IN ('pending','running')").bind(id).run();
-      return json({status:'cancelled'});
+      return json(await cancelWorkflowJob(env,id));
     }
     if(request.method==='GET'){
       const job=await getJob(env,id);

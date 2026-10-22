@@ -1,11 +1,12 @@
 import {z} from 'zod';
 import {HttpError} from './security.js';
-import {prepareCodeImprovement,dispatchDeployment,githubRequest,mergeVerifiedImprovement} from './project-evolution.js';
+import {prepareCodeImprovement,dispatchDeployment,githubRequest,mergeVerifiedImprovement,UI_SCOPE_MARKER} from './project-evolution.js';
 
 const proposalSchema = z.object({
   title: z.string().trim().min(3).max(120),
   description: z.string().trim().min(10).max(4000),
   kind: z.enum(['plugin_install', 'code_improvement', 'deployment', 'behavior_rule']),
+  scope: z.enum(['code','ui']).optional(),
   plugin_id: z.string().regex(/^[a-z0-9-]{2,80}$/).optional()
 }).strict();
 
@@ -23,9 +24,26 @@ const present = row => ({
   updated_at: row.updated_at
 });
 
+const PREPARATION_LEASE_MS = 15 * 60 * 1000;
+
+export function preparationLeaseExpired(row, now = Date.now()) {
+  const previous = typeof row?.result_json === 'string' ? JSON.parse(row.result_json) : row?.result_json;
+  if (previous?.status !== 'preparing') return false;
+  const startedAt = Date.parse(previous.started_at);
+  return Number.isFinite(startedAt) && now - startedAt >= PREPARATION_LEASE_MS;
+}
+
 async function audit(env, action, details) {
   await env.DB.prepare('INSERT INTO ops_events(action, details) VALUES(?, ?)')
     .bind(action, JSON.stringify(details)).run();
+}
+
+async function settlePreparationLease(env, id, claim, result, returnRow = false) {
+  const returning = returnRow ? ' RETURNING *' : '';
+  const statement = env.DB.prepare(
+    "UPDATE self_improvement_proposals SET result_json=?,updated_at=datetime('now') WHERE id=? AND status='approved' AND result_json=?" + returning
+  ).bind(JSON.stringify(result), id, claim);
+  return returnRow ? statement.first() : statement.run();
 }
 
 export async function listSelfImprovementProposals(env) {
@@ -37,6 +55,8 @@ export async function listSelfImprovementProposals(env) {
 
 export async function createSelfImprovementProposal(env, input, actor) {
   const data = proposalSchema.parse(input);
+  if(data.scope&&data.kind!=='code_improvement')throw new HttpError(400,'Rozsah code/ui patrí iba ku kódovému vylepšeniu.');
+  if(data.scope==='ui')data.description=UI_SCOPE_MARKER+'\n'+data.description;
   if (data.kind === 'plugin_install' && !data.plugin_id) {
     throw new HttpError(400, 'Pre inštaláciu modulu je povinné plugin_id z katalógu Trinity.');
   }
@@ -78,32 +98,47 @@ export async function applySelfImprovementProposal(env, id, actor, installPlugin
   }
   if (['code_improvement','deployment'].includes(row.kind) && (env.TRINITY_GITHUB_TOKEN || env.GITHUB_TOKEN)) {
     const previous = row.result_json ? JSON.parse(row.result_json) : null;
-    if (previous && !['failed'].includes(previous.status)) return present(row);
+    if (previous && !['failed'].includes(previous.status) && !preparationLeaseExpired(row)) return present(row);
     const claim = JSON.stringify({status:'preparing',started_at:new Date().toISOString()});
     const lock = await env.DB.prepare("UPDATE self_improvement_proposals SET result_json=?,updated_at=datetime('now') WHERE id=? AND status='approved' AND coalesce(result_json,'')=? RETURNING *")
       .bind(claim,id,row.result_json || '').first();
     if (!lock) throw new HttpError(409,'Návrh už spracúva iný proces.');
     try {
       const result = row.kind === 'deployment' ? await dispatchDeployment(env) : await prepareCodeImprovement(env,row);
-      const updated = await env.DB.prepare("UPDATE self_improvement_proposals SET result_json=?,updated_at=datetime('now') WHERE id=? RETURNING *").bind(JSON.stringify(result),id).first();
+      const updated = await settlePreparationLease(env,id,claim,result,true);
+      if(!updated)throw new HttpError(409,'Prenájom návrhu prevzal novší proces.');
       await audit(env,'self_improvement_execution_started',{id,actor,status:result.status,url:result.url});
       return present(updated);
     } catch (error) {
-      await env.DB.prepare("UPDATE self_improvement_proposals SET result_json=?,updated_at=datetime('now') WHERE id=?").bind(JSON.stringify({status:'failed',error:error.message}),id).run();
+      await settlePreparationLease(env,id,claim,{status:'failed',error:error.message});
+      throw error;
+    }
+  }
+  if (row.kind === 'plugin_install') {
+    const previous = row.result_json ? JSON.parse(row.result_json) : null;
+    if (previous && previous.status !== 'failed' && !preparationLeaseExpired(row)) return present(row);
+    const claim = JSON.stringify({status:'preparing',started_at:new Date().toISOString()});
+    const lock = await env.DB.prepare("UPDATE self_improvement_proposals SET result_json=?,updated_at=datetime('now') WHERE id=? AND status='approved' AND coalesce(result_json,'')=? RETURNING *")
+      .bind(claim,id,row.result_json || '').first();
+    if (!lock) throw new HttpError(409,'Návrh už spracúva iný proces.');
+    try {
+      const result = await installPluginById(row.plugin_id);
+      const updated = await env.DB.prepare(
+        "UPDATE self_improvement_proposals SET status='applied',result_json=?,updated_at=datetime('now') WHERE id=? AND status='approved' AND result_json=? RETURNING *"
+      ).bind(JSON.stringify(result),id,claim).first();
+      if (!updated) throw new HttpError(409,'Prenájom návrhu prevzal novší proces.');
+      await audit(env, 'self_improvement_plugin_installed', {
+        id, plugin_id: row.plugin_id, actor, result_status: result?.status || 'installed'
+      });
+      return present(updated);
+    } catch (error) {
+      await settlePreparationLease(env,id,claim,{status:'failed',error:error.message});
       throw error;
     }
   }
   if (row.kind !== 'plugin_install') {
     throw new HttpError(503, 'Chýba prepojenie GitHub: nastav Worker Secret TRINITY_GITHUB_TOKEN. Kódové návrhy používajú vetvu a PR, nasadenie vykonáva GitHub Actions.');
   }
-  const result = await installPluginById(row.plugin_id);
-  const updated = await env.DB.prepare(
-    "UPDATE self_improvement_proposals SET status='applied',result_json=?,updated_at=datetime('now') WHERE id=? AND status='approved' RETURNING *"
-  ).bind(JSON.stringify(result), id).first();
-  await audit(env, 'self_improvement_plugin_installed', {
-    id, plugin_id: row.plugin_id, actor, result_status: result?.status || 'installed'
-  });
-  return present(updated);
 }
 
 export async function listActiveBehaviorRules(env) {
@@ -149,6 +184,13 @@ export async function reconcileSelfImprovements(env) {
   const results=[];
   for (const proposal of proposals) {
     const pr=await githubRequest(env,`/pulls/${proposal.result_json.pull_request}`);
+    if (!pr.merged_at && pr.state === 'closed') {
+      const receipt={...proposal.result_json,status:'pull_request_closed',closed_at:pr.closed_at||null,deployed:false};
+      await env.DB.prepare("UPDATE self_improvement_proposals SET status='rejected',result_json=?,updated_at=datetime('now') WHERE id=? AND status='approved'").bind(JSON.stringify(receipt),proposal.id).run();
+      await audit(env,'self_improvement_pull_request_closed',{id:proposal.id,pull_request:pr.number,deployed:false});
+      results.push(receipt);
+      continue;
+    }
     if (!pr.merged_at) {
       await mergeVerifiedImprovement(env,pr);
       continue;

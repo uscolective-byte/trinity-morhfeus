@@ -156,3 +156,136 @@
 #hosting-form{grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) auto}
 #hosting-list a{overflow-wrap:anywhere;color:var(--blue)}
 @media(max-width:760px){#hosting-form,#subdomain-form{grid-template-columns:1fr}.domain-action-bar button{flex:1 1 180px}.domain-card{align-items:flex-start;flex-direction:column}}
+
+.readiness-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:16px 0}
+.readiness-card{border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--paper);color:var(--ink);display:flex;flex-direction:column;gap:10px;min-width:0}
+.readiness-card h3,.readiness-card p{margin:0}
+.readiness-card p,.readiness-card small{color:var(--muted);line-height:1.5}
+.readiness-card button{margin-top:auto}
+.readiness-card[data-status="verified"]{border-color:#15803d}
+.settings-load-error{opacity:.65}
+#settings-partial-errors,.section-load-message{color:var(--ink);border-left:3px solid #b45309;padding:10px;overflow-wrap:anywhere}
+.api-key-form{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));align-items:end}
+.api-key-form label{display:grid;gap:6px}
+@media(max-width:560px){.readiness-grid,.api-key-form{grid-template-columns:1fr}}
+
+/* Readable application shell. Existing themes, controls and role checks remain in use. */
+:root{font-size:15px}
+body{overflow-x:hidden}
+main{min-width:0;min-height:0;background:var(--canvas)}
+#app-views{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
+.view{width:100%;min-height:0;flex:1}
+header{position:relative;gap:20px;padding:18px 28px}
+.page-heading{min-width:0}
+.page-heading>span,.eyebrow{font-size:11px;letter-spacing:1.4px}
+.page-heading strong{font-size:21px;line-height:1.35}
+.page-heading small{font-size:12px;line-height:1.5;max-width:46ch}
+.header-actions{flex-wrap:wrap;justify-content:flex-end;max-width:65%}
+.header-actions button,.header-actions select{font-size:12px;min-height:36px}
+#header-menu{display:none}
+.sidebar .brand{font-size:22px;line-height:1.4}
+.sidebar .brand small{font-size:11px;color:#a7b5cb}
+.main-nav{gap:6px}
+.main-nav button{min-height:44px}
+.main-nav button b{font-size:14px}
+.new{font-size:13px;min-height:44px}
+.side-label{font-size:11px;letter-spacing:1.2px;color:#a0aec3}
+#sessions button{font-size:12px;min-height:36px;color:#a7b5cb}
+.sidebar-bottom,.sidebar-bottom small{font-size:11px;color:#a7b5cb}
+.view:not(.chat-view){padding:30px clamp(20px,3vw,44px) 40px}
+.panel{border-radius:18px;padding:24px}
+.panel-head{align-items:flex-start;flex-wrap:wrap}
+.panel-head h2{font-size:20px;line-height:1.4}
+.panel-head>button{font-size:12px;padding:9px 13px}
+.section-intro p,.settings-help{font-size:14px;line-height:1.65}
+.setting-row b,.api-key-item b,.provider-card b,.api-project-item b{font-size:14px}
+.setting-row small,.api-key-item small,.provider-card small,.api-project-item small,.integration-item small{font-size:12px;line-height:1.55;overflow-wrap:anywhere}
+.setting-row,.api-key-item,.integration-item{padding:14px;gap:14px;flex-wrap:wrap}
+input,textarea,select{min-width:0;max-width:100%;font-size:14px;line-height:1.5}
+button{font-size:14px}
+button:disabled{cursor:not-allowed}
+.primary{font-size:14px;min-height:40px}
+.provider-form label>span,.provider-toggle{font-size:12px}
+.provider-form,.secret-form{gap:12px}
+.provider-result{font-size:12px;line-height:1.65;background:var(--canvas);color:var(--ink)}
+.settings-status{min-height:108px;padding:20px}
+.settings-status span,.settings-status small{font-size:11px;line-height:1.5}
+.settings-status b{font-size:16px;margin:9px 0 5px}
+.settings-commandbar{position:sticky;top:0;z-index:3;display:grid;gap:12px;margin-bottom:20px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--paper);backdrop-filter:blur(16px)}
+.settings-search{display:flex;align-items:center;gap:10px}
+.settings-search input{width:100%;background:var(--canvas)}
+#settings-sections{display:flex;gap:7px;overflow-x:auto;padding-bottom:3px}
+#settings-sections button{flex:0 0 auto;min-height:38px;font-size:13px;white-space:nowrap}
+#settings-sections button.active{background:var(--purple);border-color:var(--purple);color:#fff}
+#settings-readiness-panel{grid-column:1/-1}
+.readiness-card h3{font-size:16px}
+.readiness-card p{font-size:13px}
+.metric span,.metric small{font-size:12px;line-height:1.5}
+.metric strong{font-size:30px}
+.action-grid b,.admin-action-grid b{font-size:14px}
+.action-grid small,.admin-action-grid small{font-size:12px;line-height:1.5}
+.action-grid button,.admin-action-grid button,.admin-action-grid a{background:var(--paper);border-color:var(--line)}
+.activity-item b{font-size:13px}
+.activity-item small{font-size:11px}
+#chat-area{padding-inline:clamp(18px,4vw,54px)}
+.message .content{font-size:16px;line-height:1.8}
+.message .name,.message details{font-size:12px}
+.message pre{max-width:100%;overflow:auto}
+.copy{font-size:12px;padding:6px 10px}
+.task-progress{font-size:12px;line-height:1.5;padding:8px 12px;border-left:3px solid var(--blue);background:var(--canvas);border-radius:0 8px 8px 0;color:var(--ink)}
+#message{font-size:16px;min-height:68px}
+.compose-settings,.suggestions button{font-size:12px}
+.footnote{font-size:11px;line-height:1.5}
+#activity{font-size:12px;color:var(--ink)}
+.skip-link{position:fixed;left:16px;top:-100px;z-index:1000;padding:12px 18px;border-radius:10px;background:var(--purple);color:#fff}
+.skip-link:focus{top:12px;outline:3px solid var(--blue)}
+:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+@media(max-width:1100px){
+ #header-menu{display:inline-flex;align-items:center;gap:8px;flex:0 0 auto;font-size:13px;min-height:42px}
+ #header-actions{display:none;position:absolute;right:20px;top:calc(100% - 4px);z-index:12;width:min(420px,calc(100vw - 36px));max-width:none;padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--paper);box-shadow:0 18px 48px #0004;backdrop-filter:blur(20px);grid-template-columns:1fr 1fr}
+ #header-actions.is-open{display:grid}
+ #header-actions .account-state{grid-column:1/-1;max-width:none}
+ #header-actions .account-state small{display:block;overflow-wrap:anywhere;white-space:normal}
+ #header-actions button,#header-actions select{min-height:42px;width:100%}
+ #header-actions .environment-badge,#header-actions .pc-bridge-badge{min-width:0;font-size:11px}
+ .settings-grid.wide-settings{grid-template-columns:1fr}
+ .admin-panel{grid-column:auto}
+}
+@media(max-width:650px){
+ body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+ main{height:calc(100dvh - 76px - env(safe-area-inset-bottom))}
+ .sidebar{height:calc(76px + env(safe-area-inset-bottom));padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
+ .main-nav{justify-content:flex-start;overflow-x:auto;gap:4px;height:60px;scrollbar-width:none}
+ .main-nav button{flex:0 0 72px;min-height:56px;padding:5px;gap:3px}
+ .main-nav button b{font-size:10px;line-height:1.3;text-align:center}
+ .main-nav button span{font-size:20px}
+ header{padding:14px 16px;gap:12px}
+ .page-heading strong{font-size:19px}
+ .page-heading>span{font-size:10px}
+ #header-menu{padding:8px 10px;font-size:12px}
+ #header-actions{right:12px;width:calc(100vw - 24px)}
+ .view:not(.chat-view){padding:20px 14px 30px}
+ .hero-card{padding:24px;min-height:220px}
+ .hero-card h1{font-size:28px;line-height:1.25}
+ .hero-card p{font-size:14px}
+ .panel{padding:18px}
+ .panel-head h2{font-size:18px}
+ .settings-commandbar{padding:10px}
+ .settings-status-grid{grid-template-columns:1fr 1fr;gap:10px}
+ .settings-status{padding:14px;min-height:100px}
+ .settings-status b{font-size:14px}
+ .message .content{font-size:15px}
+ .message.user{max-width:92%}
+ .compose-bottom{align-items:flex-end}
+ .compose-settings{max-width:none;flex:1;gap:8px;font-size:11px}
+ .compose-settings select{max-width:170px;font-size:12px}
+ .composer-wrap{padding:8px 12px 12px}
+ .secret-form,.provider-form,.provider-cards,.api-key-form{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+
+[data-theme="light"]{--muted:#596a80;--line:#d6dee9}
+.primary,[data-theme] .primary{background:#6246c7;border-color:#6246c7;color:#fff}
+.primary:hover,[data-theme] .primary:hover{background:#5338b3;border-color:#5338b3;color:#fff}

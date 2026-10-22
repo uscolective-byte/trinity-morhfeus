@@ -1,3 +1,6 @@
+import {COMMERCE_TOOLS,requireCommercePrincipal} from './commerce-context.js';
+import {leadInput,offerInput,saveSalesLead,createSalesOffer,salesPipeline} from './commerce.js';
+import {hostedDomainInput,attachHostedDomain} from './hosted-domains.js';
 import {fetchPublicWeb} from './web-access.js';
 import {inspectProject,readProjectSource} from './project-evolution.js';
 import {createSelfImprovementProposal,approveSelfImprovementProposal,applySelfImprovementProposal} from './self-improvement.js';
@@ -25,18 +28,22 @@ import {QuantumCoreEngine} from './quantum_core.js';
 import {listDomains,getDomain,createDomain,registerDomain,checkDomainAvailability,updateDomain,deleteDomain,listDomainForSale,sellDomain,listDomainForLease,leaseDomain,endDomainLease,listDomainTransactions,getDomainMarketplace,listDnsRecords,addDnsRecord,deleteDnsRecord,domainInputSchema,domainRegistrationSchema,domainSaleListingSchema,domainSaleSchema,domainLeaseListingSchema,domainLeaseSchema,domainEndLeaseSchema,dnsRecordInputSchema,DNS_RECORD_TYPES,DOMAIN_STATUSES,LISTING_TYPES} from './domains.js';
 import {createArtifact,createPdfArtifact,listArtifacts,getArtifact} from './artifacts.js';
 
-export const INTERNAL_TOOLS=new Set(['request_system_action','system_action_status','project_inspect','project_read','improvement_submit','infrastructure_status','hosting_deploy','hosting_list','domain_search','domain_registration_status','domain_subdomain','domain_sync']);
-export const DEVELOPMENT_TOOLS=['project_inspect','project_read','improvement_submit','infrastructure_status','hosting_deploy','hosting_list','domain_search','domain_registration_status','domain_subdomain','domain_sync'];
+export const INTERNAL_TOOLS=new Set([...COMMERCE_TOOLS,'request_system_action','system_action_status','project_inspect','project_read','improvement_submit','infrastructure_status','hosting_deploy','hosting_list','domain_search','domain_registration_status','domain_subdomain','domain_sync','hosting_domain']);
+export const DEVELOPMENT_TOOLS=['project_inspect','project_read','improvement_submit','infrastructure_status','hosting_deploy','hosting_list','domain_search','domain_registration_status','domain_subdomain','domain_sync','hosting_domain'];
 export const PC_TOOLS=new Set(['pc_screenshot','pc_run_script','pc_run','pc_file_read','pc_file_write','pc_file_append','pc_file_edit','pc_directory_create','pc_open_app','pc_app_control','pc_notify','pc_system_info','pc_scrape','pc_web_fetch','pc_download','pc_git_commit','pc_git_pr']);
 export const OWNER_BUSINESS_TOOLS=new Set(['prospect_queries','prospect_score','outreach_draft','revenue_model','improvement_plan']);
 export const TOOL_SCHEMAS={
+  sales_lead_save:leadInput,
+  sales_offer_create:offerInput,
+  sales_pipeline:z.object({}).strict(),
   web_fetch:z.object({url:z.string().url()}).strict(),
-  project_inspect:z.object({query:z.string().max(2000).default('')}).strict(),
+  project_inspect:z.object({query:z.string().max(2000).default(''),scope:z.enum(['code','ui']).default('code')}).strict(),
   project_read:z.object({path:z.string().max(500),ref:z.string().regex(/^[a-f0-9]{40}$/).optional()}).strict(),
-  improvement_submit:z.object({title:z.string().min(3).max(120),description:z.string().min(10).max(4000),kind:z.enum(['code_improvement','deployment','behavior_rule']).default('code_improvement'),execute:z.boolean().default(true)}).strict(),
+  improvement_submit:z.object({title:z.string().min(3).max(120),description:z.string().min(10).max(4000),kind:z.enum(['code_improvement','deployment','behavior_rule']).default('code_improvement'),scope:z.enum(['code','ui']).optional(),execute:z.boolean().default(true)}).strict(),
   infrastructure_status:z.object({}).strict(),
   hosting_list:z.object({}).strict(),
   hosting_deploy:hostingInput,
+  hosting_domain:hostedDomainInput,
   domain_sync:z.object({}).strict(),
   domain_search:z.object({query:z.string().min(2).max(150)}).strict(),
   domain_registration_status:z.object({domain:z.string().min(3).max(253)}).strict(),
@@ -153,13 +160,21 @@ export async function runTool(env, agent, name, input, executionContext={}) {
   if(OWNER_BUSINESS_TOOLS.has(name)&&executionContext.adminAuthorized!==true)throw new Error('Obchodné a vývojové schopnosti Trinity sú dostupné iba overenému ownerovi.');
   if(PC_TOOLS.has(name)&&executionContext.adminAuthorized!==true)throw new Error('PC nástroje sú dostupné iba v serverom overenom admin režime.');
   if(['execute_skill','ecosystem_synthesize'].includes(name)&&executionContext.adminAuthorized!==true)throw new Error('Spúšťanie skillov a registrácia rozšírení vyžaduje serverom overeného administrátora.');
+  if(COMMERCE_TOOLS.has(name))requireCommercePrincipal(executionContext);
   if(!INTERNAL_TOOLS.has(name)&&name!=='install_plugin')await ensureToolEnabled(env,name);
   if(name==='request_system_action'&&input&&typeof input==='object')input={action:input.action,payload:input.payload||(typeof input.resource==='string'?{path:input.resource}:{}),rationale:input.rationale||input.reason};
   const args=PC_TOOLS.has(name)?null:TOOL_SCHEMAS[name].parse(input);
+  if(COMMERCE_TOOLS.has(name)){
+    const {ownerId}=requireCommercePrincipal(executionContext);
+    if(name==='sales_pipeline')return salesPipeline(env,ownerId);
+    const item=name==='sales_lead_save'?await saveSalesLead(env,ownerId,args):await createSalesOffer(env,ownerId,args);
+    return {...item,_evidence:{effect:'mutation',actions:['change'],receipt_id:item.id}};
+  }
   if(name==='web_fetch')return fetchPublicWeb(args.url);
-  if(name==='project_inspect')return inspectProject(env,args.query);
+  if(name==='project_inspect')return inspectProject(env,args.query,args.scope);
   if(name==='project_read')return readProjectSource(env,args.path,args.ref);
   if(name==='infrastructure_status')return infrastructureStatus(env);
+  if(name==='hosting_domain')return {...await attachHostedDomain(env,args),_evidence:{effect:'mutation',actions:['change'],receipt_id:crypto.randomUUID()}};
   if(name==='hosting_list')return {items:await listHostedSites(env)};
   if(name==='hosting_deploy')return {...await hostStudioProject(env,args),_evidence:{effect:'mutation',actions:['deploy'],receipt_id:crypto.randomUUID()}};
   if(name==='domain_search')return searchDomainNames(env,args.query);
@@ -583,11 +598,15 @@ export async function recallMemory(env,task){
   return selectMemoryRecords(records,task);
 }
 export const TOOL_HELP={
+  sales_lead_save:'Uloží firmu s verejným zdrojom a potrebou do pipeline vlastníka. Je to neoverený lead, nie získaný zákazník: {company,source_url,need}',
+  sales_offer_create:'Uloží neodoslaný návrh ponuky s cenou v najmenších menových jednotkách a odkazom používateľa z Revolut Pro: {title,deliverable,amount_cents,currency:EUR|USD|GBP|CZK,payment_link}. Nikdy nepotvrdzuje úhradu.',
+  sales_pipeline:'Prečíta uložené leady a ponuky aktuálneho vlastníka bez bankových tajomstiev: {}',
   web_fetch:'Prečíta konkrétnu verejnú webovú adresu priamo z cloudu bez PC: {url}',
-  project_inspect:'Sama nájde aktuálny commit a relevantné súbory Trinity podľa problému: {query}',
+  project_inspect:'Sama nájde aktuálny commit a relevantné súbory Trinity podľa problému: {query,scope?:code|ui}',
   project_read:'Prečíta konkrétny zdroj Trinity z GitHubu: {path,ref?:commit SHA}',
-  improvement_submit:'Uloží návrh a pri execute:true pripraví kódovú opravu vo vetve a PR, alebo aktivuje behavior_rule. PR ešte nie je nasadenie: {title,description,kind:code_improvement|deployment|behavior_rule,execute?:boolean}',
+  improvement_submit:'Uloží návrh a pri execute:true pripraví kódovú opravu vo vetve a PR, alebo aktivuje behavior_rule. PR ešte nie je nasadenie: {title,description,kind:code_improvement|deployment|behavior_rule,scope?:code|ui,execute?:boolean}. Na zmenu vlastného rozhrania použi kind:code_improvement a scope:ui; výsledok obsahuje PR a neoverené nasadenie.',
   infrastructure_status:'Skutočný stav konfigurácie domén, hostingu, webu a evolúcie: {}',
+  hosting_domain:'Pripojí voľnú doménu zo svojej aktívnej Cloudflare zóny k webu vytvorenému Trinity; existujúce DNS sa neprepisuje. TLS a HTTP zostávajú pending do overenia: {site_id,domain,hostname}',
   hosting_deploy:'Nasadí existujúci Studio projekt na Cloudflare. Súkromný predvolene; publish:true iba po výslovnej požiadavke verejného publikovania: {project_id,publish?:boolean}',
   hosting_list:'Zoznam uložených dokladov hostingu: {}',
   domain_search:'Vyhľadá kandidátov na doménu; pred nákupom over aktuálnu cenu: {query}',

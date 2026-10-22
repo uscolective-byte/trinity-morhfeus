@@ -41,20 +41,21 @@ export async function listAIProviders(env,ownerId){
   const environmentOllama=!!(env.OLLAMA_SECRET||typeof env.OLLAMA_API_KEY==='string'&&env.OLLAMA_API_KEY.length>=8);
   return {items:[
     {id:'workers-ai',name:'Cloudflare Workers AI',configured:!!env.AI,enabled:true,model:env.AI_MODEL||'@cf/openai/gpt-oss-120b',managed_by:'cloudflare',last_check:checks.get('workers-ai')||null},
-    {id:'openai',name:'OpenAI / ChatGPT API',configured:!!openaiSetting||environmentOpenAI,enabled:openaiSetting?openaiSetting.enabled===1:environmentOpenAI,model:openaiSetting?.model||env.OPENAI_MODEL||'gpt-4o',managed_by:openaiSetting?'encrypted-vault':'worker-secret',secret_source:openaiSetting?'encrypted-vault':environmentOpenAI?'worker-secret':'bez poverenia',credentials:openaiSecrets,last_check:checks.get('openai')||null},
+    {id:'openai',name:'OpenAI / ChatGPT API',configured:!!openaiSetting||environmentOpenAI,enabled:openaiSetting?openaiSetting.enabled===1:environmentOpenAI,model:openaiSetting?.model||env.OPENAI_MODEL||'gpt-4o',secret_id:openaiSetting?.secret_id||null,managed_by:openaiSetting?'encrypted-vault':'worker-secret',secret_source:openaiSetting?'encrypted-vault':environmentOpenAI?'worker-secret':'bez poverenia',credentials:openaiSecrets,last_check:checks.get('openai')||null},
     {id:'ollama',name:'Ollama Cloud',configured:environmentOllama,enabled:environmentOllama,model:env.OLLAMA_MODEL||'gemma4:31b',managed_by:env.OLLAMA_SECRET?'secrets-store':'worker-secret',secret_source:env.OLLAMA_SECRET?'secrets-store':'worker-secret',last_check:checks.get('ollama')||null},
     {id:'gemini',name:'Google Gemini',configured:!!geminiSetting||environmentGemini,enabled:geminiSetting?geminiSetting.enabled===1:environmentGemini,project_control:geminiSetting?.project_control===1,approval_policy:'authenticated-admin-request',operator_policy:GEMINI_OPERATOR_POLICY,allowed_actions:GEMINI_OPERATOR_ACTIONS,model:geminiSetting?.model||env.GEMINI_MODEL||null,secret_id:geminiSetting?.secret_id||null,secret_source:geminiSetting?'encrypted-vault':environmentGemini?'worker-secret':null,credentials:geminiSecrets,updated_at:geminiSetting?.updated_at||null,last_check:checks.get('gemini')||null}
   ]};
 }
 
 export async function configureAIProvider(env,ownerId,provider,input){
-  if(provider!=='gemini')throw new HttpError(404,'Neznámy AI poskytovateľ.');
-  const data=aiProviderInputSchema.parse(input);
+  if(!['gemini','openai'].includes(provider))throw new HttpError(404,'Neznámy AI poskytovateľ.');
+  const schema=provider==='gemini'?aiProviderInputSchema:aiProviderInputSchema.extend({model:z.string().trim().regex(/^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,159}$/),project_control:z.literal(false).default(false)});
+  const data=schema.parse(input);
   const material=await getSecretMaterial(env,{ownerId,id:data.secret_id,provider});
   if(material.status!=='verified')throw new HttpError(409,'Najprv API kľúč úspešne over.');
   const verification=decodeVerification(material.verification_json);
   const allowed=verification?.models||[];
-  if(allowed.length&&!allowed.includes(data.model))throw new HttpError(400,'Vybraný model nebol nájdený pri overení Gemini kľúča.');
+  if(allowed.length&&!allowed.includes(data.model))throw new HttpError(400,'Vybraný model nebol nájdený pri overení API kľúča.');
   const row=await env.DB.prepare(`INSERT INTO ops_ai_provider_settings(owner_id,provider,secret_id,model,enabled,project_control)
     VALUES(?,?,?,?,?,?) ON CONFLICT(owner_id,provider) DO UPDATE SET secret_id=excluded.secret_id,model=excluded.model,
     enabled=excluded.enabled,project_control=excluded.project_control,updated_at=datetime('now') RETURNING provider,secret_id,model,enabled,project_control,updated_at`)

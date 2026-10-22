@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
-import {createSelfImprovementProposal,approveSelfImprovementProposal,applySelfImprovementProposal,reconcileSelfImprovements} from '../src/self-improvement.js';
+import {createSelfImprovementProposal,approveSelfImprovementProposal,applySelfImprovementProposal,reconcileSelfImprovements,preparationLeaseExpired} from '../src/self-improvement.js';
 function environment(){
  const sqlite=new DatabaseSync(':memory:');
  sqlite.exec("CREATE TABLE self_improvement_proposals(id TEXT PRIMARY KEY,title TEXT,description TEXT,kind TEXT,plugin_id TEXT,status TEXT,created_by TEXT,approved_by TEXT,result_json TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP,updated_at TEXT DEFAULT CURRENT_TIMESTAMP);CREATE TABLE ops_events(action TEXT,details TEXT);");
@@ -12,7 +12,8 @@ test('approved proposal executes the branch/PR protocol sequence and records sou
  const env=environment(),old=globalThis.fetch,calls=[];let merged=false;
  try{globalThis.fetch=async(url,options)=>{const method=options.method;calls.push({url,method});
  if(url.includes('/pulls?'))return Response.json([]);
- if(url.includes('/git/ref/heads/'))return Response.json({object:{sha:'a'.repeat(40)}});
+ if(url.includes('/git/ref/heads/main'))return Response.json({object:{sha:'a'.repeat(40)}});
+ if(url.includes('/git/ref/heads/'))return Response.json({message:'Not Found'},{status:404});
  if(url.includes('/git/trees/')&&url.includes('recursive'))return Response.json({sha:'b'.repeat(40),tree:[{path:'Trinity/src/sample.js',type:'blob',sha:'c'.repeat(40),size:40}],truncated:false});
  if(url.includes('/contents/'))return Response.json({sha:'c'.repeat(40),encoding:'base64',size:40,content:Buffer.from('export function value(){return 1;}').toString('base64')});
  if(url.endsWith('/git/trees')){const body=JSON.parse(options.body);assert.match(body.tree[0].content,/return 2/);assert.equal(body.base_tree,'b'.repeat(40));return Response.json({sha:'d'.repeat(40)});}
@@ -24,6 +25,7 @@ test('approved proposal executes the branch/PR protocol sequence and records sou
  };
  const proposal=await createSelfImprovementProposal(env,{title:'Fix value calculation',description:'Correct the off by one in sample.js and validate the result.',kind:'code_improvement'},'owner');
  await approveSelfImprovementProposal(env,proposal.id,'owner');
+ env.sqlite.prepare('UPDATE self_improvement_proposals SET result_json=?,updated_at=? WHERE id=?').run(JSON.stringify({status:'preparing',started_at:'2000-01-01T00:00:00.000Z'}),'2000-01-01 00:00:00',proposal.id);
  const result=await applySelfImprovementProposal(env,proposal.id,'owner');assert.equal(result.status,'approved');assert.equal(result.result_json.status,'pull_request_created');assert.equal(result.result_json.deployed,false);
  const count=calls.length;await applySelfImprovementProposal(env,proposal.id,'owner');assert.equal(calls.length,count,'repeated apply must not create a duplicate PR');
  merged=true;const integrated=await reconcileSelfImprovements(env);assert.equal(integrated[0].status,'merged');assert.equal(integrated[0].deployed,false);assert.equal(env.sqlite.prepare('SELECT status FROM self_improvement_proposals').get().status,'applied');
@@ -32,4 +34,53 @@ test('approved proposal executes the branch/PR protocol sequence and records sou
 test('model patch failure is persisted as failed, not applied',async()=>{
  const env=environment();const proposal=await createSelfImprovementProposal(env,{title:'Failed preparation',description:'Demonstrate a disconnected GitHub endpoint without claiming success.',kind:'code_improvement'},'owner');await approveSelfImprovementProposal(env,proposal.id,'owner');
  const old=globalThis.fetch;try{globalThis.fetch=async()=>new Response('unavailable',{status:503});await assert.rejects(()=>applySelfImprovementProposal(env,proposal.id,'owner'),/GitHub/);const row=env.sqlite.prepare('SELECT * FROM self_improvement_proposals').get();assert.equal(row.status,'approved');assert.equal(JSON.parse(row.result_json).status,'failed');}finally{globalThis.fetch=old;env.sqlite.close();}
+});
+
+test('an expired worker cannot overwrite the result of a newer preparation lease',async()=>{
+ const env=environment();
+ const proposal=await createSelfImprovementProposal(env,{title:'Competing deployment',description:'Keep the newest deployment preparation receipt.',kind:'deployment'},'owner');
+ await approveSelfImprovementProposal(env,proposal.id,'owner');
+ const newer=JSON.stringify({status:'deployment_queued',source:'newer-process'});
+ const old=globalThis.fetch;
+ try{
+  globalThis.fetch=async(url,options)=>{
+   assert.match(url,/actions\/workflows\/self-deploy\.yml\/dispatches$/);assert.equal(options.method,'POST');
+   env.sqlite.prepare('UPDATE self_improvement_proposals SET result_json=? WHERE id=?').run(newer,proposal.id);
+   return new Response(null,{status:204});
+  };
+  await assert.rejects(()=>applySelfImprovementProposal(env,proposal.id,'owner'),/Prenájom návrhu prevzal novší proces/);
+  assert.equal(env.sqlite.prepare('SELECT result_json FROM self_improvement_proposals WHERE id=?').get(proposal.id).result_json,newer);
+ }finally{globalThis.fetch=old;env.sqlite.close();}
+});
+
+test('concurrent plugin application installs and audits exactly once',async()=>{
+ const env=environment();
+ const proposal=await createSelfImprovementProposal(env,{title:'Install audit plugin',description:'Install one trusted plugin without duplicate side effects.',kind:'plugin_install',plugin_id:'audit'},'owner');
+ await approveSelfImprovementProposal(env,proposal.id,'owner');
+ let installs=0,releaseInstall,markStarted;
+ const started=new Promise(resolve=>{markStarted=resolve;});
+ const release=new Promise(resolve=>{releaseInstall=resolve;});
+ const installer=async id=>{installs+=1;markStarted();await release;return {id,status:'installed'};};
+ try{
+  const first=applySelfImprovementProposal(env,proposal.id,'owner',installer);
+  await started;
+  const concurrent=await applySelfImprovementProposal(env,proposal.id,'owner',installer);
+  assert.equal(concurrent.status,'approved');
+  assert.equal(concurrent.result_json.status,'preparing');
+  assert.equal(installs,1);
+  releaseInstall();
+  const applied=await first;
+  assert.equal(applied.status,'applied');
+  assert.equal(installs,1);
+  const audits=env.sqlite.prepare("SELECT count(*) AS count FROM ops_events WHERE action='self_improvement_plugin_installed'").get();
+  assert.equal(audits.count,1);
+ }finally{releaseInstall?.();env.sqlite.close();}
+});
+
+test('preparation lease expires only for an old in-progress claim',()=>{
+ const now=Date.parse('2026-10-21T18:00:00.000Z');
+ assert.equal(preparationLeaseExpired({result_json:JSON.stringify({status:'preparing',started_at:'2026-10-21T17:50:00.000Z'})},now),false);
+ assert.equal(preparationLeaseExpired({result_json:JSON.stringify({status:'preparing',started_at:'2026-10-21T17:44:59.999Z'})},now),true);
+ assert.equal(preparationLeaseExpired({result_json:JSON.stringify({status:'failed',started_at:'2000-01-01T00:00:00.000Z'})},now),false);
+ assert.equal(preparationLeaseExpired({result_json:JSON.stringify({status:'preparing',started_at:'invalid'})},now),false);
 });

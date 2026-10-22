@@ -1,8 +1,8 @@
 {
   "generated_by": "openai-codex",
   "reviewed": false,
-  "risk": "medium",
-  "component": "Trinity/daily-planner",
-  "description": "Adds a bounded daily planning MCP tool using the existing workflow, job rate limits on session and scoped API routes, integration instructions and end-to-end tests. Synchronized with Trinity 10.3. No credential or resource configuration changes.",
-  "source_pr": null
+  "risk": "high",
+  "component": "Trinity/platform",
+  "description": "Restores Trinity UI, platform and scoped self-development alongside the daily planner. Adds isolated preview DO bindings, truthful evolution PR states, recoverable preparation leases with compare-and-set result writes for code and plugin installation, verified orphan-branch recovery, ID attribute validation and retryable task cancellation. Failed and stale self-development proposals can be retried from the UI. Renders completed workflow replies once from original Markdown to preserve links and generated-file cards. Production dry-run build and the full local test suite pass; live deployment remains unverified.",
+  "source_pr": 46
 }
