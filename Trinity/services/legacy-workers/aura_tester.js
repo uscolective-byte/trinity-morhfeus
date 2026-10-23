@@ -27,11 +27,25 @@ export default {
         return Response.json({ ok: true, result, traceId, from: "aura-tester" });
       }
       if (call.action === "test.endpoint") {
-        try {
-          const r = await fetch(d.url, { method: d.method || "GET", headers: d.headers || {}, body: d.body ? JSON.stringify(d.body) : undefined });
-          const body = await r.text();
-          return Response.json({ ok: true, result: { status: r.status, ok: r.ok, body: body.substring(0, 2000) }, traceId, from: "aura-tester" });
-        } catch (e) { return Response.json({ ok: false, error: e.message, traceId, from: "aura-tester" }); }
+        const method=d.method||'GET';
+        if(!['GET','HEAD'].includes(method)||d.headers||d.body)throw Object.assign(new Error('Only credential-free GET/HEAD health checks are supported'),{status:400});
+        const r=await fetch(d.url,{method,redirect:'manual',signal:AbortSignal.timeout(5000)});
+        if(r.status>=300&&r.status<400)throw Object.assign(new Error('Redirects are disabled for endpoint probes'),{status:502});
+        let body='';
+        if(method==='GET'&&r.body){
+          const reader=r.body.getReader(),decoder=new TextDecoder();
+          let bytes=0;
+          try {
+            while(bytes<2048) {
+              const {value,done}=await reader.read();if(done)break;
+              const part=value.subarray(0,2048-bytes);bytes+=part.byteLength;
+              body+=decoder.decode(part,{stream:true});
+              if(part.byteLength<value.byteLength)break;
+            }
+            body+=decoder.decode();
+          } finally {await reader.cancel().catch(()=>{});}
+        }
+        return Response.json({ok:true,result:{status:r.status,ok:r.ok,body},traceId,from:'aura-tester'});
       }
       if (call.action === "test.system") {
         const tables = await safeDbRun(env.DB.prepare("SELECT COUNT(*) as c FROM sqlite_master WHERE type='table'").first());

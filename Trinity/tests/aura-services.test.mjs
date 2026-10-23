@@ -7,7 +7,7 @@ for(const role of ['aura_analyzer','aura_architect','aura_codegen','aura_deploye
   test(`${role} exposes bounded health`,async()=>{const env={...base,WORKER_ROLE:role,...(role==='aura_deployer'?{CODE_KV:{}}:{})};const response=await worker.fetch(new Request('https://aura.internal/health'),env);assert.equal(response.status,200);assert.equal((await response.json()).status,'serving');});
 }
 test('unknown actions and malformed input fail closed',async()=>{const env={...base,WORKER_ROLE:'aura_analyzer'};assert.equal((await worker.fetch(new Request('https://aura.internal/',{method:'POST',headers:{'Content-Type':'application/json'},body:'{"action":"shell","data":{}}'}),env)).status,400);assert.equal((await worker.fetch(new Request('https://aura.internal/',{method:'POST',headers:{'Content-Type':'application/json'},body:'{'}),env)).status,400);});
-test('deployment mutations require approval and idempotency',async()=>{const env={...base,WORKER_ROLE:'aura_deployer',CODE_KV:{}};const request=body=>new Request('https://aura.internal/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});assert.equal((await worker.fetch(request({action:'deploy.rollback',data:{version_id:'x'}}),env)).status,403);assert.equal((await worker.fetch(request({action:'deploy.rollback',data:{version_id:'x'},approval:{approved:true,actor_role:'owner',request_id:crypto.randomUUID()}}),env)).status,400);});
+test('deployment mutations require approval and idempotency',async()=>{const env={...base,WORKER_ROLE:'aura_deployer',CODE_KV:{}};const request=body=>new Request('https://aura.internal/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});assert.equal((await worker.fetch(request({action:'deploy.rollback',data:{version_id:'x'}}),env)).status,403);assert.equal((await worker.fetch(request({action:'deploy.rollback',data:{version_id:'x'},approval:{approved:true,actor_role:'owner',request_id:crypto.randomUUID()}}),env)).status,403);});
 test('endpoint tester blocks arbitrary SSRF targets',async()=>{const env={...base,WORKER_ROLE:'aura_tester'};const response=await worker.fetch(new Request('https://aura.internal/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'test.endpoint',data:{url:'http://127.0.0.1/admin'},approval:{approved:true,actor_role:'owner',request_id:crypto.randomUUID()}})}),env);assert.equal(response.status,403);});
 
 test('reconciled Aura services retain deployed actions and bounded status without invoking AI for probes',async()=>{
@@ -39,7 +39,7 @@ test('all Aura workers expose aura.skills and can execute skills', async () => {
     assert.equal(resList.status, 200, role);
     const bodyList = await resList.json();
     assert.equal(bodyList.ok, true);
-    assert.ok(bodyList.skills_count >= 40);
+    assert.deepEqual(bodyList.skills.map(s=>s.name).sort(),['integrationReadiness','semverCheck']);
 
     const resExec = await worker.fetch(new Request('https://aura.internal/', {
       method: 'POST',
@@ -51,4 +51,44 @@ test('all Aura workers expose aura.skills and can execute skills', async () => {
     assert.equal(bodyExec.ok, true);
     assert.equal(bodyExec.result.major, 2);
   }
+});
+
+test('Aura refuses high-privilege registry skills and keeps diagnostics read-only',async()=>{
+ const env={...base,WORKER_ROLE:'aura_analyzer'};
+ const req=skill=>new Request('https://aura.internal/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'aura.execute_skill',data:{skill,params:{domain_name:'example.com'}}})});
+ for(const skill of ['domainRegister','domainSetDns','domainSell','callPowerPlatform']){
+   const response=await worker.fetch(req(skill),env);
+   assert.equal(response.status,403,skill);
+ }
+});
+
+test('Aura mutating actions need a verified service token, not client approval flags',async()=>{
+ const token='unit-test-shared-internal-service-token-very-long';
+ const env={...base,WORKER_ROLE:'aura_deployer',AURA_SERVICE_TOKEN:token,CODE_KV:{put:async()=>{},delete:async()=>{}}};
+ const req=(headers={})=>new Request('https://aura.internal/',{method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify({action:'deploy.stage',data:{name:'website',code:'export default 1'},idempotency_key:crypto.randomUUID(),approval:{approved:true,actor_role:'owner',request_id:crypto.randomUUID()}})});
+ assert.equal((await worker.fetch(req(),env)).status,403);
+ assert.equal((await worker.fetch(req({'X-Aura-Service-Token':'wrong-secret'}),env)).status,403);
+ const good=await worker.fetch(req({'X-Aura-Service-Token':token}),env);
+ assert.equal(good.status,200);
+ assert.equal((await good.json()).result.cloudflare_deployed,false);
+});
+
+test('Aura cannot claim external deployment or rollback without an actual provider receipt',async()=>{
+ const token='unit-test-shared-internal-service-token-very-long';
+ const env={...base,WORKER_ROLE:'aura_deployer',AURA_SERVICE_TOKEN:token,CODE_KV:{put:async()=>{},delete:async()=>{}}};
+ const req=action=>new Request('https://aura.internal/',{method:'POST',headers:{'Content-Type':'application/json','X-Aura-Service-Token':token},body:JSON.stringify({action,data:{version_id:'abc'},idempotency_key:crypto.randomUUID(),approval:{approved:true,actor_role:'owner',request_id:crypto.randomUUID()}})});
+ for(const action of ['deploy.complete','deploy.rollback']){
+  const response=await worker.fetch(req(action),env);
+  assert.equal(response.status,501);
+  assert.equal((await response.json()).ok,false);
+ }
+});
+
+test('Aura endpoint checks enforce exact domains, no credentials, no redirects and read-only methods',async()=>{
+ const env={...base,WORKER_ROLE:'aura_tester',AURA_SERVICE_TOKEN:'unit-test-shared-internal-service-token-very-long'};
+ const request=(url,method)=>new Request('https://aura.internal/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'test.endpoint',data:{url,method},approval:{approved:true,actor_role:'owner',request_id:crypto.randomUUID()}})});
+ for(const url of ['https://auru.space@evil.example/health','https://auru.space/admin','https://auru.space:444/health','https://auru.space/health?token=1','https://other.saboivan2008.workers.dev/health']){
+  const r=await worker.fetch(request(url,'GET'),env);assert.equal(r.status,403,url);
+ }
+ const allowed=await worker.fetch(request('https://auru.dev/health','POST'),env);assert.equal(allowed.status,400);
 });
