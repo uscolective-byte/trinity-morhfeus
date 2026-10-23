@@ -1730,3 +1730,33 @@ dialog::backdrop {
   border-radius: 8px;
   border: 1px solid var(--border, rgba(255,255,255,0.1));
 }
+
+/* Trinity 11 groundwork: progressive disclosure instead of a crowded navigation. */
+.main-nav .more-nav {
+  border-top: 1px solid var(--line, rgba(255,255,255,.12));
+  margin-top: 10px;
+  padding-top: 10px;
+}
+.main-nav .more-nav > summary {
+  list-style-position: inside;
+  cursor: pointer;
+  border-radius: 10px;
+  padding: 11px 12px;
+  color: var(--text-muted, #94a3b8);
+  font-size: 13px;
+  font-weight: 650;
+  transition: color .15s, background .15s;
+}
+.main-nav .more-nav > summary:hover,
+.main-nav .more-nav > summary:focus-visible {
+  color: var(--text-main, #f8fafc);
+  background: rgba(148,163,184,.10);
+}
+.main-nav .more-nav > summary:focus-visible {
+  outline: 2px solid var(--cyan, #38bdf8);
+  outline-offset: 2px;
+}
+.main-nav .more-nav-items { display: grid; gap: 3px; padding-top: 6px; }
+@media (prefers-reduced-motion: reduce) {
+  .main-nav .more-nav > summary { transition: none; }
+}

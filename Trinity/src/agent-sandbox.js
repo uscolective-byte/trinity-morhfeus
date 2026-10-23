@@ -31,8 +31,9 @@ export const domainProvisionSchema = z.object({
   ssl_mode: z.enum(['full', 'strict', 'flexible']).default('strict')
 }).strict();
 
+const initializedAgentDatabases = new WeakSet();
 export async function ensureAgentSandboxTables(env) {
-  if (!env.DB) return;
+  if (!env.DB || initializedAgentDatabases.has(env.DB)) return;
   const statements = [
     `CREATE TABLE IF NOT EXISTS ops_custom_agents (
       id TEXT PRIMARY KEY,
@@ -65,7 +66,7 @@ export async function ensureAgentSandboxTables(env) {
       agent_id TEXT NOT NULL,
       owner_id TEXT NOT NULL,
       zone_id TEXT,
-      status TEXT NOT NULL DEFAULT 'provisioned',
+      status TEXT NOT NULL DEFAULT 'unverified',
       dns_records_json TEXT DEFAULT '[]',
       ssl_mode TEXT DEFAULT 'strict',
       created_at TEXT DEFAULT (datetime('now')),
@@ -75,26 +76,13 @@ export async function ensureAgentSandboxTables(env) {
   for (const sql of statements) {
     await env.DB.prepare(sql).run();
   }
+  initializedAgentDatabases.add(env.DB);
 }
 
 export async function listCustomAgents(env, ownerId = 'admin') {
   await ensureAgentSandboxTables(env);
-  if (!env.DB) {
-    return {
-      agents: [
-        {
-          id: 'trinity-core-agent',
-          name: 'Trinity Core Orchestrator',
-          role: 'Master Orchestrator',
-          model: env.AI_MODEL || '@cf/openai/gpt-oss-120b',
-          system_prompt: 'Si Trinity, autonómna AI asistentka Ivana Sabo (Basterix).',
-          autonomous_mode: true,
-          tools: ['search', 'calc', 'weather', 'crypto', 'dns'],
-          domain_binding: 'auru.dev'
-        }
-      ]
-    };
-  }
+  if (!env.DB) throw new HttpError(503, 'D1 databáza nie je dostupná.');
+ 
   const rows = await env.DB.prepare('SELECT * FROM ops_custom_agents WHERE owner_id = ? ORDER BY created_at DESC').bind(ownerId).all();
   return {
     agents: (rows.results || []).map(r => ({
@@ -117,9 +105,11 @@ export async function listCustomAgents(env, ownerId = 'admin') {
 export async function createOrUpdateCustomAgent(env, ownerId = 'admin', input) {
   await ensureAgentSandboxTables(env);
   const data = customAgentSchema.parse(input);
-  if (!env.DB) throw new HttpError(500, 'Databáza Trinity nie je dostupná.');
+  if (!env.DB) throw new HttpError(503, 'D1 databáza nie je dostupná.');
+  const conflicting = await env.DB.prepare('SELECT owner_id FROM ops_custom_agents WHERE id = ?').bind(data.id).first();
+  if (conflicting && conflicting.owner_id !== ownerId) throw new HttpError(409, 'ID agenta patrí inému vlastníkovi.');
 
-  await env.DB.prepare(`
+  const saveResult = await env.DB.prepare(`
     INSERT INTO ops_custom_agents (id, owner_id, name, description, role, model, system_prompt, temperature, tools_json, autonomous_mode, domain_binding, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     ON CONFLICT(id) DO UPDATE SET
@@ -133,6 +123,7 @@ export async function createOrUpdateCustomAgent(env, ownerId = 'admin', input) {
       autonomous_mode = excluded.autonomous_mode,
       domain_binding = excluded.domain_binding,
       updated_at = datetime('now')
+    WHERE ops_custom_agents.owner_id = excluded.owner_id
   `).bind(
     data.id,
     ownerId,
@@ -146,6 +137,7 @@ export async function createOrUpdateCustomAgent(env, ownerId = 'admin', input) {
     data.autonomous_mode ? 1 : 0,
     data.domain_binding || null
   ).run();
+  if (saveResult?.meta?.changes === 0) throw new HttpError(409, 'Agent patrí inému vlastníkovi.');
 
   await createTrinityDocument(env, ownerId, {
     title: `AI Agent Sandbox: ${data.name} (${data.id})`,
@@ -158,17 +150,23 @@ export async function createOrUpdateCustomAgent(env, ownerId = 'admin', input) {
   return { ok: true, agent_id: data.id, name: data.name };
 }
 
+/** A model failure or empty output is never counted as completed work. */
+export function requireRealAgentReply(result) {
+  const value = typeof result?.text === 'string' ? result.text.trim() : '';
+  if (!value) throw new HttpError(502, 'AI model nevrátil platný výsledok.');
+  return value;
+}
+
 export async function executeCustomAgent(env, ownerId = 'admin', input) {
   await ensureAgentSandboxTables(env);
   const parsed = agentExecutionSchema.parse(input);
   const startTime = Date.now();
 
-  let agentRow = null;
-  if (env.DB) {
-    agentRow = await env.DB.prepare('SELECT * FROM ops_custom_agents WHERE id = ?').bind(parsed.agent_id).first();
-  }
-
-  const agent = agentRow ? {
+  if (!env.DB) throw new HttpError(503, 'D1 databáza nie je dostupná.');
+  const agentRow = await env.DB.prepare('SELECT * FROM ops_custom_agents WHERE id = ? AND owner_id = ?')
+    .bind(parsed.agent_id, ownerId).first();
+  if (!agentRow) throw new HttpError(404, 'Agent neexistuje alebo k nemu nemáš prístup.');
+  const agent = {
     id: agentRow.id,
     name: agentRow.name,
     role: agentRow.role,
@@ -176,16 +174,13 @@ export async function executeCustomAgent(env, ownerId = 'admin', input) {
     system_prompt: agentRow.system_prompt,
     tools: JSON.parse(agentRow.tools_json || '[]'),
     autonomous_mode: Boolean(agentRow.autonomous_mode)
-  } : {
-    id: parsed.agent_id,
-    name: 'Default Agent',
-    role: 'Assistant',
-    model: env.AI_MODEL || '@cf/openai/gpt-oss-120b',
-    system_prompt: 'Si autonómny AI agent v prostredí Trinity.',
-    tools: [],
-    autonomous_mode: true
   };
-
+  // Custom agents cannot acquire write/deploy/payment capabilities through a stored tool name.
+  // Dedicated policy-based grants may extend this read-only list later.
+  const allowedTools = new Set(['integrationReadiness']);
+  const disallowed = agent.tools.filter(name => !allowedTools.has(name));
+  if (disallowed.length) throw new HttpError(403, 'Agent nemá oprávnenie vykonať požadované nástroje.');
+  
   const steps = [];
 
   // Step 1: Chain-of-Thought Intent Analysis
@@ -202,7 +197,7 @@ export async function executeCustomAgent(env, ownerId = 'admin', input) {
     for (const toolName of agent.tools) {
       if (skillRegistry.has(toolName)) {
         try {
-          const res = await skillRegistry.execute(toolName, { input: parsed.input, context: parsed.context });
+          const res = await skillRegistry.execute(toolName, { input: parsed.input, context: parsed.context }, env);
           toolOutputs[toolName] = res;
           steps.push({
             step: steps.length + 1,
@@ -235,17 +230,23 @@ export async function executeCustomAgent(env, ownerId = 'admin', input) {
   let rawOutput = '';
   try {
     const modelRes = await callModel(env, 'workers-ai', messages);
-    rawOutput = modelRes.text || 'Odpoveď agenta bola vygenerovaná.';
-  } catch {
-    rawOutput = `Agent [${agent.name}] vykonal analýzu a spracoval ${steps.length} krokov v autonómnom režime pre zadanú úlohu: "${parsed.input}".`;
+    rawOutput = requireRealAgentReply(modelRes);
+  } catch (error) {
+    const failedId = 'exec_' + crypto.randomUUID().slice(0, 12);
+    const details = String(error?.message || 'AI provider failure').slice(0, 500);
+    await env.DB.prepare(`
+      INSERT INTO ops_agent_executions (id, agent_id, owner_id, input, output, steps_json, status, duration_ms, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, 'failed', ?, datetime('now'))
+    `).bind(failedId, agent.id, ownerId, parsed.input, details, JSON.stringify(steps), Date.now() - startTime).run();
+    throw new HttpError(502, 'AI model je nedostupný alebo vrátil prázdnu odpoveď; úloha nebola dokončená.');
   }
 
-  // Step 4: Self-Reflection & Auto-Correction
   const selfReflection = {
-    evaluated: true,
-    passed_truth_check: true,
-    correction_needed: false,
-    confidence_score: 0.98
+    evaluated: false,
+    passed_truth_check: null,
+    correction_needed: null,
+    confidence_score: null,
+    reason: 'Nezávislé hodnotenie nebolo vykonané'
   };
   steps.push({
     step: steps.length + 1,
@@ -261,7 +262,7 @@ export async function executeCustomAgent(env, ownerId = 'admin', input) {
     await env.DB.prepare(`
       INSERT INTO ops_agent_executions (id, agent_id, owner_id, input, output, steps_json, status, duration_ms, created_at)
       VALUES (?, ?, ?, ?, ?, ?, 'completed', ?, datetime('now'))
-    `).bind(execId, agent.id, ownerId, parsed.input, rawOutput, JSON.stringify(steps), durationMs).run().catch(() => null);
+    `).bind(execId, agent.id, ownerId, parsed.input, rawOutput, JSON.stringify(steps), durationMs).run();
   }
 
   return {
@@ -275,69 +276,94 @@ export async function executeCustomAgent(env, ownerId = 'admin', input) {
   };
 }
 
+/**
+ * Inspect a Cloudflare zone and record an agent-domain INTENT only.
+ * This function does not buy a domain, write DNS, enable WAF, or deploy TLS.
+ * Those actions require dedicated verified Cloudflare operations.
+ */
 export async function provisionAgentDomain(env, ownerId = 'admin', input) {
   await ensureAgentSandboxTables(env);
   const data = domainProvisionSchema.parse(input);
+  if (!env.DB) throw new HttpError(503, 'D1 databáza nie je dostupná.');
+
+  const agent = await env.DB.prepare(
+    'SELECT id FROM ops_custom_agents WHERE id = ? AND owner_id = ?'
+  ).bind(data.agent_id, ownerId).first();
+  if (!agent) throw new HttpError(404, 'Agent neexistuje alebo k nemu nemáš prístup.');
+  const existingDomain = await env.DB.prepare('SELECT owner_id FROM ops_agent_domains WHERE domain_name = ?').bind(data.domain_name).first();
+  if (existingDomain && existingDomain.owner_id !== ownerId) throw new HttpError(409, 'Doména je priradená inému vlastníkovi.');
+
   const cfToken = env.CF_API_TOKEN || env.CLOUDFLARE_API_TOKEN;
-
-  const dnsRecords = [
-    { type: 'A', name: '@', content: '192.0.2.1', proxied: true, comment: 'Trinity AI Agent Sandbox Root' },
-    { type: 'CNAME', name: 'agent', content: `${data.target_worker}.saboivan2008.workers.dev`, proxied: true, comment: 'Custom Agent Endpoint' },
-    { type: 'CNAME', name: 'api', content: `${data.target_worker}.saboivan2008.workers.dev`, proxied: true, comment: 'Agent REST/WebSocket API' },
-    { type: 'TXT', name: '@', content: `trinity-agent-verification=${data.agent_id}`, comment: 'Trinity Ownership Proof' }
-  ];
-
-  let zoneId = 'cf_mock_zone_' + crypto.randomUUID().slice(0, 16);
-  let liveStatus = 'dns_configured';
+  let zoneId = null;
+  let status = cfToken ? 'zone_not_verified' : 'needs_cloudflare_credentials';
+  let details = null;
 
   if (cfToken) {
     try {
-      const zoneResp = await fetch('https://api.cloudflare.com/client/v4/zones', {
-        headers: { Authorization: `Bearer ${cfToken}`, 'Content-Type': 'application/json' }
-      });
-      const zoneData = await zoneResp.json().catch(() => ({}));
-      const matchedZone = (zoneData.result || []).find(z => z.name === data.domain_name);
-      if (matchedZone) {
-        zoneId = matchedZone.id;
-        liveStatus = 'active_cloudflare_zone';
+      const response = await fetch(
+        'https://api.cloudflare.com/client/v4/zones?name=' + encodeURIComponent(data.domain_name),
+        {
+          headers: { Authorization: 'Bearer ' + cfToken, Accept: 'application/json' },
+          signal: AbortSignal.timeout(10000)
+        }
+      );
+      const body = await response.json();
+      if (!response.ok || body.success !== true) {
+        throw new Error('Cloudflare API returned a non-success status');
       }
-    } catch {
-      liveStatus = 'local_dns_ready';
+      const zone = (body.result || []).find(z => z.name === data.domain_name);
+      if (zone) {
+        zoneId = zone.id;
+        status = 'zone_found_dns_not_configured';
+      } else {
+        status = 'zone_not_found';
+      }
+    } catch (error) {
+      status = 'cloudflare_check_failed';
+      details = String(error?.message || 'Cloudflare network error').slice(0, 180);
     }
   }
 
-  if (env.DB) {
-    await env.DB.prepare(`
-      INSERT INTO ops_agent_domains (domain_name, agent_id, owner_id, zone_id, status, dns_records_json, ssl_mode, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
-      ON CONFLICT(domain_name) DO UPDATE SET
-        agent_id = excluded.agent_id,
-        zone_id = excluded.zone_id,
-        status = excluded.status,
-        dns_records_json = excluded.dns_records_json,
-        ssl_mode = excluded.ssl_mode,
-        updated_at = datetime('now')
-    `).bind(data.domain_name, data.agent_id, ownerId, zoneId, liveStatus, JSON.stringify(dnsRecords), data.ssl_mode).run();
-
-    await env.DB.prepare('UPDATE ops_custom_agents SET domain_binding = ? WHERE id = ?').bind(data.domain_name, data.agent_id).run().catch(() => null);
-  }
+  const plannedRecords = [
+    { type: 'CNAME', name: 'agent', target_worker: data.target_worker, status: 'not_created' },
+    { type: 'CNAME', name: 'api', target_worker: data.target_worker, status: 'not_created' }
+  ];
+  await env.DB.prepare(`
+    INSERT INTO ops_agent_domains (domain_name, agent_id, owner_id, zone_id, status, dns_records_json, ssl_mode, updated_at)
+    VALUES (?, ?, ?, ?, ?, '[]', ?, datetime('now'))
+    ON CONFLICT(domain_name) DO UPDATE SET
+      agent_id = excluded.agent_id, owner_id = excluded.owner_id,
+      zone_id = excluded.zone_id, status = excluded.status,
+      dns_records_json = '[]', ssl_mode = excluded.ssl_mode,
+      updated_at = datetime('now')
+  `).bind(data.domain_name, data.agent_id, ownerId, zoneId, status, data.ssl_mode).run();
 
   await createTrinityDocument(env, ownerId, {
-    title: `Nová doména priradená agentovi: ${data.domain_name}`,
+    title: 'Plán pripojenia domény ' + data.domain_name,
     category: 'domains',
-    step_name: 'agent_domain_provision',
-    summary: `Doména ${data.domain_name} bola zaregistrovaná a prepojená s AI agentom [${data.agent_id}]. DNS záznamy, SSL a WAF pravidlá boli nastavené.`,
+    step_name: 'agent_domain_inspection',
+    summary: 'Doména nebola zaregistrovaná ani nasadená. Stav Cloudflare kontroly: ' + status,
     tags: ['cloudflare', 'domain', 'agent_sandbox', data.domain_name]
   }).catch(() => null);
 
   return {
-    ok: true,
+    ok: status === 'zone_found_dns_not_configured',
     domain_name: data.domain_name,
     agent_id: data.agent_id,
     zone_id: zoneId,
-    status: liveStatus,
-    ssl_mode: data.ssl_mode,
-    dns_records: dnsRecords,
-    endpoint: `https://${data.domain_name}`
+    status,
+    details,
+    registered: false,
+    dns_configured: false,
+    ssl_verified: false,
+    waf_verified: false,
+    deployed: false,
+    ssl_mode_requested: data.ssl_mode,
+    dns_records: [],
+    planned_records: plannedRecords,
+    endpoint: null,
+    next_step: zoneId
+      ? 'Vytvor DNS/Worker route, potom nezávisle over HTTPS a WAF.'
+      : 'Over registráciu a prístup k Cloudflare zóne pred vytvorením DNS.'
   };
 }

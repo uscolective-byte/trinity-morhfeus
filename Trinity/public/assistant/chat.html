@@ -4,47 +4,31 @@
   <nav class="main-nav" aria-label="Hlavné menu">
     <button data-view="dashboard" class="active"><span>⌂</span><b data-i18n="overview">Prehľad</b></button>
     <button data-view="chat"><span>◌</span><b data-i18n="chat">Chat</b></button>
-    <button data-view="agentlab"><span>🤖</span><b>AI Agent Lab</b></button>
-    <button data-view="workflows"><span>⚡</span><b>Visual Workflows</b></button>
-    <button data-view="studio"><span>✦</span><b>AI Studio</b></button>
+    <button data-view="agentlab"><span>✦</span><b>AI Agent Lab</b></button>
     <button data-view="projects"><span>▦</span><b data-i18n="projects">Projekty</b></button>
-    <button data-view="domains"><span>◈</span><b>Domény a hosting</b></button>
-    <button data-view="commodities"><span>📈</span><b>Komodity & Banky</b></button>
-    <button data-view="wallet"><span>💳</span><b>Peňaženka & Terminály</b></button>
-    <button data-view="modules"><span>🌐</span><b>Open-Data Moduly</b></button>
-    <button data-view="documents"><span>📚</span><b>Dokumentácia & Help</b></button>
-    <button id="memory-nav"><span>◇</span><b data-i18n="memoryPlain">Pamäť</b></button>
-    <button data-view="graph"><span>🕸</span><b>Pamäťový Graf</b></button>
-    <button data-view="settings"><span>⚙</span><b data-i18n="settings">Nastavenia</b></button>
+    <button data-view="wallet"><span>◈</span><b>Peňaženka</b></button>
+    <button data-view="studio"><span>◉</span><b>AI Studio</b></button>
+    <details class="more-nav" id="more-nav">
+      <summary>Ďalšie nástroje</summary>
+      <div class="more-nav-items">
+        <button data-view="workflows"><span>◎</span><b>Visual Workflows</b></button>
+        <button data-view="domains"><span>◇</span><b>Domény a hosting</b></button>
+        <button data-view="commodities"><span>▤</span><b>Komodity a banky</b></button>
+        <button data-view="modules"><span>◎</span><b>Open-Data moduly</b></button>
+        <button data-view="documents"><span>▤</span><b>Dokumentácia</b></button>
+        <button id="memory-nav"><span>◇</span><b data-i18n="memoryPlain">Pamäť</b></button>
+        <button data-view="graph"><span>◎</span><b>Pamäťový graf</b></button>
+        <button id="tools-button" type="button"><span>✦</span><b>Schopnosti a stav</b></button>
+        <button data-view="settings"><span>⚙</span><b data-i18n="settings">Nastavenia</b></button>
+      </div>
+    </details>
   </nav>
   <button id="new-chat" class="new"><span>＋</span><span data-i18n="newChatPlain">Nový rozhovor</span></button>
   <div class="side-label" data-i18n="recent">NAŠE ROZHOVORY</div><div id="sessions"></div>
-  <div class="sidebar-status-card">
-    <div class="status-card-header">
-      <span>👑 BASTERIX CORE</span>
-      <span class="status-pulse-badge">ONLINE</span>
-    </div>
-    <div class="status-card-row">
-      <small>Revolut:</small>
-      <a href="https://revolut.me/isabo91" target="_blank" rel="noopener">@isabo91 ↗</a>
-    </div>
-    <div class="status-card-row">
-      <small>PayPal:</small>
-      <b>saboivan2008@gmail.com</b>
-    </div>
-    <div class="status-card-row">
-      <small>TRNT Token:</small>
-      <b class="crypto-glow">1,000,000 TRNT</b>
-    </div>
-    <div class="status-card-row">
-      <small>Agent Jericho:</small>
-      <a href="https://jericho.dev" target="_blank" rel="noopener" class="jericho-glow">jericho.dev ↗</a>
-    </div>
-  </div>
   <div class="sidebar-bottom"><div><span class="signal"></span><span id="engine-state">…</span></div><small data-i18n="boundary">Citlivé zmeny len s tvojím súhlasom.</small><span id="operations" hidden></span></div>
 </aside>
 <main>
-  <header><div class="page-heading"><span id="page-kicker">TRINITY 11.0</span><strong id="page-title">Prehľad</strong><small id="subtitle" data-i18n="dashboardHere">Tvoj priestor pre tvorbu, prácu a nápady.</small></div><div class="header-actions"><span id="environment-badge" class="environment-badge" title="Aktívne prostredie">TRINITY 11.0</span><span class="fast-model-pill" title="Meta Llama 3.3 70B Turbo aktívny"><span class="fast-dot"></span> ⚡ <b>Turbo AI</b></span><span id="pc-bridge-badge" class="pc-bridge-badge" title="Stav lokálneho PC Bridge"><span class="pc-dot"></span> <b id="pc-bridge-text">PC: Kontrola…</b></span><div id="account-state" class="account-state" role="status" aria-live="polite" hidden><span class="account-dot" aria-hidden="true"></span><span><b id="account-label">Prihlásený</b><small id="account-detail">—</small></span></div><button id="theme" type="button" aria-label="Prepnúť farebný režim">◐ Vzhľad</button><button id="memory-button" data-i18n="memory" style="display:none">◇ Pamäť</button><button id="tools-button" data-i18n="tools" style="display:none">✦ Schopnosti</button><select id="language" aria-label="Language"><option value="auto">AUTO</option><option value="sk">SK</option><option value="en">EN</option><option value="cs">CS</option><option value="de">DE</option><option value="fr">FR</option><option value="es">ES</option><option value="it">IT</option><option value="pl">PL</option><option value="uk">UK</option><option value="ja">JA</option><option value="ko">KO</option><option value="zh">ZH</option></select><button id="logout" type="button" hidden>Odhlásiť</button></div></header>
+  <header><div class="page-heading"><span id="page-kicker">TRINITY 11.0</span><strong id="page-title">Prehľad</strong><small id="subtitle" data-i18n="dashboardHere">Tvoj priestor pre tvorbu, prácu a nápady.</small></div><div class="header-actions"><span id="environment-badge" class="environment-badge" title="Aktívne prostredie">TRINITY 11.0</span><span id="pc-bridge-badge" class="pc-bridge-badge" title="Stav lokálneho PC Bridge"><span class="pc-dot"></span> <b id="pc-bridge-text">PC: Kontrola…</b></span><div id="account-state" class="account-state" role="status" aria-live="polite" hidden><span class="account-dot" aria-hidden="true"></span><span><b id="account-label">Prihlásený</b><small id="account-detail">—</small></span></div><button id="theme" type="button" aria-label="Prepnúť farebný režim">◐ Vzhľad</button><button id="memory-button" data-i18n="memory" style="display:none">◇ Pamäť</button><select id="language" aria-label="Language"><option value="auto">AUTO</option><option value="sk">SK</option><option value="en">EN</option><option value="cs">CS</option><option value="de">DE</option><option value="fr">FR</option><option value="es">ES</option><option value="it">IT</option><option value="pl">PL</option><option value="uk">UK</option><option value="ja">JA</option><option value="ko">KO</option><option value="zh">ZH</option></select><button id="logout" type="button" hidden>Odhlásiť</button></div></header>
   <div id="notice" role="status" hidden></div>
   <section id="login" hidden>
     <h2 data-i18n="loginTitle">Vitaj v Trinity</h2>
@@ -637,40 +621,40 @@
       <div class="section-intro">
         <span class="eyebrow">FINANČNÉ CENTRUM TRINITY · PLATOBNÉ TERMINÁLY & PEŇAŽENKA</span>
         <h1>Peňaženka, POS Terminály & Výbery Peňazí</h1>
-        <p>Skutočná správa zostatkov, platobné terminály na prijímanie platieb (SEPA Instant EPC QR, Revolut Pay, PayPal, Web3 krypto) a okamžité výbery peňazí na váš osobný bankový účet.</p>
+        <p>Platobné požiadavky a evidencia potvrdení. QR kód nie je prijatá platba. Bez overeného bankového spojenia Trinity nepozná disponibilný zostatok ani nevykonáva automatické prevody.</p>
       </div>
 
       <div class="metric-grid domain-metrics tabular-metrics">
         <article class="metric blue">
-          <span>CELKOVÝ ZOSTATOK</span>
-          <strong id="wstat-balance">0,00 €</strong>
-          <small>peňaženka Trinity</small>
+          <span>EVIDOVANÝ ZOSTATOK</span>
+          <strong id="wstat-balance">—</strong>
+          <small>podľa evidencie Trinity</small>
         </article>
         <article class="metric teal">
-          <span>DOSTUPNÉ NA VÝBER</span>
-          <strong id="wstat-available">0,00 €</strong>
-          <small id="wstat-status">pripravené na výber (payout)</small>
+          <span>STAV BANKOVÉHO ÚČTU</span>
+          <strong id="wstat-available">—</strong>
+          <small id="wstat-status">Bez živého bankového pripojenia</small>
         </article>
         <article class="metric gold">
-          <span>PRIJATÉ PLATBY</span>
-          <strong id="wstat-received">0,00 €</strong>
-          <small>cez terminály & SEPA</small>
+          <span>EVIDOVANÉ PRÍJMY</span>
+          <strong id="wstat-received">—</strong>
+          <small>podľa doložených záznamov</small>
         </article>
         <article class="metric purple">
-          <span>CELKOVÉ VÝBERY</span>
-          <strong id="wstat-withdrawn">0,00 €</strong>
-          <small>vyplatené na banku / PayPal</small>
+          <span>NAHLÁSENÉ ODOSLANIA</span>
+          <strong id="wstat-withdrawn">—</strong>
+          <small>podľa potvrdenia majiteľa</small>
         </article>
         <article class="metric coral">
-          <span>AKTÍVNE TERMINÁLY</span>
-          <strong id="wstat-terminals-count">4</strong>
+          <span>NASTAVENÉ KANÁLY</span>
+          <strong id="wstat-terminals-count">—</strong>
           <small>SEPA, Revolut, PayPal, Web3</small>
         </article>
       </div>
 
       <nav class="trinity-subnav" id="wallet-subnav" aria-label="Sekcie peňaženky">
         <button type="button" class="subnav-btn active" data-wallet-tab="terminal">📥 Prijať platbu (POS Terminál)</button>
-        <button type="button" class="subnav-btn" data-wallet-tab="payout">📤 Vybrať peniaze (Payout na banku / PayPal)</button>
+        <button type="button" class="subnav-btn" data-wallet-tab="payout">📤 Pripraviť platbu (neodosiela peniaze)</button>
         <button type="button" class="subnav-btn" data-wallet-tab="config">⚙ Nastavenie terminálov & Krypto peňaženka</button>
         <button type="button" class="subnav-btn" data-wallet-tab="history">📜 Pohyby a výpisy</button>
         <div class="subnav-actions">
@@ -1358,7 +1342,7 @@
           </div>
           <div id="commerce-product-list" class="api-key-list"></div>
         </section>
-        <section id="settings-wallet-panel" class="panel admin-panel" data-settings-section="admin" data-settings-keywords="wallet financie penazenka terminaly platby sepa paypal revolut krypto"><div class="panel-head"><div><span class="eyebrow">TRINITY WALLET & TERMINÁLY</span><h2>Peňaženka & Platobné Terminály</h2></div><span class="detail-chip">OVERENÉ FAKTY · BEZ SIMULÁCIÍ</span></div><div class="wallet-balance"><small>Overený zostatok peňaženky</small><strong id="wallet-balance">0,00 €</strong></div><p class="settings-help">Skutočné platobné terminály: SEPA Instant EPC QR, Revolut Pay, PayPal Commerce a Web3 EVM krypto. Všetky transakcie sa overujú na blockchaine alebo bankovým výpisom.</p><div style="margin-bottom:12px"><button type="button" class="primary" data-view="wallet">💳 Otvoriť Hlavný POS Terminál & Peňaženku</button></div><form id="wallet-form" class="secret-form" style="display:none"><input id="wallet-amount" type="number" min="0.01" max="1000000" step="0.01" placeholder="Suma v EUR"><input id="wallet-recipient" maxlength="120" placeholder="Príjemca"><input id="wallet-note" maxlength="500" placeholder="Poznámka"><div class="wallet-actions"><button type="button" class="primary" data-wallet-action="deposit">Vložiť €</button><button type="button" data-wallet-action="withdrawal">Vybrať</button><button type="button" data-wallet-action="send">Odoslať</button></div></form><div id="wallet-transactions" class="api-key-list"></div></section>
+        <section id="settings-wallet-panel" class="panel admin-panel" data-settings-section="admin" data-settings-keywords="wallet financie penazenka terminaly platby sepa paypal revolut krypto"><div class="panel-head"><div><span class="eyebrow">TRINITY WALLET & TERMINÁLY</span><h2>Peňaženka & Platobné Terminály</h2></div><span class="detail-chip">VIRTUÁLNY TESTOVACÍ ÚČET</span></div><div class="wallet-balance"><small>Virtuálny zostatok sandboxu (nie peniaze)</small><strong id="wallet-balance">—</strong></div><p class="settings-help">Toto je testovací virtuálny účet. Živé platobné kanály sú v časti Peňaženka; banka ani PayPal sa neoverujú automaticky.</p><div style="margin-bottom:12px"><button type="button" class="primary" data-view="wallet">💳 Otvoriť Hlavný POS Terminál & Peňaženku</button></div><form id="wallet-form" class="secret-form" style="display:none"><input id="wallet-amount" type="number" min="0.01" max="1000000" step="0.01" placeholder="Suma v EUR"><input id="wallet-recipient" maxlength="120" placeholder="Príjemca"><input id="wallet-note" maxlength="500" placeholder="Poznámka"><div class="wallet-actions"><button type="button" class="primary" data-wallet-action="deposit">Vložiť €</button><button type="button" data-wallet-action="withdrawal">Vybrať</button><button type="button" data-wallet-action="send">Odoslať</button></div></form><div id="wallet-transactions" class="api-key-list"></div></section>
         <section id="settings-rbac-panel" class="panel admin-panel" data-settings-section="admin" data-settings-keywords="rbac oprávnenia roly schopnosti"><div class="panel-head"><div><span class="eyebrow">GRANULAR RBAC</span><h2>Oprávnenia podľa schopností</h2></div><span class="detail-chip">OWNER</span></div><p class="settings-help">Nastav presné schopnosti pre roly admin a user. Owner zostáva neobmedzený.</p><div id="settings-rbac" class="rbac-grid"></div></section>
         <section id="settings-passkey-panel" class="panel admin-panel" data-settings-section="admin" data-settings-keywords="passkey webauthn biometrika login touchid windows hello yubikey">
           <div class="panel-head">
