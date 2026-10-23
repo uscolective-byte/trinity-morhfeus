@@ -1,5 +1,5 @@
 // AURA CodeGen — generuje, refaktoruje a udržiava kód (Trinity 10.2)
-import {runAuraAi, parseAuraJson, safeDbRun, safeDbWrite} from './aura_helpers.js';
+import {runAuraAi, parseAuraJson, safeDbRun, safeDbWrite, AURA_SERVICE_VERSION} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
@@ -65,7 +65,7 @@ export default {
         return Response.json({ ok: true, result: { migration_sql: cleanedSql }, traceId, from: "aura-codegen" });
       }
       if (call.action === "aura.status") {
-        return Response.json({ ok: true, result: { agent: "codegen", role: "Generuje čistý kód, refaktoruje, scaffoldy a D1 SQL", status: "active", version: "10.2.0" }, traceId, from: "aura-codegen" });
+        return Response.json({ ok: true, result: { agent: "codegen", role: "Generuje čistý kód, refaktoruje, scaffoldy a D1 SQL", status: "active", version: AURA_SERVICE_VERSION }, traceId, from: "aura-codegen" });
       }
       return Response.json({ ok: false, error: "Unknown action: " + call.action, traceId, from: "aura-codegen" });
     } catch (e) { return Response.json({ ok: false, error: e.message, traceId, from: "aura-codegen" }); }

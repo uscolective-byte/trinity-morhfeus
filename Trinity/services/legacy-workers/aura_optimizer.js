@@ -1,5 +1,5 @@
 // AURA Optimizer — optimalizuje výkon, náklady a zdroje (Trinity 10.2)
-import {runAuraAi, parseAuraJson, safeDbRun} from './aura_helpers.js';
+import {runAuraAi, parseAuraJson, safeDbRun, AURA_SERVICE_VERSION} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
@@ -38,7 +38,7 @@ export default {
         return Response.json({ ok: true, result: { optimized: cleaned }, traceId, from: "aura-optimizer" });
       }
       if (call.action === "aura.status") {
-        return Response.json({ ok: true, result: { agent: "optimizer", role: "Optimalizuje výkon, náklady, token usage a D1 dotazy", status: "active", version: "10.2.0" }, traceId, from: "aura-optimizer" });
+        return Response.json({ ok: true, result: { agent: "optimizer", role: "Optimalizuje výkon, náklady, token usage a D1 dotazy", status: "active", version: AURA_SERVICE_VERSION }, traceId, from: "aura-optimizer" });
       }
       const text = await runAuraAi(env, "Si AURA Optimizer. Navrhni optimalizácie.", d.prompt || call.action);
       return Response.json({ ok: true, result: { response: text }, traceId, from: "aura-optimizer" });

@@ -1,5 +1,5 @@
 // AURA Memory — konsoliduje pamäť a syntetizuje znalosti (Trinity 10.2)
-import {runAuraAi, parseAuraJson, safeDbRun, safeDbWrite} from './aura_helpers.js';
+import {runAuraAi, parseAuraJson, safeDbRun, safeDbWrite, AURA_SERVICE_VERSION} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
@@ -40,7 +40,7 @@ export default {
         return Response.json({ ok: true, result: r.results, traceId, from: "aura-memory" });
       }
       if (call.action === "aura.status") {
-        return Response.json({ ok: true, result: { agent: "memory", role: "Konsoliduje pamäť, prepája D1 kontext a syntetizuje znalosti", status: "active", version: "10.2.0" }, traceId, from: "aura-memory" });
+        return Response.json({ ok: true, result: { agent: "memory", role: "Konsoliduje pamäť, prepája D1 kontext a syntetizuje znalosti", status: "active", version: AURA_SERVICE_VERSION }, traceId, from: "aura-memory" });
       }
       const text = await runAuraAi(env, "Si AURA Memory. Asistuj pri organizácii pamäte.", d.prompt || call.action);
       return Response.json({ ok: true, result: { response: text }, traceId, from: "aura-memory" });

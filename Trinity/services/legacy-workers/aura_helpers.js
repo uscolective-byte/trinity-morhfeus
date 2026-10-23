@@ -1,4 +1,5 @@
-// AURA Workers Helpers — zdieľaná logika pre inteligentné modely a robustný JSON parsing
+// Shared Aura Worker helpers. Service protocol version is distinct from Trinity app release.
+export const AURA_SERVICE_VERSION='2.1.0';
 
 export function getAiModel(env, preferred) {
   if (preferred && env[preferred]) return env[preferred];

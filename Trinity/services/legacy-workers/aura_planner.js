@@ -1,5 +1,5 @@
 // AURA Planner — dekomponuje ciele, plánuje projekty a šprinty (Trinity 10.2)
-import {runAuraAi, parseAuraJson, safeDbRun, safeDbWrite} from './aura_helpers.js';
+import {runAuraAi, parseAuraJson, safeDbRun, safeDbWrite, AURA_SERVICE_VERSION} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
@@ -73,7 +73,7 @@ export default {
         return Response.json({ ok: true, result: r.results, traceId, from: "aura-planner" });
       }
       if (call.action === "aura.status") {
-        return Response.json({ ok: true, result: { agent: "planner", role: "Dekomponuje ciele, plánuje projekty, šprinty a časové osi", status: "active", version: "10.2.0" }, traceId, from: "aura-planner" });
+        return Response.json({ ok: true, result: { agent: "planner", role: "Dekomponuje ciele, plánuje projekty, šprinty a časové osi", status: "active", version: AURA_SERVICE_VERSION }, traceId, from: "aura-planner" });
       }
       const text = await runAuraAi(env, "Si AURA Planner. Plánuj ciele a koordinuj tím.", d.prompt || call.action);
       return Response.json({ ok: true, result: { response: text }, traceId, from: "aura-planner" });

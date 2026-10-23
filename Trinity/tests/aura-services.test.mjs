@@ -103,3 +103,13 @@ test('a real SQL write error returns a failed Aura action instead of fabricated 
  const req=new Request('https://aura.internal/',{method:'POST',headers:{'Content-Type':'application/json','X-Aura-Service-Token':token},body:JSON.stringify({action:'codegen.generate',data:{spec:'small helper'},idempotency_key:crypto.randomUUID(),approval:{approved:true,actor_role:'owner',request_id:crypto.randomUUID()}})});
  const res=await worker.fetch(req,env);assert.equal(res.status,500);assert.equal((await res.json()).ok,false);
 });
+
+test('Aura role status uses the shared protocol version',async()=>{
+ for(const role of ['aura_analyzer','aura_architect','aura_codegen','aura_deployer','aura_evolver','aura_memory','aura_optimizer','aura_planner','aura_sentinel','aura_tester']){
+  const env={...base,WORKER_ROLE:role,AI:{run(){throw Error('status must not query AI');}}};
+  const res=await worker.fetch(new Request('https://aura.internal/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'aura.status',data:{}})}),env);
+  assert.equal(res.status,200,role);
+  const body=await res.json();assert.equal(body.result.version,body.service_version,role);
+  assert.equal(body.result.version,'2.1.0',role);
+ }
+});

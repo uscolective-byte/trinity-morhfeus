@@ -9,8 +9,9 @@ import planner from './legacy-workers/aura_planner.js';
 import sentinel from './legacy-workers/aura_sentinel.js';
 import tester from './legacy-workers/aura_tester.js';
 import {listAuraSafeSkills,executeAuraSafeSkill} from './legacy-workers/aura-safe-skills.js';
+import {AURA_SERVICE_VERSION} from './legacy-workers/aura_helpers.js';
 
-const VERSION='2.1.0';
+const VERSION=AURA_SERVICE_VERSION;
 const WRITE_ACTIONS=new Set(['analyze.code','architect.design','architect.edge.add','architect.node.add','codegen.generate','codegen.refactor','codegen.scaffold','evolve.propose','memory.synthesize','memory.consolidate','plan.task','plan.project','plan.create','plan.goals','sentinel.alert','sentinel.scan','test.validate','deploy.stage','deploy.complete','deploy.rollback']);
 const COMMON_AURA_SKILLS=['aura.skills','aura.execute_skill'];
 const roles={

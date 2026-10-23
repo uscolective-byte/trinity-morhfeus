@@ -1,5 +1,5 @@
 // AURA Deployer — nasadzuje Workery, spravuje verzie a rollback (Trinity 10.2)
-import {runAuraAi} from './aura_helpers.js';
+import {runAuraAi, AURA_SERVICE_VERSION} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
@@ -34,7 +34,7 @@ export default {
         return Response.json({ok:false,error:'Live Cloudflare deployment is not implemented in Aura Deployer; use verified Wrangler/CI release receipts.',traceId,from:'aura-deployer'},{status:501});
       }
       if (call.action === "aura.status") {
-        return Response.json({ ok: true, result: { agent: "deployer", role: "Nasadzuje Workery, spravuje verzie a rollback", status: "active", version: "2.1.0" }, traceId, from: "aura-deployer" });
+        return Response.json({ ok: true, result: { agent: "deployer", role: "Nasadzuje Workery, spravuje verzie a rollback", status: "active", version: AURA_SERVICE_VERSION }, traceId, from: "aura-deployer" });
       }
       const text = await runAuraAi(env, "Si AURA Deployer. Odpovedaj na otázky týkajúce sa nasadzovania, CI/CD a infraštruktúry Cloudflare Workers.", d.prompt || call.action);
       return Response.json({ ok: true, result: { response: text }, traceId, from: "aura-deployer" });

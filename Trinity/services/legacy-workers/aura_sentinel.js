@@ -1,5 +1,5 @@
 // AURA Sentinel — monitoruje bezpečnosť a detekuje anomálie (Trinity 10.2)
-import {runAuraAi, parseAuraJson, safeDbRun, safeDbWrite} from './aura_helpers.js';
+import {runAuraAi, parseAuraJson, safeDbRun, safeDbWrite, AURA_SERVICE_VERSION} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
@@ -36,7 +36,7 @@ export default {
         return Response.json({ ok: true, traceId, from: "aura-sentinel" });
       }
       if (call.action === "aura.status") {
-        return Response.json({ ok: true, result: { agent: "sentinel", role: "Monitoruje bezpečnosť, deteguje anomálie a riadi alerty", status: "active", version: "10.2.0" }, traceId, from: "aura-sentinel" });
+        return Response.json({ ok: true, result: { agent: "sentinel", role: "Monitoruje bezpečnosť, deteguje anomálie a riadi alerty", status: "active", version: AURA_SERVICE_VERSION }, traceId, from: "aura-sentinel" });
       }
       const text = await runAuraAi(env, "Si AURA Sentinel. Vykonaj bezpečnostné monitorovanie.", d.prompt || call.action);
       return Response.json({ ok: true, result: { response: text }, traceId, from: "aura-sentinel" });

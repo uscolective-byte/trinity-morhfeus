@@ -1,5 +1,5 @@
 // AURA Tester — testuje, validuje a zabezpečuje kvalitu systému (Trinity 10.2)
-import {runAuraAi, parseAuraJson, safeDbRun, safeDbWrite} from './aura_helpers.js';
+import {runAuraAi, parseAuraJson, safeDbRun, safeDbWrite, AURA_SERVICE_VERSION} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
@@ -59,7 +59,7 @@ export default {
         return Response.json({ ok: true, result, traceId, from: "aura-tester" });
       }
       if (call.action === "aura.status") {
-        return Response.json({ ok: true, result: { agent: "tester", role: "Testuje, validuje kód a zabezpečuje kvalitu systému", status: "active", version: "10.2.0" }, traceId, from: "aura-tester" });
+        return Response.json({ ok: true, result: { agent: "tester", role: "Testuje, validuje kód a zabezpečuje kvalitu systému", status: "active", version: AURA_SERVICE_VERSION }, traceId, from: "aura-tester" });
       }
       const text = await runAuraAi(env, "Si AURA Tester. Spusti testy a validáciu.", d.prompt || call.action);
       return Response.json({ ok: true, result: { response: text }, traceId, from: "aura-tester" });
