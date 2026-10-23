@@ -1,0 +1,78 @@
+openapi: 3.0.3
+info:
+  title: Trinity Assistant Bridge
+  version: 1.0.0
+  description: Private, owner-scoped shared notes for ChatGPT and Copilot Studio.
+servers:
+  - url: https://auru.dev
+security:
+  - TrinityApiKey: []
+components:
+  securitySchemes:
+    TrinityApiKey:
+      type: apiKey
+      in: header
+      name: X-Trinity-API-Key
+  schemas:
+    Note:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        text: {type: string}
+        source: {type: string, enum: [chatgpt, copilot]}
+        revision: {type: integer}
+        updated_at: {type: string}
+    NoteInput:
+      type: object
+      additionalProperties: false
+      required: [id, text, source, base_revision]
+      properties:
+        id: {type: string, format: uuid}
+        text: {type: string, minLength: 1, maxLength: 8000}
+        source: {type: string, enum: [chatgpt, copilot]}
+        base_revision: {type: integer, minimum: 0}
+paths:
+  /api/assistant-bridge/status:
+    get:
+      operationId: trinityBridgeStatus
+      summary: Check the authenticated Trinity integration, not external OAuth connection.
+      responses:
+        '200':
+          description: Authenticated bridge metadata.
+  /api/assistant-bridge/notes:
+    get:
+      operationId: listTrinitySharedNotes
+      summary: Read shared notes for the authenticated owner.
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: A page of up to 50 notes and next_cursor.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notes:
+                    type: array
+                    items: {$ref: '#/components/schemas/Note'}
+                  next_cursor: {type: string, nullable: true}
+    post:
+      operationId: upsertTrinitySharedNote
+      summary: Create or revise a shared note using optimistic revision protection.
+      description: Supply base_revision 0 when creating. On updates, use the revision returned by listing. HTTP 409 means refresh before retrying.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/NoteInput'}
+      responses:
+        '200':
+          description: Updated note.
+        '201':
+          description: Created note.
+        '409':
+          description: Revision conflict. Reload and reconcile; do not blindly retry.
