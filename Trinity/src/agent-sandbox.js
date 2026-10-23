@@ -150,6 +150,13 @@ export async function createOrUpdateCustomAgent(env, ownerId = 'admin', input) {
   return { ok: true, agent_id: data.id, name: data.name };
 }
 
+/** A model failure or empty output is never counted as completed work. */
+export function requireRealAgentReply(result) {
+  const value = typeof result?.text === 'string' ? result.text.trim() : '';
+  if (!value) throw new HttpError(502, 'AI model nevrátil platný výsledok.');
+  return value;
+}
+
 export async function executeCustomAgent(env, ownerId = 'admin', input) {
   await ensureAgentSandboxTables(env);
   const parsed = agentExecutionSchema.parse(input);
@@ -223,8 +230,7 @@ export async function executeCustomAgent(env, ownerId = 'admin', input) {
   let rawOutput = '';
   try {
     const modelRes = await callModel(env, 'workers-ai', messages);
-    rawOutput = typeof modelRes?.text === 'string' ? modelRes.text.trim() : '';
-    if (!rawOutput) throw new Error('AI provider returned no text');
+    rawOutput = requireRealAgentReply(modelRes);
   } catch (error) {
     const failedId = 'exec_' + crypto.randomUUID().slice(0, 12);
     const details = String(error?.message || 'AI provider failure').slice(0, 500);
