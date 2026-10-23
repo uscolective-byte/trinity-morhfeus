@@ -1,3 +1,4 @@
+import {cancelWalletPayout} from '../src/wallet-terminals.js';
 import {readFileSync} from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -127,4 +128,36 @@ test('Trinity 11 UI keeps all routes and unique DOM identifiers', () => {
   }
   assert.ok(script.includes('initAgentLabEvents()'), 'AI Agent Lab wiring must remain');
   assert.ok(!html.includes('1,000,000 TRNT'), 'token amount cannot be hard-coded as live');
+});
+
+test('recorded payout cannot be deleted through cancel endpoint', async () => {
+  const sqls = [];
+  const env = { DB: { prepare(sql) {
+    sqls.push(sql);
+    return {bind() {return this;}, async first() {return null;}};
+  } } };
+  await assert.rejects(cancelWalletPayout(env, 'owner', 'PAYOUT-123'), /Zmazať možno len neodoslaný návrh/);
+  assert.ok(sqls[0].includes("status='prepared'"), 'cancel must require prepared status');
+  assert.ok(sqls[0].includes('owner_id=?'), 'cancel must be owner scoped');
+});
+
+test('only prepared owner payouts can be cancelled', async () => {
+  const env = { DB: { prepare(sql) {
+    assert.match(sql, /status='prepared'/);
+    return {bind(...values) {
+      assert.deepEqual(values, ['PAYOUT-123', 'PAYOUT-123', 'owner']);
+      return this;
+    }, async first() {return {id:'PAYOUT-123'};}};
+  } } };
+  const result = await cancelWalletPayout(env, 'owner', 'PAYOUT-123');
+  assert.equal(result.deleted, true);
+  assert.equal(result.id, 'PAYOUT-123');
+});
+
+test('financial UI renders evidence ledger without guessing bank balances', () => {
+  const script = readFileSync(new URL('../public/assistant/chat.js.txt', import.meta.url), 'utf8');
+  assert.match(script, /const txs = data\.ledger \|\| data\.recent_transactions \|\| \[\]/);
+  assert.match(script, /Živé bankové pripojenie neoverené/);
+  assert.match(script, /Potvrdené majiteľom \(neoverené bankou\)/);
+  assert.doesNotMatch(script, /Odoslané a overené bankovým výpisom/);
 });
