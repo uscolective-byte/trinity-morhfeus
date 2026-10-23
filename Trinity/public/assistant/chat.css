@@ -1669,64 +1669,33 @@ dialog::backdrop {
 }
 
 
-/* Trinity 11.0: AI Agent Lab & Visual Workflows Cyber-Fintech UI */
-.agentlab-view, .workflows-view {
-  animation: fadeIn 0.25s ease-out;
-}
 
-.agentlab-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+/* Trinity 11 groundwork: progressive disclosure instead of a crowded navigation. */
+.main-nav .more-nav {
+  border-top: 1px solid var(--line, rgba(255,255,255,.12));
+  margin-top: 10px;
+  padding-top: 10px;
 }
-
-@media (max-width: 900px) {
-  .agentlab-grid {
-    grid-template-columns: 1fr;
-  }
+.main-nav .more-nav > summary {
+  list-style-position: inside;
+  cursor: pointer;
+  border-radius: 10px;
+  padding: 11px 12px;
+  color: var(--text-muted, #94a3b8);
+  font-size: 13px;
+  font-weight: 650;
+  transition: color .15s, background .15s;
 }
-
-.agent-card {
-  background: var(--bg-card, rgba(255, 255, 255, 0.03));
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-  border-radius: 8px;
-  padding: 14px 16px;
-  margin-bottom: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  transition: all 0.2s ease;
+.main-nav .more-nav > summary:hover,
+.main-nav .more-nav > summary:focus-visible {
+  color: var(--text-main, #f8fafc);
+  background: rgba(148,163,184,.10);
 }
-
-.agent-card:hover {
-  border-color: var(--accent, #6366f1);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
-  transform: translateY(-1px);
+.main-nav .more-nav > summary:focus-visible {
+  outline: 2px solid var(--cyan, #38bdf8);
+  outline-offset: 2px;
 }
-
-.agent-card-info h4 {
-  margin: 0 0 4px 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text, #fff);
-}
-
-.agent-card-info p {
-  margin: 0;
-  font-size: 12px;
-  color: var(--muted, #94a3b8);
-}
-
-.agent-card-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.workflow-canvas-container {
-  position: relative;
-  min-height: 280px;
-  background: radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
-  background-size: 18px 18px;
-  border-radius: 8px;
-  border: 1px solid var(--border, rgba(255,255,255,0.1));
+.main-nav .more-nav-items { display: grid; gap: 3px; padding-top: 6px; }
+@media (prefers-reduced-motion: reduce) {
+  .main-nav .more-nav > summary { transition: none; }
 }

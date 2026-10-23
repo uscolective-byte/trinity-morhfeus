@@ -27,7 +27,7 @@ export const provisionDomainEnvSchema = z.object({
   proxied: z.boolean().optional().default(true),
   waf_enabled: z.boolean().optional().default(true),
   cache_level: z.enum(['bypass', 'standard', 'aggressive']).optional().default('standard'),
-  auto_create_dns: z.boolean().optional().default(true),
+  auto_create_dns: z.boolean().optional().default(false),
   sale_price_eur: z.number().min(0).max(10000000).optional().nullable(),
   payment_checkout_url: z.string().max(2048).optional().default('')
 }).strict();
@@ -247,6 +247,7 @@ function buildDefaultEnvironmentEntry(domain_name, envName, opts = {}) {
 export async function provisionDomainWithEnvironments(env, actor = 'owner', rawInput = {}) {
   const input = provisionDomainEnvSchema.parse(rawInput);
   const domain_name = input.domain_name;
+  if (input.auto_create_dns) throw new HttpError(422, 'Automatické DNS bez overeného cieľa nie je podporované. Najprv over Cloudflare zónu a cieľový Worker.');
 
   let domainRecord = null;
   if (env?.DB?.prepare) {
@@ -256,20 +257,13 @@ export async function provisionDomainWithEnvironments(env, actor = 'owner', rawI
         domainRecord = await createDomain(env, {
           domain_name,
           registrar: input.registrar || 'cloudflare',
-          status: input.sale_price_eur ? 'for_sale' : 'active',
-          listing_type: input.sale_price_eur ? 'sale' : 'none',
+          status: 'pending',
+          listing_type: 'none',
           sale_price: input.sale_price_eur || null,
           notes: `Vytvorené cez Trinity Cloudflare Control Plane (${input.template})`
         });
       }
-      if (input.auto_create_dns && domainRecord?.id) {
-        const existingDns = await env.DB.prepare('SELECT COUNT(*) AS count FROM domain_dns_records WHERE domain_id=?').bind(domainRecord.id).first().catch(() => ({ count: 0 }));
-        if (!existingDns?.count) {
-          await addDnsRecord(env, domainRecord.id, { type: 'A', name: '@', content: '192.0.2.1', ttl: 1, proxied: input.proxied }).catch(() => {});
-          await addDnsRecord(env, domainRecord.id, { type: 'CNAME', name: 'staging', content: domain_name, ttl: 1, proxied: input.proxied }).catch(() => {});
-          await addDnsRecord(env, domainRecord.id, { type: 'CNAME', name: 'dev', content: domain_name, ttl: 1, proxied: input.proxied }).catch(() => {});
-        }
-      }
+      // External DNS is a separate, verified Cloudflare operation.
     } catch {}
   }
 
@@ -302,13 +296,13 @@ export async function provisionDomainWithEnvironments(env, actor = 'owner', rawI
     category: 'domain_production',
     step_name: `domain_env_provision:${domain_name}`,
     actor,
-    summary: `Doména ${domain_name} bola vytvorená so všetkými prostrediami (production, staging, development), DNS záznamami a nasadenou šablónou ${input.template}.`,
+    summary: `V Trinity bola uložená konfigurácia prostredí pre ${domain_name}. Registrácia, DNS, SSL a WAF neboli vykonané ani overené.`,
     content: [
       `### Konfigurácia domény \`${domain_name}\``,
       `- **Registrátor / Control Plane**: \`${entry.registrar}\``,
-      `- **SSL/TLS režim**: \`${entry.ssl_mode}\``,
-      `- **Cloudflare Proxy**: \`${entry.proxied ? 'Zapnuté (Orange Cloud)' : 'DNS Only'}\``,
-      `- **WAF ochrana**: \`${entry.waf_enabled ? 'Aktívna' : 'Vypnutá'}\``,
+      `- **Požadovaný SSL/TLS režim (neoverené)**: \`${entry.ssl_mode}\``,
+      `- **Požadované Cloudflare Proxy (neoverené)**: \`${entry.proxied ? 'Áno' : 'Nie'}\``,
+      `- **Požadovaná WAF ochrana (neoverené)**: \`${entry.waf_enabled ? 'Áno' : 'Nie'}\``,
       '',
       '### Vytvorené prostredia (Environments)',
       `- **Production**: \`/sites/${domain_name}/production\` (${environments.production.hostname})`,
@@ -321,8 +315,9 @@ export async function provisionDomainWithEnvironments(env, actor = 'owner', rawI
 
   return {
     ok: true,
-    domain: domainRecord || { id: entry.domain_id, domain_name, status: 'active' },
-    control_plane: entry
+    domain: domainRecord || { id: entry.domain_id, domain_name, status: 'pending' },
+    control_plane: entry,
+    external_deployment: {registered: false, dns_configured: false, ssl_verified: false, waf_verified: false, status: 'configuration_only'}
   };
 }
 
@@ -375,7 +370,7 @@ export async function deployDomainEnvironment(env, actor = 'owner', rawInput = {
   const updatedEnv = {
     environment,
     hostname: environment === 'production' ? domain_name : `${environment}.${domain_name}`,
-    status: 'deployed',
+    status: 'saved_in_trinity',
     version: nextVersion,
     template: input.template,
     studio_project_id: input.studio_project_id || null,
@@ -405,19 +400,19 @@ export async function deployDomainEnvironment(env, actor = 'owner', rawInput = {
   await writeEnvironmentsMap(env, refreshedMap);
 
   await recordStepDocument(env, {
-    title: `Nasadenie prostredia ${environment.toUpperCase()} pre doménu ${domain_name} (v${nextVersion})`,
+    title: `Uloženie HTML prostredia ${environment.toUpperCase()} pre doménu ${domain_name} (v${nextVersion})`,
     category: 'domain_production',
     step_name: `domain_env_deploy:${domain_name}:${environment}`,
     actor,
-    summary: `Prostredie ${environment} domény ${domain_name} bolo vyprodukované a nasadené vo verzii v${nextVersion} (šablóna: ${input.template}).`,
+    summary: `V Trinity bol uložený obsah prostredia ${environment} pre ${domain_name} vo verzii v${nextVersion}. Externé nasadenie a DNS neboli overené.`,
     content: [
-      `### Detail produkčného nasadenia`,
+      `### Uložená interná verzia webu; nie potvrdenie živého nasadenia`,
       `- **Doména**: \`${domain_name}\``,
       `- **Prostredie**: \`${environment}\` (verzia \`v${nextVersion}\`)`,
       `- **Hostname**: \`${updatedEnv.hostname}\``,
-      `- **Živá URL cesta**: \`${updatedEnv.live_path}\``,
+      `- **Interná URL cesta**: \`${updatedEnv.live_path}\``,
       `- **Šablóna / Zdroj**: \`${input.template}\``,
-      `- **SSL / Proxy / WAF**: \`${input.ssl_mode}\` / \`${input.proxied ? 'Proxied' : 'DNS Only'}\` / \`${input.waf_enabled ? 'WAF ON' : 'WAF OFF'}\``
+      `- **Požadované SSL / Proxy / WAF (neoverené)**: \`${input.ssl_mode}\` / \`${input.proxied ? 'Proxied' : 'DNS Only'}\` / \`${input.waf_enabled ? 'WAF ON' : 'WAF OFF'}\``
     ].join('\n'),
     receipt_id: `domain-deploy:${domain_name}:${environment}:v${nextVersion}`,
     tags: ['deploy', domain_name, environment, `v${nextVersion}`]
@@ -427,7 +422,8 @@ export async function deployDomainEnvironment(env, actor = 'owner', rawInput = {
     ok: true,
     domain_name,
     environment: updatedEnv,
-    control_plane: domainEntry
+    control_plane: domainEntry,
+    external_deployment: {deployed:false, dns_verified:false, ssl_verified:false, waf_verified:false}
   };
 }
 
@@ -455,6 +451,7 @@ export const TWENTY_STARTER_CLOUDFLARE_DOMAINS = [
 ];
 
 export async function seedTwentyCloudflareDomains(env, actor = 'cloudflare-auto-seed') {
+  if (env.TRINITY_ENV === 'production' || env.TRINITY_ALLOW_DEMO_SEED !== 'true') throw new HttpError(403, 'Demo domény sa nesmú automaticky zapisovať do produkčného portfólia.');
   const allMap = await readEnvironmentsMap(env);
   const createdDomains = [];
   const now = new Date().toISOString();
@@ -468,24 +465,17 @@ export async function seedTwentyCloudflareDomains(env, actor = 'cloudflare-auto-
           domainRecord = await createDomain(env, {
             domain_name: item.domain_name,
             registrar: 'cloudflare',
-            status: item.status,
-            auto_renew: true,
-            listing_type: item.listing_type,
-            sale_price: item.sale_price,
+            status: 'pending',
+            auto_renew: false,
+            listing_type: 'none',
+            sale_price: null,
             sale_currency: 'EUR',
             lease_price_monthly: item.lease_price_monthly,
             lease_currency: 'EUR',
             notes: `${item.title} — ${item.subtitle}`
           });
         }
-        if (domainRecord?.id) {
-          const existingDns = await env.DB.prepare('SELECT COUNT(*) AS count FROM domain_dns_records WHERE domain_id=?').bind(domainRecord.id).first().catch(() => ({ count: 0 }));
-          if (!existingDns?.count) {
-            await addDnsRecord(env, domainRecord.id, { type: 'A', name: '@', content: '192.0.2.1', ttl: 1, proxied: true }).catch(() => {});
-            await addDnsRecord(env, domainRecord.id, { type: 'CNAME', name: 'staging', content: item.domain_name, ttl: 1, proxied: true }).catch(() => {});
-            await addDnsRecord(env, domainRecord.id, { type: 'CNAME', name: 'dev', content: item.domain_name, ttl: 1, proxied: true }).catch(() => {});
-          }
-        }
+        // No example IP addresses or DNS are created for a sample domain.
       } catch {}
     }
 
@@ -524,11 +514,11 @@ export async function seedTwentyCloudflareDomains(env, actor = 'cloudflare-auto-
   await writeEnvironmentsMap(env, allMap);
 
   await recordStepDocument(env, {
-    title: `Cloudflare Inicializácia: Vytvorených 20 domén s produkčnými prostrediami`,
+    title: `Ukážkové návrhy domén (bez registrácie a nasadenia)`,
     category: 'domain_production',
     step_name: 'domain_seed_twenty',
     actor,
-    summary: `Cez Cloudflare Control Plane bolo pripravených a nasadených 20 domén s DNS záznamami (A, CNAME), prostrediami (production, staging, development) a ponukami v trhovisku.`,
+    summary: `Uložený demo katalóg návrhov domén pre vývoj. Nebola vykonaná registrácia, DNS, SSL, WAF ani nasadenie.`,
     content: [
       `# 🌐 Portfólio 20 Cloudflare Domén v Trinity`,
       ``,
@@ -542,6 +532,9 @@ export async function seedTwentyCloudflareDomains(env, actor = 'cloudflare-auto-
 
   return {
     ok: true,
+    simulated: true,
+    registered: false,
+    deployed: false,
     total_seeded: TWENTY_STARTER_CLOUDFLARE_DOMAINS.length,
     domains: createdDomains
   };
@@ -549,7 +542,7 @@ export async function seedTwentyCloudflareDomains(env, actor = 'cloudflare-auto-
 
 export async function listDomainEnvironments(env, domainFilter = '', { autoSeedIfEmpty = false } = {}) {
   let allMap = await readEnvironmentsMap(env);
-  if (autoSeedIfEmpty && Object.keys(allMap).length < 20) {
+  if (autoSeedIfEmpty && env.TRINITY_ENV !== 'production' && env.TRINITY_ALLOW_DEMO_SEED === 'true' && Object.keys(allMap).length < 20) {
     await seedTwentyCloudflareDomains(env, 'cloudflare-startup-seed');
     allMap = await readEnvironmentsMap(env);
   }
@@ -584,7 +577,7 @@ export async function handlePublicSiteRoute(request, env) {
   const domain_name = match[1].toLowerCase();
   const envName = (match[2] || 'production').toLowerCase();
   let allMap = await readEnvironmentsMap(env);
-  if (!allMap[domain_name] && TWENTY_STARTER_CLOUDFLARE_DOMAINS.some(d => d.domain_name === domain_name)) {
+  if (!allMap[domain_name] && env.TRINITY_ENV !== 'production' && env.TRINITY_ALLOW_DEMO_SEED === 'true' && TWENTY_STARTER_CLOUDFLARE_DOMAINS.some(d => d.domain_name === domain_name)) {
     await seedTwentyCloudflareDomains(env, 'cloudflare-startup-seed');
     allMap = await readEnvironmentsMap(env);
   }

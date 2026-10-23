@@ -53,6 +53,7 @@ import {TrinityCopilotAgent} from './copilot-agent.js';
 import {copilotChatOptionsSchema} from './copilot-options.js';
 import {assertCopilotSkillEnabled} from './copilot-plugins.js';
 import {skillRegistry} from './skillRegistry.js';
+import {integrationReadiness} from './integration-readiness.js';
 import {copilotPluginRegistry} from './copilot-plugins.js';
 import {universalEcosystem,UNIVERSAL_DOMAINS,APPLICATION_TEMPLATES} from './universal-ecosystem.js';
 import {runBrainCycle} from './brain.js';
@@ -203,6 +204,10 @@ async function route(request,env,ctx){
   }
   const ownerId=(user.email||user.id).trim().toLowerCase();
   if(path==='/api/assistant/capabilities'&&request.method==='GET')return json(await capabilityStatus(env));
+  if(path==='/api/assistant/integrations/readiness'&&request.method==='GET'){
+    requireAdmin(user);
+    return json(integrationReadiness({},env));
+  }
   const control=await readControl(env);
   if(control.emergency_stop&&!['/api/ops/status','/api/ops/control','/api/ops/logout','/api/assistant/rbac','/api/assistant/audit/export'].includes(path))assertRunning(control);
   if(path==='/api/assistant/media/status'&&request.method==='GET')return json(mediaStatus(env));
