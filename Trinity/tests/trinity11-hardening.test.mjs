@@ -119,7 +119,7 @@ test('AI reply guard refuses empty or invented fallbacks', () => {
 test('Trinity 11 UI keeps all routes and unique DOM identifiers', () => {
   const html = readFileSync(new URL('../public/assistant/chat.html', import.meta.url), 'utf8');
   const script = readFileSync(new URL('../public/assistant/chat.js.txt', import.meta.url), 'utf8');
-  const ids = Array.from(html.matchAll(/\\bid="([^"]+)"/g), m => m[1]);
+  const ids = Array.from(html.matchAll(/\bid="([^"]+)"/g), m => m[1]);
   assert.equal(ids.length, new Set(ids).size, 'duplicate HTML IDs break event handlers');
   const routes = [...new Set(Array.from(html.matchAll(/data-view="([^"]+)"/g), m => m[1]))];
   for (const route of routes) assert.ok(html.includes(`id="${route}-view"`), `missing view: ${route}`);
