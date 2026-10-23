@@ -17,7 +17,7 @@
 | High | DB mutations swallowed errors and reported success. | `safeDbRun` applied to INSERT statements in eight roles. | Introduce fail-closed `safeDbWrite`; use for mutation operations. |
 | Medium | Main Aura gateway imported the full skill registry with a large transitive dependency graph, inflating Worker bundle. | `aura-entry.js` imports `src/skillRegistry.js`. | Load the narrow `aura-safe-skills.js` module; retain full registry inside the authenticated application. |
 | Medium | Request-length guard checked JavaScript string length, not UTF-8 bytes. | `aura-entry.js`. | Check encoded byte length; follow with streaming hard cap later. |
-| Medium | Role-specific status strings still show legacy `10.2.0` while the main package declares `11.0.0`. | 10 worker modules. | Make status metadata generated from one source in a follow-up release; do not blindly change historical service versions. |
+| Resolved | Role status strings used legacy `10.2.0` inconsistently with Aura gateway `2.0.0`. | 10 worker modules. | Unified as `AURA_SERVICE_VERSION='2.1.0'` and kept distinct from the Trinity application release `11.0.0`. |
 | Medium | `CODE_KV` and `IDEMPOTENCY` in `aura_deployer.jsonc` point to the same KV namespace. | Wrangler config namespace IDs match. | Provision a separate KV namespace before changing bindings, then migrate keys intentionally. |
 | Medium | Repeated request parsing and identical headers in 10 role files. | Each `aura_*.js` repeats POST/JSON scaffolding. | Consolidate behind `worker-runtime.js` after contract tests are green. |
 | Medium | Legacy `safeDbRun` still suppresses SELECT errors, making outage appear as empty results. | `aura_helpers.js`. | Replace selected reads with explicit `data_unavailable` state, then remove silent fallback. |
@@ -26,7 +26,7 @@
 
 ## Delete and modification decision
 
-**Removed now:** unused imports, unrestricted skill registry wiring, misleading `deploy.complete/rollback` SQL updates, user-supplied endpoint probe methods/headers, silent SQL mutation behavior.
+**Removed now:** unused imports (including Aura Deployer and CodeGen), unrestricted skill registry wiring, misleading `deploy.complete/rollback` SQL updates, user-supplied endpoint probe methods/headers, silent SQL mutation behavior.
 
 **Do not delete yet:** `services/legacy-workers/*`, `workers/aura/*.jsonc`, historical D1 migrations, or `src/legacy.js` because named Worker bindings/configurations still reference them. Removal requires a verified map of deployed consumers and a deprecation window.
 
