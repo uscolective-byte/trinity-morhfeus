@@ -87,7 +87,7 @@ test('Aura cannot claim external deployment or rollback without an actual provid
 
 test('Aura endpoint checks enforce exact domains, no credentials, no redirects and read-only methods',async()=>{
  const env={...base,WORKER_ROLE:'aura_tester',AURA_SERVICE_TOKEN:'unit-test-shared-internal-service-token-very-long'};
- const request=(url,method)=>new Request('https://aura.internal/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'test.endpoint',data:{url,method},approval:{approved:true,actor_role:'owner',request_id:crypto.randomUUID()}})});
+ const request=(url,method)=>new Request('https://aura.internal/',{method:'POST',headers:{'Content-Type':'application/json','X-Aura-Service-Token':env.AURA_SERVICE_TOKEN},body:JSON.stringify({action:'test.endpoint',data:{url,method},approval:{approved:true,actor_role:'owner',request_id:crypto.randomUUID()}})});
  for(const url of ['https://auru.space@evil.example/health','https://auru.space/admin','https://auru.space:444/health','https://auru.space/health?token=1','https://other.saboivan2008.workers.dev/health']){
   const r=await worker.fetch(request(url,'GET'),env);assert.equal(r.status,403,url);
  }
