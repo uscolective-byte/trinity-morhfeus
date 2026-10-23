@@ -1,5 +1,5 @@
 // AURA CodeGen — generuje, refaktoruje a udržiava kód (Trinity 10.2)
-import {runAuraAi, parseAuraJson, safeDbRun, safeDbWrite, AURA_SERVICE_VERSION} from './aura_helpers.js';
+import {runAuraAi, parseAuraJson, safeDbWrite, AURA_SERVICE_VERSION} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
