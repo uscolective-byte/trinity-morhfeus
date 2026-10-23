@@ -33,6 +33,7 @@ import {mediaStatus} from './media.js';
 import {readControl,assertRunning} from './control.js';
 import {listApis,createApi,invokeApi,invokeApiBySlug} from './api-builder.js';
 import {listApiKeys,createApiKey,revokeApiKey,authenticateApiKey} from './api-keys.js';
+import {handleAssistantBridge} from './assistant-bridge.js';
 import {listSecrets,storeSecret,verifySecret,revokeSecret,promoteCustomSecretToGemini} from './secret-vault.js';
 import {listAIProviders,configureAIProvider,recordAIProviderCheck} from './ai-providers.js';
 import {getGraphVisualization,syncGraphFromEcosystem,queryGraphContext} from './graph-memory.js';
@@ -191,6 +192,7 @@ async function route(request,env,ctx){
   }
   const bearer=request.headers.get('Authorization')?.replace(/^Bearer\s+/i,'')||request.headers.get('X-Trinity-API-Key')||'';
   if(path==='/mcp'&&bearer.startsWith('trn_live_'))return handleScopedMcp(request,env,ctx);
+  if(path.startsWith('/api/assistant-bridge/'))return handleAssistantBridge(request,env);
   const user=await authenticate(request,env);
   const ownerId=(user.email||user.id).trim().toLowerCase();
   if(path==='/api/assistant/capabilities'&&request.method==='GET')return json(await capabilityStatus(env));
