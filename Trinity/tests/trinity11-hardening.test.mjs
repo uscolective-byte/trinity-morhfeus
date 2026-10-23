@@ -1,6 +1,7 @@
+import {readFileSync} from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { provisionAgentDomain, listCustomAgents, executeCustomAgent, createOrUpdateCustomAgent } from '../src/agent-sandbox.js';
+import { provisionAgentDomain, listCustomAgents, executeCustomAgent, requireRealAgentReply } from '../src/agent-sandbox.js';
 import { provisionDomainWithEnvironments } from '../src/domain-environments.js';
 import { integrationReadiness } from '../src/integration-readiness.js';
 
@@ -105,4 +106,25 @@ test('agent execution does not invent an agent for a different owner', async () 
   await assert.rejects(executeCustomAgent(env, 'owner-b', {
     agent_id: 'agent-one', input: 'test'
   }), /neexistuje/);
+});
+
+test('AI reply guard refuses empty or invented fallbacks', () => {
+  assert.equal(requireRealAgentReply({text: ' Done. '}), 'Done.');
+  for (const value of [null, undefined, {}, {text:''}, {text:'  '}, {output:'No real response'}]) {
+    assert.throws(() => requireRealAgentReply(value), /nevrátil platný výsledok/);
+  }
+});
+
+test('Trinity 11 UI keeps all routes and unique DOM identifiers', () => {
+  const html = readFileSync(new URL('../public/assistant/chat.html', import.meta.url), 'utf8');
+  const script = readFileSync(new URL('../public/assistant/chat.js.txt', import.meta.url), 'utf8');
+  const ids = Array.from(html.matchAll(/\\bid="([^"]+)"/g), m => m[1]);
+  assert.equal(ids.length, new Set(ids).size, 'duplicate HTML IDs break event handlers');
+  const routes = [...new Set(Array.from(html.matchAll(/data-view="([^"]+)"/g), m => m[1]))];
+  for (const route of routes) assert.ok(html.includes(`id="${route}-view"`), `missing view: ${route}`);
+  for (const required of ['agentlab','workflows','wallet','studio','chat']) {
+    assert.ok(routes.includes(required), `Trinity 11 route hidden: ${required}`);
+  }
+  assert.ok(script.includes('initAgentLabEvents()'), 'AI Agent Lab wiring must remain');
+  assert.ok(!html.includes('1,000,000 TRNT'), 'token amount cannot be hard-coded as live');
 });
