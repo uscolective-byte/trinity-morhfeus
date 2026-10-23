@@ -627,7 +627,7 @@
       <div class="metric-grid domain-metrics tabular-metrics">
         <article class="metric blue">
           <span>EVIDOVANÝ ZOSTATOK</span>
-          <strong id="wstat-balance">0,00 €</strong>
+          <strong id="wstat-balance">—</strong>
           <small>podľa evidencie Trinity</small>
         </article>
         <article class="metric teal">
@@ -637,12 +637,12 @@
         </article>
         <article class="metric gold">
           <span>EVIDOVANÉ PRÍJMY</span>
-          <strong id="wstat-received">0,00 €</strong>
+          <strong id="wstat-received">—</strong>
           <small>podľa doložených záznamov</small>
         </article>
         <article class="metric purple">
           <span>NAHLÁSENÉ ODOSLANIA</span>
-          <strong id="wstat-withdrawn">0,00 €</strong>
+          <strong id="wstat-withdrawn">—</strong>
           <small>podľa potvrdenia majiteľa</small>
         </article>
         <article class="metric coral">
@@ -1342,7 +1342,7 @@
           </div>
           <div id="commerce-product-list" class="api-key-list"></div>
         </section>
-        <section id="settings-wallet-panel" class="panel admin-panel" data-settings-section="admin" data-settings-keywords="wallet financie penazenka terminaly platby sepa paypal revolut krypto"><div class="panel-head"><div><span class="eyebrow">TRINITY WALLET & TERMINÁLY</span><h2>Peňaženka & Platobné Terminály</h2></div><span class="detail-chip">VIRTUÁLNY TESTOVACÍ ÚČET</span></div><div class="wallet-balance"><small>Virtuálny zostatok sandboxu (nie peniaze)</small><strong id="wallet-balance">0,00 €</strong></div><p class="settings-help">Toto je testovací virtuálny účet. Živé platobné kanály sú v časti Peňaženka; banka ani PayPal sa neoverujú automaticky.</p><div style="margin-bottom:12px"><button type="button" class="primary" data-view="wallet">💳 Otvoriť Hlavný POS Terminál & Peňaženku</button></div><form id="wallet-form" class="secret-form" style="display:none"><input id="wallet-amount" type="number" min="0.01" max="1000000" step="0.01" placeholder="Suma v EUR"><input id="wallet-recipient" maxlength="120" placeholder="Príjemca"><input id="wallet-note" maxlength="500" placeholder="Poznámka"><div class="wallet-actions"><button type="button" class="primary" data-wallet-action="deposit">Vložiť €</button><button type="button" data-wallet-action="withdrawal">Vybrať</button><button type="button" data-wallet-action="send">Odoslať</button></div></form><div id="wallet-transactions" class="api-key-list"></div></section>
+        <section id="settings-wallet-panel" class="panel admin-panel" data-settings-section="admin" data-settings-keywords="wallet financie penazenka terminaly platby sepa paypal revolut krypto"><div class="panel-head"><div><span class="eyebrow">TRINITY WALLET & TERMINÁLY</span><h2>Peňaženka & Platobné Terminály</h2></div><span class="detail-chip">VIRTUÁLNY TESTOVACÍ ÚČET</span></div><div class="wallet-balance"><small>Virtuálny zostatok sandboxu (nie peniaze)</small><strong id="wallet-balance">—</strong></div><p class="settings-help">Toto je testovací virtuálny účet. Živé platobné kanály sú v časti Peňaženka; banka ani PayPal sa neoverujú automaticky.</p><div style="margin-bottom:12px"><button type="button" class="primary" data-view="wallet">💳 Otvoriť Hlavný POS Terminál & Peňaženku</button></div><form id="wallet-form" class="secret-form" style="display:none"><input id="wallet-amount" type="number" min="0.01" max="1000000" step="0.01" placeholder="Suma v EUR"><input id="wallet-recipient" maxlength="120" placeholder="Príjemca"><input id="wallet-note" maxlength="500" placeholder="Poznámka"><div class="wallet-actions"><button type="button" class="primary" data-wallet-action="deposit">Vložiť €</button><button type="button" data-wallet-action="withdrawal">Vybrať</button><button type="button" data-wallet-action="send">Odoslať</button></div></form><div id="wallet-transactions" class="api-key-list"></div></section>
         <section id="settings-rbac-panel" class="panel admin-panel" data-settings-section="admin" data-settings-keywords="rbac oprávnenia roly schopnosti"><div class="panel-head"><div><span class="eyebrow">GRANULAR RBAC</span><h2>Oprávnenia podľa schopností</h2></div><span class="detail-chip">OWNER</span></div><p class="settings-help">Nastav presné schopnosti pre roly admin a user. Owner zostáva neobmedzený.</p><div id="settings-rbac" class="rbac-grid"></div></section>
         <section id="settings-passkey-panel" class="panel admin-panel" data-settings-section="admin" data-settings-keywords="passkey webauthn biometrika login touchid windows hello yubikey">
           <div class="panel-head">
