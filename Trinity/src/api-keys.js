@@ -3,7 +3,7 @@ import {hash,HttpError} from './security.js';
 
 export const createApiKeySchema=z.object({
   name:z.string().trim().min(2).max(80),
-  scopes:z.array(z.enum(['api:invoke','mcp:read','mcp:write'])).min(1).max(3).refine(scopes=>new Set(scopes).size===scopes.length,'Oprávnenia sa nesmú opakovať.').default(['api:invoke']),
+  scopes:z.array(z.enum(['api:invoke','mcp:read','mcp:write','assistant:read','assistant:write'])).min(1).max(3).refine(scopes=>new Set(scopes).size===scopes.length,'Oprávnenia sa nesmú opakovať.').default(['api:invoke']),
   rate_limit_per_minute:z.number().int().min(1).max(600).default(60),
   expires_at:z.string().datetime({offset:true}).nullable().default(null)
 }).strict();
