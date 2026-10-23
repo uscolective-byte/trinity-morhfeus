@@ -1897,18 +1897,14 @@ function renderWalletView(data) {
   const w = data.wallet || {};
   const t = data.terminals || {};
 
-  const balance = w.evidenced_balance_eur != null ? w.evidenced_balance_eur : (w.balance_eur || 0);
-  const available = w.evidenced_balance_eur != null ? w.evidenced_balance_eur : (w.available_payout_eur || 0);
-  const received = w.evidenced_received_eur != null ? w.evidenced_received_eur : (w.total_received_eur || 0);
-  const withdrawn = w.evidenced_paid_out_eur != null ? w.evidenced_paid_out_eur : (w.total_withdrawn_eur || 0);
-
-  if ($('wstat-balance')) $('wstat-balance').textContent = fmt(balance);
+  const formatEvidence = value => value == null ? '—' : fmt(value);
+  if ($('wstat-balance')) $('wstat-balance').textContent = formatEvidence(w.evidenced_balance_eur);
   // The internal receipt ledger is not money available in the bank.
   if ($('wstat-available')) $('wstat-available').textContent = '—';
   if ($('wstat-status')) $('wstat-status').textContent = 'Živé bankové pripojenie neoverené';
   if ($('wstat-terminals-count')) $('wstat-terminals-count').textContent = String(Object.values(t).filter(channel => channel?.configured === true).length);
-  if ($('wstat-received')) $('wstat-received').textContent = fmt(received);
-  if ($('wstat-withdrawn')) $('wstat-withdrawn').textContent = fmt(withdrawn);
+  if ($('wstat-received')) $('wstat-received').textContent = formatEvidence(w.evidenced_received_eur);
+  if ($('wstat-withdrawn')) $('wstat-withdrawn').textContent = formatEvidence(w.evidenced_paid_out_eur);
 
   // Pre-fill config form
   if ($('wcfg-iban')) $('wcfg-iban').value = t.sepa?.iban || '';
@@ -1927,7 +1923,7 @@ function renderWalletView(data) {
   const hist = $('wallet-history-list');
   if (hist) {
     hist.replaceChildren();
-    const txs = data.recent_transactions || [];
+    const txs = data.ledger || data.recent_transactions || [];
     const payouts = data.recent_payouts || [];
     const charges = data.recent_charges || [];
 
@@ -1944,16 +1940,16 @@ function renderWalletView(data) {
           node('span', isExecuted ? 'NAHLÁSENÉ MAJITEĽOM' : 'NEODOSLANÉ (DRAFT)', isExecuted ? 'domain-badge active' : 'domain-badge expired'),
           node('span', po.reference || 'DRAFT', 'detail-chip')
         );
-        const delBtn = node('button', '🗑 Zmazať záznam', 'button-link');
-        delBtn.style.color = '#ef4444';
-        delBtn.style.marginLeft = 'auto';
-        delBtn.onclick = safe(async () => {
-          await api(`/wallet/payout/${po.id}/cancel`, {});
-          notice(`Záznam výberu ${po.id} bol trvalo vymazaný.`);
-          await loadWalletView();
-        });
-        top.append(delBtn);
-        info.append(top, node('small', `Cieľ: ${po.target}${po.note ? ' · ' + po.note : ''} · Stav: ${isExecuted ? 'Odoslané a overené bankovým výpisom' : 'Iba pripravená inštrukcia (Trinity peniaze neodoslala)'} · ${new Date(po.created_at).toLocaleString('sk-SK')}`));
+        if (!isExecuted && po.status === 'prepared') {
+          const delBtn = node('button', 'Zrušiť návrh', 'button-link');
+          delBtn.onclick = safe(async () => {
+            await api(`/wallet/payout/${po.id}/cancel`, {});
+            notice('Neodoslaný návrh bol zrušený.');
+            await loadWalletView();
+          });
+          top.append(delBtn);
+        }
+        info.append(top, node('small', `Cieľ: ${po.target}${po.note ? ' · ' + po.note : ''} · Stav: ${isExecuted ? 'Odoslanie nahlásil majiteľ (nezávisle neoverené)' : 'Iba pripravená inštrukcia (Trinity peniaze neodoslala)'} · ${new Date(po.created_at).toLocaleString('sk-SK')}`));
         row.append(info);
         hist.append(row);
       });
@@ -1976,13 +1972,19 @@ function renderWalletView(data) {
         const row = node('article', undefined, 'api-key-item');
         const info = node('div', undefined, 'commerce-offer-info');
         const top = node('div', undefined, 'commerce-offer-top');
-        const isDep = t.type === 'deposit';
+        const kind = t.kind || t.type || 'unknown';
+        const income = kind === 'received' || kind === 'deposit';
+        const source = t.evidence_type === 'onchain_tx'
+          ? 'Overené na blockchaine'
+          : t.evidence_type === 'owner_attested'
+            ? 'Potvrdené majiteľom (neoverené bankou)'
+            : (t.evidence_type ? 'Dôkaz: ' + t.evidence_type : 'Bez nezávislého overenia');
         top.append(
-          node('b', `${isDep ? 'Vklad / Príjem' : 'Platba'}: ${fmt(t.amount_eur)}`),
-          node('span', t.type.toUpperCase(), isDep ? 'domain-badge active' : 'domain-badge for_sale'),
-          node('span', `Zostatok: ${fmt(t.balance_after_eur)}`, 'detail-chip')
+          node('b', `${income ? 'Evidovaný príjem' : 'Evidované odoslanie'}: ${fmt(t.amount_eur ?? t.amount)}`),
+          node('span', kind.toUpperCase(), income ? 'domain-badge active' : 'domain-badge for_sale')
         );
-        info.append(top, node('small', `${t.recipient ? 'Príjemca: ' + t.recipient + ' · ' : ''}${t.note || ''} · ${new Date(t.created_at).toLocaleString('sk-SK')}`));
+        if (t.evidence_ref) top.append(node('small', t.evidence_ref, 'detail-chip'));
+        info.append(top, node('small', `${source}${t.note ? ' · ' + t.note : ''} · ${new Date(t.created_at).toLocaleString('sk-SK')}`));
         row.append(info);
         hist.append(row);
       });
