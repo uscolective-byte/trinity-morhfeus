@@ -1047,14 +1047,19 @@ async function route(request,env,ctx){
     if(path==='/api/assistant/sandbox/agents'){
     requireAdmin(user);
     if(request.method==='GET')return json(await listCustomAgents(env,ownerId));
-    if(request.method==='POST')return json(await createOrUpdateCustomAgent(env,ownerId,await readJSON(request,32000)));
+    if(request.method==='POST'){
+      await rateLimit(env,`agent-save:${user.id}`,12,300);
+      return json(await createOrUpdateCustomAgent(env,ownerId,await readJSON(request,32000)));
+    }
   }
   if(path==='/api/assistant/sandbox/agents/run'&&request.method==='POST'){
     requireAdmin(user);
+    await rateLimit(env,`agent-run:${user.id}`,12,300);
     return json(await executeCustomAgent(env,ownerId,await readJSON(request,32000)));
   }
   if(path==='/api/assistant/sandbox/domain/provision'&&request.method==='POST'){
     requireAdmin(user);
+    await rateLimit(env,`agent-domain:${user.id}`,5,300);
     return json(await provisionAgentDomain(env,ownerId,await readJSON(request,16000)));
   }
   if(path==='/api/assistant/devhub/status'&&request.method==='GET'){
