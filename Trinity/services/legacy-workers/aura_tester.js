@@ -1,5 +1,5 @@
 // AURA Tester — testuje, validuje a zabezpečuje kvalitu systému (Trinity 10.2)
-import {runAuraAi, parseAuraJson, safeDbRun} from './aura_helpers.js';
+import {runAuraAi, parseAuraJson, safeDbRun, safeDbWrite} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
@@ -23,7 +23,7 @@ export default {
           d.code || d.target || ""
         );
         const result = parseAuraJson(text);
-        await safeDbRun(env.DB.prepare("INSERT INTO audit_log (id, module, action, details, severity, created_at) VALUES (lower(hex(randomblob(16))), 'tester', 'validate', ?, ?, datetime('now'))").bind(JSON.stringify(result), result.valid ? "info" : "warning").run());
+        await safeDbWrite(env.DB.prepare("INSERT INTO audit_log (id, module, action, details, severity, created_at) VALUES (lower(hex(randomblob(16))), 'tester', 'validate', ?, ?, datetime('now'))").bind(JSON.stringify(result), result.valid ? "info" : "warning").run());
         return Response.json({ ok: true, result, traceId, from: "aura-tester" });
       }
       if (call.action === "test.endpoint") {

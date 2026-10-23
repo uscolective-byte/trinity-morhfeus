@@ -1,5 +1,5 @@
 // AURA Memory — konsoliduje pamäť a syntetizuje znalosti (Trinity 10.2)
-import {runAuraAi, parseAuraJson, safeDbRun} from './aura_helpers.js';
+import {runAuraAi, parseAuraJson, safeDbRun, safeDbWrite} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
@@ -17,7 +17,7 @@ export default {
         );
         const synthesis = text || "";
         const id = crypto.randomUUID();
-        await safeDbRun(env.DB.prepare("INSERT INTO memory_semantic (id, title, content, source, created_at) VALUES (?, 'Memory Synthesis', ?, 'aura-memory', datetime('now'))").bind(id, synthesis).run());
+        await safeDbWrite(env.DB.prepare("INSERT INTO memory_semantic (id, title, content, source, created_at) VALUES (?, 'Memory Synthesis', ?, 'aura-memory', datetime('now'))").bind(id, synthesis).run());
         return Response.json({ ok: true, result: { synthesis, id }, traceId, from: "aura-memory" });
       }
       if (call.action === "memory.consolidate") {
@@ -29,7 +29,7 @@ export default {
         const result = parseAuraJson(text);
         if (result.consolidated && Array.isArray(result.consolidated)) {
           for (const c of result.consolidated) {
-            await safeDbRun(env.DB.prepare("INSERT INTO memory_long (id, title, content, importance, created_at) VALUES (lower(hex(randomblob(16))), ?, ?, ?, datetime('now'))").bind(c.title, c.content, c.importance || 5).run());
+            await safeDbWrite(env.DB.prepare("INSERT INTO memory_long (id, title, content, importance, created_at) VALUES (lower(hex(randomblob(16))), ?, ?, ?, datetime('now'))").bind(c.title, c.content, c.importance || 5).run());
           }
         }
         return Response.json({ ok: true, result, traceId, from: "aura-memory" });

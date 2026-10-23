@@ -22,8 +22,9 @@ test('reconciled Aura services retain deployed actions and bounded status withou
 });
 
 test('recovered actions that store generated content require idempotency',async()=>{
+  const token='unit-test-shared-internal-service-token-very-long';
   for(const [role,action] of [['aura_codegen','codegen.refactor'],['aura_codegen','codegen.scaffold'],['aura_planner','plan.task'],['aura_planner','plan.project']]){
-    const response=await worker.fetch(new Request('https://aura.internal/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,data:{}})}),{...base,WORKER_ROLE:role});
+    const response=await worker.fetch(new Request('https://aura.internal/',{method:'POST',headers:{'Content-Type':'application/json','X-Aura-Service-Token':token},body:JSON.stringify({action,data:{},approval:{approved:true,actor_role:'owner',request_id:crypto.randomUUID()}})}),{...base,WORKER_ROLE:role,AURA_SERVICE_TOKEN:token});
     assert.equal(response.status,400,action);assert.match((await response.json()).error,/idempotency_key/);
   }
 });
@@ -91,4 +92,14 @@ test('Aura endpoint checks enforce exact domains, no credentials, no redirects a
   const r=await worker.fetch(request(url,'GET'),env);assert.equal(r.status,403,url);
  }
  const allowed=await worker.fetch(request('https://auru.dev/health','POST'),env);assert.equal(allowed.status,400);
+});
+
+test('a real SQL write error returns a failed Aura action instead of fabricated success',async()=>{
+ const token='unit-test-shared-internal-service-token-very-long';
+ const env={...base,WORKER_ROLE:'aura_codegen',AURA_SERVICE_TOKEN:token,
+   AI:{run:async()=>({response:JSON.stringify({code:'export const value=1',language:'javascript'})})},
+   DB:{prepare(sql){if(sql.startsWith('INSERT INTO code_snippets'))return{bind(){return this;},run:async()=>{throw new Error('D1 unavailable');}};return{bind(){return this;},run:async()=>({success:true})};}}
+ };
+ const req=new Request('https://aura.internal/',{method:'POST',headers:{'Content-Type':'application/json','X-Aura-Service-Token':token},body:JSON.stringify({action:'codegen.generate',data:{spec:'small helper'},idempotency_key:crypto.randomUUID(),approval:{approved:true,actor_role:'owner',request_id:crypto.randomUUID()}})});
+ const res=await worker.fetch(req,env);assert.equal(res.status,500);assert.equal((await res.json()).ok,false);
 });

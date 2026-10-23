@@ -1,5 +1,5 @@
 // AURA Analyzer — analyzuje kód, dáta, systémové správanie (Trinity 10.2)
-import {runAuraAi, parseAuraJson, safeDbRun} from './aura_helpers.js';
+import {runAuraAi, parseAuraJson, safeDbRun, safeDbWrite} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
@@ -15,7 +15,7 @@ export default {
           "Analyzuj tento kód:\n" + (d.code || "")
         );
         const result = parseAuraJson(text);
-        await safeDbRun(env.DB.prepare("INSERT INTO code_snippets (id, title, language, code, tags, created_at) VALUES (lower(hex(randomblob(16))), 'Analysis', 'analysis', ?, 'analysis', datetime('now'))").bind(text).run());
+        await safeDbWrite(env.DB.prepare("INSERT INTO code_snippets (id, title, language, code, tags, created_at) VALUES (lower(hex(randomblob(16))), 'Analysis', 'analysis', ?, 'analysis', datetime('now'))").bind(text).run());
         return Response.json({ ok: true, result, traceId, from: "aura-analyzer" });
       }
       if (call.action === "analyze.system") {

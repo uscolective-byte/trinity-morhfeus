@@ -1,5 +1,5 @@
 // AURA Sentinel — monitoruje bezpečnosť a detekuje anomálie (Trinity 10.2)
-import {runAuraAi, parseAuraJson, safeDbRun} from './aura_helpers.js';
+import {runAuraAi, parseAuraJson, safeDbRun, safeDbWrite} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
@@ -18,7 +18,7 @@ export default {
           "Events: " + JSON.stringify(events.results) + "\nCritical: " + (critical?.c || 0) + "\nErrors: " + (errors?.c || 0)
         );
         const result = parseAuraJson(text);
-        await safeDbRun(env.DB.prepare("INSERT INTO timeline (id, event, category, details, created_at) VALUES (lower(hex(randomblob(16))), 'SENTINEL_SCAN', 'security', ?, datetime('now'))").bind("Risk: " + (result.risk_level || "unknown")).run());
+        await safeDbWrite(env.DB.prepare("INSERT INTO timeline (id, event, category, details, created_at) VALUES (lower(hex(randomblob(16))), 'SENTINEL_SCAN', 'security', ?, datetime('now'))").bind("Risk: " + (result.risk_level || "unknown")).run());
         return Response.json({ ok: true, result, traceId, from: "aura-sentinel" });
       }
       if (call.action === "sentinel.monitor") {
@@ -32,7 +32,7 @@ export default {
         return Response.json({ ok: true, result, traceId, from: "aura-sentinel" });
       }
       if (call.action === "sentinel.alert") {
-        await safeDbRun(env.DB.prepare("INSERT INTO security_events (event_type, severity, source, details, created_at) VALUES (?, ?, 'aura-sentinel', ?, datetime('now'))").bind(d.event_type || "alert", d.severity || "warning", d.details || "").run());
+        await safeDbWrite(env.DB.prepare("INSERT INTO security_events (event_type, severity, source, details, created_at) VALUES (?, ?, 'aura-sentinel', ?, datetime('now'))").bind(d.event_type || "alert", d.severity || "warning", d.details || "").run());
         return Response.json({ ok: true, traceId, from: "aura-sentinel" });
       }
       if (call.action === "aura.status") {

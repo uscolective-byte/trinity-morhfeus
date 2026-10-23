@@ -65,3 +65,11 @@ export async function safeDbRun(promise) {
     return null;
   }
 }
+
+
+// Mutations must surface D1 failures instead of fabricating a successful write.
+export async function safeDbWrite(promise) {
+  const result=await promise;
+  if(!result||result.success!==true)throw new Error('D1 write did not succeed');
+  return result;
+}

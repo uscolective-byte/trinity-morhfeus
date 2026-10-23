@@ -1,5 +1,5 @@
 // AURA Evolver — navrhuje a testuje vylepšenia systému (Trinity 10.2)
-import {runAuraAi, parseAuraJson, safeDbRun} from './aura_helpers.js';
+import {runAuraAi, parseAuraJson, safeDbRun, safeDbWrite} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
@@ -16,8 +16,8 @@ export default {
         );
         const proposals = parseAuraJson(text);
         const id = crypto.randomUUID();
-        await safeDbRun(env.DB.prepare("INSERT INTO evolution_proposals (id, type, description, proposed_code, status, approval_status, created_at) VALUES (?, ?, ?, ?, 'proposed', 'pending', datetime('now'))").bind(id, d.area || "system", text, text).run());
-        await safeDbRun(env.DB.prepare("INSERT INTO timeline (id, event, category, details, created_at) VALUES (lower(hex(randomblob(16))), 'EVOLUTION_PROPOSED', 'evolution', ?, datetime('now'))").bind("Area: " + (d.area || "system")).run());
+        await safeDbWrite(env.DB.prepare("INSERT INTO evolution_proposals (id, type, description, proposed_code, status, approval_status, created_at) VALUES (?, ?, ?, ?, 'proposed', 'pending', datetime('now'))").bind(id, d.area || "system", text, text).run());
+        await safeDbWrite(env.DB.prepare("INSERT INTO timeline (id, event, category, details, created_at) VALUES (lower(hex(randomblob(16))), 'EVOLUTION_PROPOSED', 'evolution', ?, datetime('now'))").bind("Area: " + (d.area || "system")).run());
         return Response.json({ ok: true, result: { proposalId: id, proposals }, traceId, from: "aura-evolver" });
       }
       if (call.action === "evolve.history") {
