@@ -1,5 +1,5 @@
 // AURA Analyzer — analyzuje kód, dáta, systémové správanie (Trinity 10.2)
-import {runAuraAi, parseAuraJson, safeDbRun} from './aura_helpers.js';
+import {runAuraAi, parseAuraJson, safeDbRun, safeDbWrite, AURA_SERVICE_VERSION} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
@@ -15,7 +15,7 @@ export default {
           "Analyzuj tento kód:\n" + (d.code || "")
         );
         const result = parseAuraJson(text);
-        await safeDbRun(env.DB.prepare("INSERT INTO code_snippets (id, title, language, code, tags, created_at) VALUES (lower(hex(randomblob(16))), 'Analysis', 'analysis', ?, 'analysis', datetime('now'))").bind(text).run());
+        await safeDbWrite(env.DB.prepare("INSERT INTO code_snippets (id, title, language, code, tags, created_at) VALUES (lower(hex(randomblob(16))), 'Analysis', 'analysis', ?, 'analysis', datetime('now'))").bind(text).run());
         return Response.json({ ok: true, result, traceId, from: "aura-analyzer" });
       }
       if (call.action === "analyze.system") {
@@ -38,7 +38,7 @@ export default {
         return Response.json({ ok: true, result, traceId, from: "aura-analyzer" });
       }
       if (call.action === "aura.status") {
-        return Response.json({ ok: true, result: { agent: "analyzer", role: "Analyzuje kód, dáta, systémové správanie a bezpečnosť", status: "active", version: "10.2.0" }, traceId, from: "aura-analyzer" });
+        return Response.json({ ok: true, result: { agent: "analyzer", role: "Analyzuje kód, dáta, systémové správanie a bezpečnosť", status: "active", version: AURA_SERVICE_VERSION }, traceId, from: "aura-analyzer" });
       }
       const text = await runAuraAi(env, "Si AURA Analyzer. Analyzuj a poskytni presné, štruktúrované výsledky.", d.prompt || call.action);
       return Response.json({ ok: true, result: { response: text }, traceId, from: "aura-analyzer" });

@@ -1,5 +1,5 @@
 // AURA CodeGen — generuje, refaktoruje a udržiava kód (Trinity 10.2)
-import {runAuraAi, parseAuraJson, safeDbRun} from './aura_helpers.js';
+import {runAuraAi, parseAuraJson, safeDbWrite, AURA_SERVICE_VERSION} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
@@ -15,7 +15,7 @@ export default {
           "Špecifikácia: " + (d.spec || d.description || "") + "\nJazyk: " + (d.language || "javascript") + "\nTyp: " + (d.type || "function")
         );
         const result = parseAuraJson(text);
-        await safeDbRun(env.DB.prepare("INSERT INTO code_snippets (id, title, language, code, tags, created_at) VALUES (lower(hex(randomblob(16))), ?, ?, ?, 'generated', datetime('now'))").bind(d.title||"generated", d.language||"javascript", result.code || result.raw || "").run());
+        await safeDbWrite(env.DB.prepare("INSERT INTO code_snippets (id, title, language, code, tags, created_at) VALUES (lower(hex(randomblob(16))), ?, ?, ?, 'generated', datetime('now'))").bind(d.title||"generated", d.language||"javascript", result.code || result.raw || "").run());
         return Response.json({ ok: true, result, traceId, from: "aura-codegen" });
       }
       if (call.action === "codegen.refactor") {
@@ -24,7 +24,7 @@ export default {
           "Kód na refaktorizáciu:\n" + (d.code || "") + "\nPoznámky: " + (d.notes || "")
         );
         const result = parseAuraJson(text);
-        await safeDbRun(env.DB.prepare("INSERT INTO code_snippets (id, title, language, code, tags, created_at) VALUES (lower(hex(randomblob(16))), 'refactored', ?, ?, 'refactored', datetime('now'))").bind(d.language||"javascript", result.refactored_code || result.raw || "").run());
+        await safeDbWrite(env.DB.prepare("INSERT INTO code_snippets (id, title, language, code, tags, created_at) VALUES (lower(hex(randomblob(16))), 'refactored', ?, ?, 'refactored', datetime('now'))").bind(d.language||"javascript", result.refactored_code || result.raw || "").run());
         return Response.json({ ok: true, result, traceId, from: "aura-codegen" });
       }
       if (call.action === "codegen.scaffold") {
@@ -35,7 +35,7 @@ export default {
         const result = parseAuraJson(text);
         if (result.files && Array.isArray(result.files)) {
           for (const f of result.files) {
-            await safeDbRun(env.DB.prepare("INSERT INTO code_snippets (id, title, language, code, tags, created_at) VALUES (lower(hex(randomblob(16))), ?, ?, ?, 'scaffold', datetime('now'))").bind(f.path, d.language||"javascript", f.content).run());
+            await safeDbWrite(env.DB.prepare("INSERT INTO code_snippets (id, title, language, code, tags, created_at) VALUES (lower(hex(randomblob(16))), ?, ?, ?, 'scaffold', datetime('now'))").bind(f.path, d.language||"javascript", f.content).run());
           }
         }
         return Response.json({ ok: true, result, traceId, from: "aura-codegen" });
@@ -65,7 +65,7 @@ export default {
         return Response.json({ ok: true, result: { migration_sql: cleanedSql }, traceId, from: "aura-codegen" });
       }
       if (call.action === "aura.status") {
-        return Response.json({ ok: true, result: { agent: "codegen", role: "Generuje čistý kód, refaktoruje, scaffoldy a D1 SQL", status: "active", version: "10.2.0" }, traceId, from: "aura-codegen" });
+        return Response.json({ ok: true, result: { agent: "codegen", role: "Generuje čistý kód, refaktoruje, scaffoldy a D1 SQL", status: "active", version: AURA_SERVICE_VERSION }, traceId, from: "aura-codegen" });
       }
       return Response.json({ ok: false, error: "Unknown action: " + call.action, traceId, from: "aura-codegen" });
     } catch (e) { return Response.json({ ok: false, error: e.message, traceId, from: "aura-codegen" }); }
