@@ -13,10 +13,6 @@
     {
       "pattern": "jericho123.auru.space",
       "custom_domain": true
-    },
-    {
-      "pattern": "jericho123.auru.dev",
-      "custom_domain": true
     }
   ],
   "observability": {
@@ -33,5 +29,21 @@
     "SERVICE_NAME": "Jericho123",
     "VERSION": "1.0.0",
     "ENVIRONMENT": "production"
+  },
+  "env": {
+    "development": {
+      "name": "jericho123-development",
+      "routes": [
+        {
+          "pattern": "jericho123.auru.dev",
+          "custom_domain": true
+        }
+      ],
+      "vars": {
+        "SERVICE_NAME": "Jericho123",
+        "VERSION": "1.0.0",
+        "ENVIRONMENT": "development"
+      }
+    }
   }
 }
