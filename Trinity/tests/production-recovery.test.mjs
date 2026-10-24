@@ -10,9 +10,9 @@ const stored = config => ({prepare:()=>({bind(){return this;},first:async()=>({v
 test('broken model output retries once and returns the actual model with a receipt', async()=>{
   const calls=[];
   const env={AI:{run:async model=>{calls.push(model);return {response:calls.length===1?'!'.repeat(1200):'42'};}}};
-  const result=await runAgent(env,'writer','Koľko je 17 + 25?');
+  const result=await runAgent(env,'writer','Napíš krátku odpoveď.');
   assert.equal(result.text,'42');
-  assert.equal(result.model,'@cf/meta/llama-3.3-70b-instruct');
+  assert.equal(result.model,'@cf/meta/llama-3.3-70b-instruct-fp8-fast');
   assert.equal(calls.length,2);
   assert.equal(result.tool_log[0].tool,'model_fallback');
   assert.equal(result.tool_log[0].reason,'invalid-output');

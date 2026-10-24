@@ -7,7 +7,7 @@ import {Miniflare, convertV4MiniflareOptions} from 'miniflare';
 test('compiled build-only Preview blocks production routes without any storage or service binding', async () => {
   const modules = readdirSync('dist')
     .filter(name => !name.endsWith('.map') && !name.endsWith('.md'))
-    .map(name => ({type: name === 'index.js' ? 'ESModule' : 'Text', path: resolve('dist', name)}));
+    .map(name => ({type: name === 'index.js' ? 'ESModule' : name.endsWith('.png') ? 'Data' : 'Text', path: resolve('dist', name)}));
   modules.sort((a, b) => a.type === 'ESModule' ? -1 : b.type === 'ESModule' ? 1 : 0);
   const mf = new Miniflare(convertV4MiniflareOptions({
     workers: [{

@@ -1,20 +1,24 @@
-<!doctype html><html lang="sk"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b1220"><title>Trinity 11.0 · Tvoja autonómna asistentka</title><link rel="stylesheet" href="/chat.css?v=11.0.0"><link rel="stylesheet" href="/builder.css?v=11.0.0"><link rel="stylesheet" href="/theme.css?v=11.0.0"><script src="/auth-bootstrap.js" defer></script><script src="/chat.js?v=11.0.0" defer></script></head><body>
+<!doctype html><html lang="sk"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#07101f"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0" rel="stylesheet"><link rel="stylesheet" href="/concept3.css?v=11.0.0"><title>Trinity 11.0 · Tvoja autonómna asistentka</title><link rel="stylesheet" href="/chat.css?v=11.0.0"><link rel="stylesheet" href="/builder.css?v=11.0.0"><link rel="stylesheet" href="/theme.css?v=11.0.0"><script src="/auth-bootstrap.js" defer></script><script src="/chat.js?v=11.0.0" defer></script></head><body>
 <aside class="sidebar">
   <a href="#chat" class="brand" data-view-link="chat"><span class="brand-mark">T</span><span>Trinity 11.0<small>Sovereign Core · auru.dev & auru.space</small></span></a>
   <nav class="main-nav" aria-label="Hlavné menu">
-    <button data-view="chat" class="active"><span>💬</span><b data-i18n="chat">Chat & Práca</b></button>
-    <button data-view="dashboard"><span>⚡</span><b data-i18n="overview">Prehľad & Stav</b></button>
-    <button data-view="agentlab"><span>🤖</span><b>Morpheus & Agenti</b></button>
-    <button data-view="studio"><span>✦</span><b>AI Studio (Weby)</b></button>
-    <button data-view="domains"><span>◈</span><b>Domény & Hosting</b></button>
-    <button data-view="wallet"><span>💳</span><b>Platby & Peňaženka</b></button>
-    <button data-view="settings"><span>⚙</span><b data-i18n="settings">Nastavenia</b></button>
+    <span class="nav-group-label">HLAVNÉ</span>
+    <button data-view="chat" class="active"><span class="material-symbols-rounded">chat_bubble</span><b data-i18n="chat">Chat & Práca</b></button>
+    <button data-view="dashboard"><span class="material-symbols-rounded">dashboard</span><b data-i18n="overview">Prehľad & Stav</b></button>
+    <button data-view="agentlab"><span class="material-symbols-rounded">smart_toy</span><b>Morpheus & Agenti</b></button>
+    <button data-view="studio"><span class="material-symbols-rounded">auto_awesome</span><b>AI Studio (Weby)</b></button>
+    <span class="nav-group-label">DÁTA A INFRAŠTRUKTÚRA</span>
+    <button data-view="domains"><span class="material-symbols-rounded">language</span><b>Domény & Hosting</b></button>
+    <button data-view="wallet"><span class="material-symbols-rounded">account_balance_wallet</span><b>Platby & Peňaženka</b></button>
+    <span class="nav-group-label">SYSTÉM</span>
+    <button data-view="settings"><span class="material-symbols-rounded">settings</span><b data-i18n="settings">Nastavenia</b></button>
   </nav>
   <button id="new-chat" class="new"><span>＋</span><span data-i18n="newChatPlain">Nová úloha</span></button>
   <div class="side-label" data-i18n="recent">HISTÓRIA ÚLOH</div><div id="sessions"></div>
-  <div class="sidebar-status-clean">
-    <div class="status-pill-clean"><span class="signal-dot"></span> <b>Trinity Online</b></div>
-    <small>Zjednotené jadro · auru.dev / auru.space</small>
+  <div class="sidebar-status-card">
+    <div class="status-card-header"><span>TRINITY CORE</span><span class="status-pulse-badge live-verified">ONLINE</span></div>
+    <div class="status-card-row"><small>Produkcia</small><a href="https://auru.space" target="_blank" rel="noopener">auru.space ↗</a></div>
+    <div class="status-card-row"><small>Vývoj</small><a href="https://auru.dev" target="_blank" rel="noopener">auru.dev ↗</a></div>
   </div>
   <div class="sidebar-bottom"><div><span class="signal"></span><span id="engine-state">…</span></div><small data-i18n="boundary">Citlivé zmeny len s tvojím súhlasom.</small><span id="operations" hidden></span></div>
 </aside>
@@ -35,7 +39,7 @@
   <div id="app-views">
     <section id="dashboard-view" class="view dashboard-view" hidden>
       <div id="user-dashboard" class="role-dashboard">
-        <div class="hero-card user-hero"><div class="hero-copy"><span class="eyebrow">OSOBNÝ PRIESTOR</span><h1><span data-i18n="hello">Ahoj.</span> <em data-i18n="ready">Čo dnes vytvoríme?</em></h1><p data-i18n="dashboardIntro">Trinity spája rozhovor, pamäť, projekty a nástroje do jedného pokojného pracovného priestoru.</p><div class="hero-actions"><button class="primary" data-open-chat data-prompt="" data-i18n="startChat">Začať rozhovor</button><button data-view="studio" data-i18n="openStudio">Otvoriť AI Studio</button></div></div><div class="living-core" aria-label="Trinity core"><div class="orbit one"></div><div class="orbit two"></div><div class="core">✦</div><span>TRINITY USER</span></div></div>
+        <div class="hero-card user-hero"><div class="hero-copy"><span class="eyebrow">OSOBNÝ PRIESTOR</span><h1><span data-i18n="hello">Ahoj.</span> <em data-i18n="ready">Čo dnes vytvoríme?</em></h1><p data-i18n="dashboardIntro">Trinity spája rozhovor, pamäť, projekty a nástroje do jedného pokojného pracovného priestoru.</p><div class="hero-actions"><button class="primary" data-open-chat data-prompt="" data-i18n="startChat">Začať rozhovor</button><button data-view="studio" data-i18n="openStudio">Otvoriť AI Studio</button></div></div><div class="living-core" aria-label="Trinity core"><img src="/trinity-core.png" alt="Svetelný znak jadra Trinity"><span>TRINITY CORE</span><small>TVORBA · DÁTA · AGENTI</small></div></div>
         <div class="metric-grid"><article class="metric coral"><span data-i18n="today">Dnes</span><strong id="metric-tasks">—</strong><small data-i18n="tasksDone">dokončených úloh</small></article><article class="metric blue"><span data-i18n="memoryPlain">Pamäť</span><strong id="metric-memory">—</strong><small data-i18n="memories">uložených záznamov</small></article><article class="metric teal"><span data-i18n="projects">Projekty</span><strong id="metric-projects">—</strong><small data-i18n="activeProjects">aktívnych priestorov</small></article><article class="metric gold"><span>TRINITY</span><strong id="metric-health">—</strong><small>pripojené služby</small></article></div>
         <div class="dashboard-grid"><section class="panel focus-panel"><div class="panel-head"><div><span class="eyebrow" data-i18n="quickStart">RÝCHLY ŠTART</span><h2 data-i18n="whatNeed">S čím ti dnes pomôžem?</h2></div></div><div class="action-grid"><button data-open-chat data-prompt="plan"><i>◎</i><span><b data-i18n="planWork">Naplánovať prácu</b><small data-i18n="planWorkHint">Rozdelím cieľ na jasné kroky</small></span></button><button data-open-chat data-prompt="create"><i>✦</i><span><b data-i18n="createSomething">Niečo vytvoriť</b><small data-i18n="createHint">Text, nápad, kód alebo projekt</small></span></button><button data-open-chat data-prompt="research"><i>⌕</i><span><b data-i18n="research">Preskúmať tému</b><small data-i18n="researchHint">Aktuálne zdroje a zhrnutie</small></span></button><button data-open-chat data-prompt="organize"><i>▦</i><span><b data-i18n="organize">Usporiadať projekt</b><small data-i18n="organizeHint">Priority, úlohy a ďalší krok</small></span></button></div></section><section class="panel activity-panel"><div class="panel-head"><div><span class="eyebrow" data-i18n="latest">NAJNOVŠIE</span><h2 data-i18n="recentActivity">Posledná aktivita</h2></div><button data-view="chat" data-i18n="allChats">Všetky chaty</button></div><div id="dashboard-activity" class="activity-list"><p class="skeleton">Systém je pripravený na prácu.</p></div></section></div>
       </div>

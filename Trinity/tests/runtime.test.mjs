@@ -20,7 +20,7 @@ test('capability status requires authentication and does not mistake configured 
   assert.equal(JSON.stringify(report).includes(gatewayKey),false);
 });
 before(async()=>{
-  const modules=readdirSync('dist').filter(x=>!x.endsWith('.map')&&!x.endsWith('.md')).map(name=>({type:name==='index.js'?'ESModule':'Text',path:resolve('dist',name)}));
+  const modules=readdirSync('dist').filter(x=>!x.endsWith('.map')&&!x.endsWith('.md')).map(name=>({type:name==='index.js'?'ESModule':name.endsWith('.png')?'Data':'Text',path:resolve('dist',name)}));
   modules.sort((a,b)=>a.type==='ESModule'?-1:b.type==='ESModule'?1:0);
   mf=new Miniflare(convertV4MiniflareOptions({workers:[{name:'trinity',modules,compatibilityDate:'2026-10-01',compatibilityFlags:['nodejs_compat'],bindings:{CF_VERSION_METADATA:{id:'test-deployment',tag:'test-commit',timestamp:'2026-10-17T00:00:00.000Z'},TRINITY_OPS_KEY:key,TRINITY_GATEWAY_KEY:gatewayKey,TRINITY_VAULT_KEY:Buffer.alloc(32,7).toString('base64url'),OLLAMA_API_KEY:'test-only-ollama-key',OLLAMA_MODEL:'gemma4:31b'},kvNamespaces:{Mastermind:'test-kv'},d1Databases:{DB:'test-db'},r2Buckets:{ARTIFACTS:'test-r2'},
     serviceBindings:{AI:{name:'mock',entrypoint:'MockAI'}},workflows:{OPS_WORKFLOW:{name:'test-workflow',className:'TrinityOperations'}}},
@@ -65,6 +65,7 @@ test('CI audit migrations preserve a pre-existing legacy audit table',async()=>{
   assert.ok(columns.results.some(column=>column.name==='idempotency_key'));
 });
 test('public UI, liveness and readiness; private APIs',async()=>{assert.equal((await req('/',undefined,false)).status,200);const health=await(await req('/health',undefined,false)).json();assert.equal(health.agents,45);assert.equal(health.version,'11.0.0');assert.equal(health.deployment.id,'test-deployment');assert.equal(health.deployment.tag,'test-commit');const ready=await req('/ready',undefined,false);assert.equal(ready.status,200,await ready.clone().text());assert.equal((await ready.json()).checks.schema,true);assert.equal((await req('/api/ops/agents',undefined,false)).status,401);assert.equal((await req('/mcp',{},false)).status,401);});
+test('Concept 3 interface stylesheet and Trinity core artwork are served as typed assets',async()=>{const css=await req('/concept3.css',undefined,false);assert.equal(css.status,200);assert.match(await css.text(),/\.sidebar-status-card/);const image=await req('/trinity-core.png',undefined,false);assert.equal(image.status,200);assert.match(image.headers.get('content-type'),/image\/png/);assert.deepEqual([...new Uint8Array(await image.arrayBuffer()).slice(0,4)],[137,80,78,71]);});
 test('login sets protected cookie and logout revokes it',async()=>{const r=await req('/api/ops/login',{key},false);assert.equal(r.status,200);const c=r.headers.get('set-cookie');assert.match(c,/HttpOnly/);assert.match(c,/Secure/);assert.match(c,/SameSite=Strict/);assert.equal((await req('/api/ops/status',undefined,false,{Cookie:c.split(';')[0]})).status,200);await req('/api/ops/logout',{},false,{Cookie:c.split(';')[0]});assert.equal((await req('/api/ops/status',undefined,false,{Cookie:c.split(';')[0]})).status,401);});
 
 test('redeem preserves the authenticated ticket issuer and rejects reuse and expiry',async()=>{

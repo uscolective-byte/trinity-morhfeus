@@ -47,6 +47,13 @@
         "**/*.js.txt"
       ],
       "fallthrough": true
+    },
+    {
+      "type": "Data",
+      "globs": [
+        "**/*.png"
+      ],
+      "fallthrough": true
     }
   ],
   "vars": {
