@@ -1,0 +1,212 @@
+/* Trinity Workshop — a quiet, industrial chat, loaded after legacy themes. */
+body {
+  --workshop-bg: #111310;
+  --workshop-panel: #191c17;
+  --workshop-raised: #21251d;
+  --workshop-line: #34392e;
+  --workshop-text: #f0f2e9;
+  --workshop-muted: #a0a795;
+  --workshop-accent: #d8f36a;
+  --workshop-action: #d8f36a;
+  background: var(--workshop-bg) !important;
+  color: var(--workshop-text) !important;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif !important;
+  overflow: hidden !important;
+}
+html[data-theme="light"] body {
+  --workshop-bg: #f4f3eb;
+  --workshop-panel: #fffef8;
+  --workshop-raised: #e9ebdf;
+  --workshop-line: #d5d8c8;
+  --workshop-text: #24291e;
+  --workshop-muted: #626b57;
+  --workshop-accent: #507000;
+  --workshop-action: #cbe760;
+}
+[hidden] { display: none !important; }
+button, select, textarea, a { -webkit-tap-highlight-color: transparent; }
+button:focus-visible, a:focus-visible, select:focus-visible {
+  outline: 2px solid var(--workshop-accent) !important;
+  outline-offset: 3px !important;
+}
+.sidebar {
+  position: fixed !important;
+  inset: 0 auto 0 0 !important;
+  width: 236px !important;
+  height: 100dvh !important;
+  padding: 24px 16px 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+  background: var(--workshop-panel) !important;
+  border-right: 1px solid var(--workshop-line) !important;
+  box-shadow: none !important;
+}
+.brand {
+  min-height: 60px !important;
+  padding: 0 8px 20px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: none !important;
+  gap: 12px !important;
+}
+.brand-mark {
+  width: 38px !important; height: 38px !important; min-width: 38px !important;
+  border-radius: 7px !important;
+  color: #1a2011 !important;
+  background: var(--workshop-action) !important;
+  box-shadow: none !important;
+  font-size: 21px !important;
+  font-weight: 900 !important;
+}
+.brand > span:last-child { color: var(--workshop-text) !important; font-size: 17px !important; }
+.brand small { color: var(--workshop-muted) !important; font-size: 10px !important; margin-top: 5px !important; }
+.sidebar .main-nav { display: flex !important; flex: 0 0 auto !important; flex-direction: column !important; gap: 4px !important; margin-top: 14px !important; max-height: none !important; overflow: visible !important; }
+.nav-group-label { color: var(--workshop-muted) !important; font-size: 9px !important; letter-spacing: .12em !important; border: 0 !important; padding: 18px 10px 7px !important; }
+.main-nav button {
+  min-height: 42px !important; padding: 10px 12px !important; gap: 12px !important;
+  border: 1px solid transparent !important; border-radius: 7px !important;
+  color: var(--workshop-muted) !important; background: transparent !important;
+  box-shadow: none !important; transform: none !important;
+}
+.main-nav button span { width: 19px !important; color: inherit !important; font-size: 16px !important; }
+.main-nav button b { color: inherit !important; font-size: 12px !important; font-weight: 550 !important; }
+.main-nav button:hover { background: var(--workshop-raised) !important; color: var(--workshop-text) !important; }
+.main-nav button.active { color: var(--workshop-accent) !important; background: var(--workshop-raised) !important; border-color: var(--workshop-line) !important; }
+body .sidebar button.new { flex: 0 0 auto !important; margin: 20px 0 16px !important; min-height: 42px !important; border-radius: 7px !important; background: var(--workshop-action) !important; color: #1a2011 !important; border: 0 !important; box-shadow: none !important; font-weight: 700 !important; }
+.side-label { color: var(--workshop-muted) !important; font-size: 9px !important; letter-spacing: .1em !important; margin: 0 10px 8px !important; }
+#sessions { flex: 1 1 auto !important; min-height: 0 !important; max-height: none !important; overflow-y: auto !important; }
+#sessions button { display: block !important; width: 100% !important; min-width: 0 !important; color: var(--workshop-muted) !important; background: transparent !important; padding: 8px 10px !important; border: 0 !important; text-align: left !important; text-overflow: ellipsis !important; overflow: hidden !important; white-space: nowrap !important; }
+#sessions button:hover, #sessions button.active { color: var(--workshop-text) !important; background: var(--workshop-raised) !important; }
+.sidebar-status-card { flex: 0 0 auto !important; margin-top: 18px !important; padding: 12px !important; border: 1px solid var(--workshop-line) !important; background: transparent !important; border-radius: 7px !important; box-shadow: none !important; }
+body .sidebar .status-card-header { color: var(--workshop-text) !important; font-size: 9px !important; }
+.sidebar-status-card .status-card-row { margin-top: 7px !important; color: var(--workshop-muted) !important; font-size: 10px !important; }
+.sidebar-status-card a { color: var(--workshop-muted) !important; }
+.status-pulse-badge { color: var(--workshop-muted) !important; background: transparent !important; border-color: var(--workshop-line) !important; }
+.status-pulse-badge::before { display: none !important; }
+main { margin-left: 236px !important; width: calc(100% - 236px) !important; height: 100dvh !important; min-height: 0 !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; }
+main > header {
+  position: relative !important; top: auto !important; height: auto !important;
+  min-height: 80px !important; padding: 16px 32px !important; flex: 0 0 auto !important;
+  display: flex !important; align-items: center !important; justify-content: space-between !important;
+  gap: 16px !important; overflow: visible !important;
+  background: var(--workshop-bg) !important; border-bottom: 1px solid var(--workshop-line) !important;
+}
+.page-heading { min-width: 0 !important; flex: 1 1 auto !important; }
+#page-kicker { display: block !important; color: var(--workshop-muted) !important; font-size: 9px !important; letter-spacing: .12em !important; margin-bottom: 5px !important; }
+#page-title { color: var(--workshop-text) !important; font-size: 18px !important; font-weight: 650 !important; }
+#subtitle { display: none !important; }
+.header-actions { display: flex !important; flex: 0 1 auto !important; align-items: center !important; flex-wrap: wrap !important; max-width: 75% !important; gap: 6px !important; }
+.header-actions > * { flex: 0 0 auto !important; }
+.header-actions button, .header-actions select, .domain-bridge-switch, .pc-bridge-badge {
+  width: auto !important; min-height: 32px !important; height: 32px !important;
+  padding: 5px 9px !important; border: 1px solid var(--workshop-line) !important;
+  border-radius: 6px !important; background: var(--workshop-panel) !important;
+  color: var(--workshop-muted) !important; font-size: 10px !important;
+}
+.header-actions select { max-width: 72px !important; }
+.header-actions .account-state { gap: 7px !important; padding: 6px 9px !important; min-width: 0 !important; font-size: 10px !important; }
+.header-actions .account-state small { display: none !important; }
+#new-chat-mobile { display: none !important; }
+.environment-badge, .fast-model-pill { display: none !important; }
+.domain-bridge-switch a { color: var(--workshop-muted) !important; }
+#app-views { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; overflow: hidden; }
+#app-views > .view:not([hidden]) { flex: 1 1 0 !important; min-height: 0 !important; height: auto !important; }
+#chat-view:not([hidden]) { display: flex !important; flex-direction: column !important; padding: 0 !important; overflow: hidden !important; background: var(--workshop-bg) !important; }
+#chat-area { flex: 1 1 0 !important; min-height: 0 !important; width: 100% !important; max-width: none !important; margin: 0 !important; overflow-y: auto !important; padding: 40px 32px 24px !important; scroll-padding-bottom: 24px; overscroll-behavior: contain; }
+#welcome { max-width: 800px !important; text-align: left !important; margin: 18px auto 32px !important; padding: 0 !important; }
+#welcome .avatar.large {
+  width: 54px !important; height: 54px !important; margin: 0 0 26px !important;
+  display: grid !important; border-radius: 9px !important; background: var(--workshop-action) !important;
+  color: #202614 !important; font-size: 26px !important; font-weight: 900 !important;
+  box-shadow: 5px 5px 0 var(--workshop-line) !important; transform: rotate(-4deg);
+}
+#welcome .eyebrow { color: var(--workshop-muted) !important; font-size: 10px !important; letter-spacing: .16em !important; }
+#welcome h1 { color: var(--workshop-text) !important; font-size: clamp(34px, 4.2vw, 60px) !important; letter-spacing: -.05em !important; line-height: 1.08 !important; font-weight: 800 !important; margin: 12px 0 18px !important; }
+#welcome p { color: var(--workshop-muted) !important; max-width: 580px !important; font-size: 15px !important; line-height: 1.7 !important; margin: 0 !important; }
+.suggestions { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; margin: 32px 0 0 !important; counter-reset: workshop-action; }
+.suggestions button {
+  display: flex !important; align-items: center !important; justify-content: flex-start !important;
+  min-width: 0 !important; min-height: 64px !important; padding: 16px !important;
+  text-align: left !important; border: 1px solid var(--workshop-line) !important;
+  border-radius: 9px !important; color: var(--workshop-text) !important;
+  background: var(--workshop-panel) !important; font-size: 13px !important; gap: 14px !important;
+  transform: none !important; box-shadow: none !important;
+}
+.suggestions button::before { counter-increment: workshop-action; content: "0" counter(workshop-action); color: var(--workshop-muted); font: 10px ui-monospace, monospace; }
+.suggestions button::after { content: "↗"; margin-left: auto; color: var(--workshop-muted); font-size: 16px; }
+.suggestions button:hover { border-color: var(--workshop-accent) !important; background: var(--workshop-raised) !important; }
+#messages { width: 100% !important; max-width: 800px !important; margin: 0 auto !important; gap: 24px !important; }
+.message { max-width: 90% !important; animation: none !important; }
+.message.user { padding: 15px 18px !important; background: var(--workshop-raised) !important; color: var(--workshop-text) !important; border: 1px solid var(--workshop-line) !important; border-radius: 12px 12px 3px 12px !important; box-shadow: none !important; }
+.message.assistant { width: 100% !important; max-width: 100% !important; padding: 8px 0 16px !important; background: transparent !important; color: var(--workshop-text) !important; border: 0 !important; border-bottom: 1px solid var(--workshop-line) !important; border-radius: 0 !important; box-shadow: none !important; }
+.message .name { color: var(--workshop-accent) !important; font-size: 10px !important; letter-spacing: .1em !important; margin-bottom: 10px !important; }
+.message.user .name { color: var(--workshop-muted) !important; }
+.message .content { font-size: 15px !important; line-height: 1.75 !important; color: inherit !important; }
+.message .content a { color: var(--workshop-accent) !important; text-decoration: underline; }
+.message pre { max-width: 100%; overflow-x: auto; background: var(--workshop-panel) !important; border: 1px solid var(--workshop-line) !important; border-radius: 8px !important; padding: 14px !important; }
+.message details { color: var(--workshop-muted) !important; border-color: var(--workshop-line) !important; }
+.message .copy { color: var(--workshop-muted) !important; background: var(--workshop-panel) !important; border-color: var(--workshop-line) !important; border-radius: 5px !important; }
+.composer-wrap { position: relative !important; inset: auto !important; flex: 0 0 auto !important; width: 100% !important; max-width: 864px !important; padding: 8px 32px 20px !important; margin: 0 auto !important; background: var(--workshop-bg) !important; }
+#activity { min-height: 0 !important; padding: 0 2px 6px !important; color: var(--workshop-accent) !important; font-size: 11px !important; }
+#activity:empty { display: none !important; }
+#chat-maintenance-status { display: block; padding: 0 2px 8px; color: var(--workshop-muted); font-size: 10px; }
+#chat-form { margin: 0 !important; padding: 16px !important; border: 1px solid var(--workshop-line) !important; border-radius: 12px !important; background: var(--workshop-panel) !important; box-shadow: 0 8px 30px #0002 !important; backdrop-filter: none !important; }
+#chat-form:focus-within { border-color: var(--workshop-accent) !important; box-shadow: 0 0 0 1px var(--workshop-accent) !important; }
+#message { display: block !important; width: 100% !important; min-height: 66px !important; max-height: 180px !important; margin: 0 !important; padding: 0 0 12px !important; background: transparent !important; border: 0 !important; box-shadow: none !important; color: var(--workshop-text) !important; font-family: inherit !important; font-size: 15px !important; line-height: 1.6 !important; resize: vertical !important; }
+#message::placeholder { color: var(--workshop-muted) !important; opacity: .85; }
+.compose-bottom { display: flex !important; align-items: flex-end !important; gap: 10px !important; padding-top: 12px !important; border-top: 1px solid var(--workshop-line) !important; }
+.compose-settings { display: flex !important; flex: 1 1 auto !important; flex-wrap: wrap !important; min-width: 0 !important; align-items: center !important; gap: 6px !important; }
+.compose-settings select, .compose-settings button { height: 32px !important; min-height: 32px !important; width: auto !important; padding: 5px 9px !important; font-size: 11px !important; border: 1px solid var(--workshop-line) !important; border-radius: 6px !important; background: var(--workshop-bg) !important; color: var(--workshop-muted) !important; box-shadow: none !important; }
+#engine { flex: 0 1 220px !important; max-width: 220px !important; min-width: 100px !important; }
+#send, #stop { display: inline-flex; justify-content: center !important; align-items: center !important; width: auto !important; min-width: 104px !important; height: 40px !important; min-height: 40px !important; padding: 0 16px !important; flex: 0 0 auto !important; border-radius: 7px !important; white-space: nowrap !important; font-size: 12px !important; font-weight: 750 !important; transform: none !important; box-shadow: none !important; }
+#send { background: var(--workshop-action) !important; color: #202614 !important; border: 0 !important; }
+#send:hover { filter: brightness(1.08); }
+#send:disabled { opacity: .55; cursor: wait; }
+#stop { background: transparent !important; color: var(--workshop-text) !important; border: 1px solid var(--workshop-line) !important; }
+.footnote { display: block !important; margin-top: 10px !important; text-align: center !important; color: var(--workshop-muted) !important; font-size: 10px !important; }
+.media-preview { max-width: 100%; }
+@media (max-width: 1100px) {
+  .sidebar { width: 208px !important; padding: 20px 12px 12px !important; }
+  main { margin-left: 208px !important; width: calc(100% - 208px) !important; }
+  .domain-bridge-switch, .pc-bridge-badge { display: none !important; }
+  main > header { padding: 14px 24px !important; }
+  .header-actions { max-width: 70% !important; }
+  #chat-area { padding: 32px 24px 20px !important; }
+  .composer-wrap { padding: 8px 24px 16px !important; }
+}
+@media (max-width: 760px) {
+  .sidebar { position: fixed !important; inset: auto 0 0 !important; width: 100% !important; height: calc(70px + env(safe-area-inset-bottom, 0px)) !important; padding: 5px 6px calc(5px + env(safe-area-inset-bottom, 0px)) !important; border: 0 !important; border-top: 1px solid var(--workshop-line) !important; z-index: 40 !important; overflow: hidden !important; }
+  .sidebar .brand, .sidebar .nav-group-label, .sidebar .new, .sidebar .side-label, .sidebar #sessions, .sidebar .sidebar-status-card, .sidebar .sidebar-bottom { display: none !important; }
+  .sidebar .main-nav { display: grid !important; grid-template-columns: repeat(7, minmax(0, 1fr)) !important; margin: 0 !important; gap: 2px !important; height: 56px !important; overflow: visible !important; }
+  .main-nav button { display: flex !important; flex-direction: column !important; gap: 5px !important; justify-content: center !important; min-height: 54px !important; padding: 5px 2px !important; }
+  .main-nav button span { width: auto !important; font-size: 16px !important; }
+  .main-nav button b { width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 8px !important; text-align: center; }
+  main { width: 100% !important; margin-left: 0 !important; height: calc(100dvh - 70px - env(safe-area-inset-bottom, 0px)) !important; }
+  main > header { min-height: 64px !important; padding: 10px 16px !important; gap: 8px !important; }
+  #page-kicker { font-size: 8px !important; }
+  #page-title { font-size: 15px !important; }
+  .header-actions { gap: 4px !important; max-width: 67% !important; }
+  .header-actions button, .header-actions select { padding: 4px 6px !important; min-height: 30px !important; height: 30px !important; font-size: 9px !important; }
+  #memory-button, #tools-button, #account-state { display: none !important; }
+  #new-chat-mobile { display: inline-flex !important; color: var(--workshop-accent) !important; }
+  #chat-area { padding: 24px 16px 16px !important; }
+  #welcome { margin-top: 8px !important; }
+  #welcome .avatar.large { width: 42px !important; height: 42px !important; font-size: 22px !important; margin-bottom: 22px !important; }
+  #welcome h1 { font-size: 36px !important; }
+  #welcome p { font-size: 13px !important; }
+  .suggestions { gap: 8px !important; margin-top: 24px !important; }
+  .suggestions button { min-height: 58px !important; padding: 12px !important; font-size: 11px !important; gap: 8px !important; }
+  .composer-wrap { padding: 8px 12px 12px !important; }
+  #chat-form { padding: 12px !important; }
+  #message { min-height: 56px !important; font-size: 16px !important; }
+  .compose-bottom { flex-wrap: wrap !important; align-items: center !important; }
+  .compose-settings { flex-basis: calc(100% - 96px) !important; }
+  #engine { flex-basis: 100% !important; max-width: 100% !important; }
+  #send, #stop { min-width: 86px !important; padding: 0 12px !important; }
+  .footnote { display: none !important; }
+  .message .content { font-size: 14px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

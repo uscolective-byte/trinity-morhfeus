@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
 import {readFileSync} from 'node:fs';
 import {inspectChat,maintenanceStatus} from '../../Chat-Maintenance-Worker/src/maintenance.mjs';
-import {chatPromptTools} from '../src/chat-prompt.js';
+import {chatPromptTools,directCalculation} from '../src/chat-prompt.js';
 import {runAgent} from '../src/engine.js';
 import {runTool,TOOL_HELP} from '../src/tools.js';
 import {agentById} from '../src/registry.js';
@@ -58,12 +58,21 @@ test('a concurrent completed result wins over maintenance compare-and-set',async
 test('fast chat executes the actual calculator and keeps an execution receipt',async()=>{
   let calls=0,prompt;
   const env={AI:{run:async(model,args)=>{prompt=args.messages[0].content;calls++;return {response:calls===1?JSON.stringify({tool:'calculate',arguments:{operation:'add',values:[17,25]}}):'42'};}}};
-  const result=await runAgent(env,'orchestrator','Koľko je 17 + 25?','','fast');
+  const result=await runAgent(env,'orchestrator','Napíš krátky prirodzený pozdrav po slovensky.','','fast');
   assert.equal(result.text,'42');
   assert.equal(result.tool_log[0].tool,'calculate');
   assert.equal(result.tool_log[0].status,'completed');
   assert.match(prompt,/tool_catalog/);
   assert.ok(chatPromptTools(agentById('orchestrator').tools,'domény',TOOL_HELP).length<=16);
+});
+
+test('explicit short arithmetic requests use calculator deterministically without model guessing',async()=>{
+  let modelCalls=0;
+  const env={AI:{run:async()=>{modelCalls++;throw new Error('model must not guess arithmetic');}}};
+  const result=await runAgent(env,'orchestrator','Vypočítaj 19 × 23 pomocou kalkulačky a odpovedz iba výsledkom.','','fast');
+  assert.equal(result.text,'437');assert.equal(result.tool_log[0].tool,'calculate');assert.equal(modelCalls,0);
+  assert.deepEqual(directCalculation('19 × 23'),{operation:'multiply',values:[19,23]});
+  assert.equal(directCalculation('Vypočítaj obrat firmy za Q3'),null);
 });
 
 test('tool catalog returns exact input schemas only for installed permitted tools',async()=>{

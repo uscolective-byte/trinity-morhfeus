@@ -47,13 +47,20 @@
         "**/*.js.txt"
       ],
       "fallthrough": true
+    },
+    {
+      "type": "Data",
+      "globs": [
+        "**/*.png"
+      ],
+      "fallthrough": true
     }
   ],
   "vars": {
     "CF_ACCOUNT_ID": "b60342e5e52f5646fbd4e913bb409334",
-    "AI_MODEL": "@cf/meta/llama-3.3-70b-instruct",
-    "AI_FALLBACK_MODEL": "@cf/meta/llama-3.1-8b-instruct",
-    "AI_FAST_MODEL": "@cf/meta/llama-3.1-8b-instruct",
+    "AI_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+    "AI_FALLBACK_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+    "AI_FAST_MODEL": "@cf/meta/llama-3.1-8b-instruct-fast",
     "OPENAI_MODEL": "gpt-5.6-luna",
     "IMAGE_MODEL": "@cf/black-forest-labs/flux-1-schnell",
     "VISION_MODEL": "@cf/meta/llama-3.2-11b-vision-instruct",
@@ -281,9 +288,9 @@
       ],
       "vars": {
         "CF_ACCOUNT_ID": "b60342e5e52f5646fbd4e913bb409334",
-        "AI_MODEL": "@cf/meta/llama-3.3-70b-instruct",
-        "AI_FALLBACK_MODEL": "@cf/meta/llama-3.1-8b-instruct",
-        "AI_FAST_MODEL": "@cf/meta/llama-3.1-8b-instruct",
+        "AI_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+        "AI_FALLBACK_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+        "AI_FAST_MODEL": "@cf/meta/llama-3.1-8b-instruct-fast",
         "OPENAI_MODEL": "gpt-5.6-luna",
         "IMAGE_MODEL": "@cf/black-forest-labs/flux-1-schnell",
         "VISION_MODEL": "@cf/meta/llama-3.2-11b-vision-instruct",

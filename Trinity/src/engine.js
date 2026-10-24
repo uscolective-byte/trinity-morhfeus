@@ -1,6 +1,6 @@
 import {agentById,selectSkills} from './registry.js';
 import {callModel} from './services.js';
-import {chatPromptTools} from './chat-prompt.js';
+import {chatPromptTools,directCalculation} from './chat-prompt.js';
 import {runTool,TOOL_HELP,INTERNAL_TOOLS,PC_TOOLS,DEVELOPMENT_TOOLS} from './tools.js';
 import {listPlugins} from './plugins.js';
 import {TRUTH_POLICY,assertNoSimulatedData,findUnsupportedActionClaims,safeTruthResponse,truthStatus} from './truth.js';
@@ -178,6 +178,13 @@ export async function runAgent(env, id, task, context='', provider='workers-ai',
   }
   const enabled=env.DB?(await listPlugins(env)).filter(p=>p.enabled).flatMap(p=>p.tools):agent.tools;
   const activeTools=agent.tools.filter(t=>(enabled.includes(t)||DEVELOPMENT_TOOLS.includes(t))&&(!INTERNAL_TOOLS.has(t)||executionPolicy.allowInternal)&&(!PC_TOOLS.has(t)||executionPolicy.allowDirectPC));
+  const calculation=activeTools.includes('calculate')?directCalculation(task):null;
+  if(calculation){
+    const started=Date.now(),outcome=await runTool(env,agent,'calculate',calculation,{adminAuthorized:executionPolicy.directAdmin});
+    const evidence=outcome?._evidence;const receipt={tool:'calculate',status:'completed',effect:evidence?.effect||'read',receipt_id:evidence?.receipt_id||crypto.randomUUID(),verified_at:new Date().toISOString()};
+    const toolLog=[receipt];
+    return {text:String(outcome.result),model:'trinity-calculate',provider:'internal',agent_id:id,tool_log:toolLog,truth:truthStatus(String(outcome.result),toolLog),duration_ms:Date.now()-started};
+  }
   const activeSkills=selectSkills(agent,task);
   if(id==='orchestrator'&&activeTools.includes('pc_open_app')&&isOpenAppRequest(task,context)){
     const target=resolveAppTarget(task,context);
