@@ -61,7 +61,7 @@ button:focus-visible, a:focus-visible, select:focus-visible {
 }
 .brand > span:last-child { color: var(--workshop-text) !important; font-size: 17px !important; }
 .brand small { color: var(--workshop-muted) !important; font-size: 10px !important; margin-top: 5px !important; }
-.main-nav { display: flex !important; flex-direction: column !important; gap: 4px !important; margin-top: 14px !important; }
+.sidebar .main-nav { display: flex !important; flex: 0 0 auto !important; flex-direction: column !important; gap: 4px !important; margin-top: 14px !important; max-height: none !important; overflow: visible !important; }
 .nav-group-label { color: var(--workshop-muted) !important; font-size: 9px !important; letter-spacing: .12em !important; border: 0 !important; padding: 18px 10px 7px !important; }
 .main-nav button {
   min-height: 42px !important; padding: 10px 12px !important; gap: 12px !important;
@@ -73,16 +73,17 @@ button:focus-visible, a:focus-visible, select:focus-visible {
 .main-nav button b { color: inherit !important; font-size: 12px !important; font-weight: 550 !important; }
 .main-nav button:hover { background: var(--workshop-raised) !important; color: var(--workshop-text) !important; }
 .main-nav button.active { color: var(--workshop-accent) !important; background: var(--workshop-raised) !important; border-color: var(--workshop-line) !important; }
-button.new { margin: 24px 0 20px !important; min-height: 42px !important; border-radius: 7px !important; background: var(--workshop-action) !important; color: #1a2011 !important; border: 0 !important; box-shadow: none !important; font-weight: 700 !important; }
+body .sidebar button.new { flex: 0 0 auto !important; margin: 20px 0 16px !important; min-height: 42px !important; border-radius: 7px !important; background: var(--workshop-action) !important; color: #1a2011 !important; border: 0 !important; box-shadow: none !important; font-weight: 700 !important; }
 .side-label { color: var(--workshop-muted) !important; font-size: 9px !important; letter-spacing: .1em !important; margin: 0 10px 8px !important; }
 #sessions { flex: 1 1 auto !important; min-height: 0 !important; max-height: none !important; overflow-y: auto !important; }
-#sessions button { color: var(--workshop-muted) !important; background: transparent !important; padding: 8px 10px !important; border: 0 !important; }
+#sessions button { display: block !important; width: 100% !important; min-width: 0 !important; color: var(--workshop-muted) !important; background: transparent !important; padding: 8px 10px !important; border: 0 !important; text-align: left !important; text-overflow: ellipsis !important; overflow: hidden !important; white-space: nowrap !important; }
 #sessions button:hover, #sessions button.active { color: var(--workshop-text) !important; background: var(--workshop-raised) !important; }
-.sidebar-status-card { margin-top: 18px !important; padding: 12px !important; border: 1px solid var(--workshop-line) !important; background: transparent !important; border-radius: 7px !important; box-shadow: none !important; }
-.status-card-header { color: var(--workshop-text) !important; font-size: 9px !important; }
+.sidebar-status-card { flex: 0 0 auto !important; margin-top: 18px !important; padding: 12px !important; border: 1px solid var(--workshop-line) !important; background: transparent !important; border-radius: 7px !important; box-shadow: none !important; }
+body .sidebar .status-card-header { color: var(--workshop-text) !important; font-size: 9px !important; }
 .sidebar-status-card .status-card-row { margin-top: 7px !important; color: var(--workshop-muted) !important; font-size: 10px !important; }
 .sidebar-status-card a { color: var(--workshop-muted) !important; }
 .status-pulse-badge { color: var(--workshop-muted) !important; background: transparent !important; border-color: var(--workshop-line) !important; }
+.status-pulse-badge::before { display: none !important; }
 main { margin-left: 236px !important; width: calc(100% - 236px) !important; height: 100dvh !important; min-height: 0 !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; }
 main > header {
   position: relative !important; top: auto !important; height: auto !important;
@@ -104,6 +105,8 @@ main > header {
   color: var(--workshop-muted) !important; font-size: 10px !important;
 }
 .header-actions select { max-width: 72px !important; }
+.header-actions .account-state { gap: 7px !important; padding: 6px 9px !important; min-width: 0 !important; font-size: 10px !important; }
+.header-actions .account-state small { display: none !important; }
 #new-chat-mobile { display: none !important; }
 .environment-badge, .fast-model-pill { display: none !important; }
 .domain-bridge-switch a { color: var(--workshop-muted) !important; }
