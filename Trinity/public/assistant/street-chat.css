@@ -210,3 +210,278 @@ main > header {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+
+/* ========================================================================
+   TRINITY / STREET SIGNAL 001
+   Original urban command-station identity: asphalt, hazard orange, road
+   markings and editorial typography. Intentional CSS-only skin; existing
+   navigation, authentication, chat controls and tool handlers are unchanged.
+   ======================================================================== */
+body {
+  --workshop-bg:#090b0c;
+  --workshop-panel:#121517;
+  --workshop-raised:#1b2021;
+  --workshop-line:#383d3d;
+  --workshop-text:#f2f0e8;
+  --workshop-muted:#b4b5a9;
+  --workshop-accent:#dfff70;
+  --workshop-action:#ff6a43;
+  color-scheme:dark;
+  background-color:var(--workshop-bg) !important;
+}
+html[data-theme="light"] body {
+  --workshop-bg:#eae7df;
+  --workshop-panel:#f8f5ed;
+  --workshop-raised:#e0dfd5;
+  --workshop-line:#8b8d83;
+  --workshop-text:#151819;
+  --workshop-muted:#494f4e;
+  --workshop-accent:#395900;
+  --workshop-action:#e35031;
+  color-scheme:light;
+}
+::selection { background:#ff6a43; color:#111; }
+body, button, input, textarea, select { font-family: "Arial Narrow", "Roboto Condensed", "Segoe UI", sans-serif !important; }
+:focus-visible { outline:3px solid var(--workshop-accent) !important; outline-offset:3px !important; }
+/* Main left rail becomes an unmistakable wayfinding strip. */
+.sidebar {
+  background:
+    linear-gradient(90deg, var(--workshop-action) 0 5px, transparent 5px),
+    var(--workshop-panel) !important;
+  padding-left:23px !important;
+}
+.brand { position:relative !important; padding-bottom:30px !important; }
+.brand-mark {
+  width:48px !important; min-width:48px !important; height:48px !important;
+  border-radius:0 !important;
+  background:var(--workshop-action) !important;
+  color:#111 !important;
+  font-family: Impact, "Arial Black", sans-serif !important;
+  font-size:28px !important;
+  transform:skew(-7deg);
+}
+.brand > span:last-child {
+  text-transform:uppercase !important; font-size:23px !important;
+  font-family:Impact,"Arial Black",sans-serif !important;
+  font-weight:900 !important; letter-spacing:.045em !important;
+}
+.brand small {
+  font:700 9px/1.25 ui-monospace,monospace !important;
+  letter-spacing:.09em !important; text-transform:uppercase;
+  color:var(--workshop-accent) !important;
+}
+.brand::after {
+  content:"S T R E E T  /  S I G N A L    0 0 1";
+  position:absolute; left:8px; bottom:10px;
+  font:700 8px ui-monospace,monospace;
+  color:var(--workshop-muted); letter-spacing:.04em;
+}
+.sidebar .nav-group-label, .side-label {
+  font:700 10px ui-monospace,monospace !important;
+  letter-spacing:.18em !important;
+  color:var(--workshop-muted) !important;
+}
+.sidebar .main-nav button {
+  position:relative; border-radius:0 !important;
+  border-left:3px solid transparent !important;
+  font-weight:700 !important; text-transform:uppercase !important;
+  letter-spacing:.035em;
+}
+.sidebar .main-nav button.active {
+  background:var(--workshop-raised) !important;
+  border-left-color:var(--workshop-action) !important;
+  border-top-color:var(--workshop-line) !important;
+  border-right-color:var(--workshop-line) !important;
+  border-bottom-color:var(--workshop-line) !important;
+  color:var(--workshop-text) !important;
+}
+.sidebar .main-nav button.active::after {
+  content:"/"; position:absolute; right:9px;
+  color:var(--workshop-action); font-size:21px; font-weight:900;
+}
+body .sidebar button.new {
+  background:var(--workshop-action) !important;
+  color:#101010 !important; border-radius:0 !important;
+  text-transform:uppercase; letter-spacing:.06em;
+  box-shadow:5px 5px 0 var(--workshop-line) !important;
+}
+.sidebar-status-card { border-radius:0 !important; border-left:3px solid var(--workshop-accent) !important; }
+.sidebar-status-card a { color:var(--workshop-accent) !important; }
+main > header {
+  border-bottom:2px solid var(--workshop-line) !important;
+  background:
+    repeating-linear-gradient(125deg,transparent 0 11px,rgba(255,106,67,.055) 11px 12px),
+    var(--workshop-panel) !important;
+  min-height:88px !important;
+}
+#page-kicker {
+  color:var(--workshop-accent) !important;
+  font-family:ui-monospace,monospace !important;
+  letter-spacing:.22em !important;
+}
+#page-title {
+  font-family:Impact,"Arial Black",sans-serif !important;
+  font-size:clamp(19px,2vw,28px) !important;
+  letter-spacing:.025em !important;
+  text-transform:uppercase !important;
+}
+.header-actions button, .header-actions select, .domain-bridge-switch, .pc-bridge-badge {
+  border-radius:0 !important; border-color:var(--workshop-line) !important;
+}
+.header-actions button:hover { color:var(--workshop-accent) !important; border-color:var(--workshop-accent) !important; }
+/* Road grid, with a readable center lane instead of decorative clutter. */
+#chat-view:not([hidden]) {
+  background:
+    linear-gradient(90deg,transparent calc(50% - 1px),rgba(223,255,112,.055) 50%,transparent calc(50% + 1px)),
+    repeating-linear-gradient(0deg,transparent 0 79px,rgba(255,255,255,.025) 79px 80px),
+    var(--workshop-bg) !important;
+}
+#chat-area { position:relative !important; }
+#welcome {
+  position:relative !important; max-width:920px !important;
+  margin-top:10px !important;
+  padding:20px 0 30px 24px !important;
+  border-left:4px solid var(--workshop-action) !important;
+}
+#welcome::before {
+  content:"001  /  IDEAS INTO ACTION";
+  display:inline-block; color:var(--workshop-accent);
+  border:1px solid var(--workshop-line);
+  padding:7px 12px; margin-bottom:23px;
+  font:700 11px ui-monospace,monospace; letter-spacing:.16em;
+}
+#welcome .avatar.large {
+  background:var(--workshop-action) !important;
+  color:#111 !important;
+  border-radius:0 !important; transform:rotate(-6deg) skew(-5deg) !important;
+  box-shadow:7px 7px 0 var(--workshop-line) !important;
+  width:65px !important; height:65px !important; font-size:31px !important;
+}
+#welcome .eyebrow {
+  color:var(--workshop-accent) !important;
+  font:700 11px ui-monospace,monospace !important;
+  letter-spacing:.15em !important;
+}
+#welcome h1 {
+  max-width:790px; margin:16px 0 !important;
+  color:var(--workshop-text) !important;
+  font-family:Impact,"Arial Black",sans-serif !important;
+  font-weight:900 !important;
+  font-size:clamp(43px,6vw,100px) !important;
+  line-height:.99 !important; letter-spacing:-.02em !important;
+  text-wrap:balance !important; text-transform:uppercase;
+  text-shadow:4px 4px 0 rgba(255,106,67,.24);
+}
+#welcome p {
+  max-width:600px !important; color:var(--workshop-text) !important;
+  font-size:clamp(14px,1.35vw,17px) !important;
+  border-top:1px solid var(--workshop-line);
+  padding-top:16px;
+}
+.suggestions {
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  gap:12px !important; counter-reset:street-action !important;
+}
+.suggestions button {
+  position:relative;
+  background:var(--workshop-panel) !important;
+  color:var(--workshop-text) !important;
+  border-radius:0 !important; border:1px solid var(--workshop-line) !important;
+  border-top:3px solid var(--workshop-line) !important;
+  min-height:80px !important;
+  font-weight:750 !important; font-size:14px !important;
+  text-transform:uppercase !important; letter-spacing:.035em;
+  box-shadow:4px 4px 0 rgba(0,0,0,.2) !important;
+  transition:background .14s,border-color .14s !important;
+}
+.suggestions button::before {
+  counter-increment:street-action;
+  content:"#" counter(street-action,decimal-leading-zero) !important;
+  color:var(--workshop-action) !important;
+  font:900 11px ui-monospace,monospace !important;
+}
+.suggestions button::after { color:var(--workshop-accent) !important; font-size:22px !important; }
+.suggestions button:hover, .suggestions button:focus-visible {
+  background:var(--workshop-raised) !important;
+  border-top-color:var(--workshop-action) !important;
+}
+/* Conversation retains the existing message DOM and code/copy actions. */
+.message.assistant {
+  border-bottom:1px dashed var(--workshop-line) !important;
+}
+.message.assistant .name { color:var(--workshop-accent) !important; }
+.message.user {
+  border-radius:0 !important; border-left:4px solid var(--workshop-action) !important;
+  background:var(--workshop-raised) !important;
+}
+.message pre { border-radius:0 !important; }
+.message .copy { border-radius:0 !important; }
+.composer-wrap {
+  max-width:980px !important; background:var(--workshop-bg) !important;
+}
+#chat-form {
+  position:relative; border:2px solid var(--workshop-line) !important;
+  border-radius:0 !important;
+  background:var(--workshop-panel) !important;
+  box-shadow:8px 8px 0 rgba(255,106,67,.16) !important;
+}
+#chat-form::before {
+  content:"TRANSMISSION / 01";
+  position:absolute; right:14px; top:-11px;
+  padding:3px 8px;
+  color:#151819; background:var(--workshop-accent);
+  font:800 9px ui-monospace,monospace; letter-spacing:.08em;
+}
+#chat-form:focus-within {
+  border-color:var(--workshop-action) !important;
+  box-shadow:8px 8px 0 rgba(255,106,67,.32) !important;
+}
+#message::placeholder { color:var(--workshop-muted) !important; }
+.compose-bottom { border-top:1px dashed var(--workshop-line) !important; }
+.compose-settings select,.compose-settings button {
+  border-radius:0 !important;
+  background:var(--workshop-raised) !important;
+  color:var(--workshop-text) !important;
+  border-color:var(--workshop-line) !important;
+}
+#send {
+  background:var(--workshop-action) !important; color:#171717 !important;
+  border-radius:0 !important; letter-spacing:.04em;
+  text-transform:uppercase; font-weight:900 !important;
+}
+#send:disabled { opacity:.55 !important; }
+#activity,#chat-maintenance-status { color:var(--workshop-muted) !important; }
+/* Carry the visual system through panels, without touching control behavior. */
+#app-views .panel,#app-views .metric,#app-views .hero-card,
+#app-views .domain-card,#app-views .domain-market-card {
+  border-radius:0 !important; border-color:var(--workshop-line) !important;
+  box-shadow:none !important;
+}
+#app-views .panel-head .eyebrow, #app-views .eyebrow { color:var(--workshop-accent) !important; }
+#app-views .primary { background:var(--workshop-action) !important; color:#101010 !important; border-radius:0 !important; }
+#app-views .metric { border-top:3px solid var(--workshop-action) !important; }
+dialog { border-radius:0 !important; border:2px solid var(--workshop-line) !important; }
+@media(max-width:1100px) {
+  .sidebar { padding-left:18px !important; }
+  #welcome h1 { font-size:clamp(42px,6vw,72px) !important; }
+}
+@media(max-width:760px) {
+  .sidebar { padding-left:6px !important; background:var(--workshop-panel) !important; }
+  main > header { min-height:66px !important; }
+  #welcome { padding:10px 0 22px 14px !important; margin:4px auto 20px !important; }
+  #welcome::before { padding:5px 8px; font-size:9px; margin-bottom:15px; }
+  #welcome .avatar.large { width:45px !important; height:45px !important; font-size:24px !important; }
+  #welcome h1 { font-size:clamp(34px,10vw,53px) !important; }
+  .suggestions { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:8px !important; }
+  .suggestions button { min-height:64px !important; padding:10px !important; font-size:11px !important; }
+  #chat-form { box-shadow:4px 4px 0 rgba(255,106,67,.14) !important; }
+  .composer-wrap { padding-bottom:14px !important; }
+}
+@media(max-width:380px) {
+  .suggestions { grid-template-columns:1fr !important; }
+  .suggestions button { min-height:47px !important; }
+}
+@media(prefers-reduced-motion:reduce) {
+  *,*::before,*::after { animation:none !important; scroll-behavior:auto !important; transition:none !important; }
+}
