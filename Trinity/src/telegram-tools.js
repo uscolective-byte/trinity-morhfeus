@@ -28,7 +28,7 @@ export function resolveTelegramReadCommand(raw){
 export async function runTelegramReadTool(command,env){
   switch(command){
     case '/tools':
-      return 'Bezpečné nástroje Trinity cez Telegram:\n'+TELEGRAM_READ_COMMANDS.map(item=>item.command+' — '+item.description).join('\n')+
+      return 'Bezpečné príkazy Trinity cez Telegram:\n'+TELEGRAM_READ_COMMANDS.map(item=>item.command+' — '+item.description).join('\n')+
         '\nZmeny kódu, terminál, nasadenia a platby cez tento kanál nie sú povolené. Na vývoj použi Gemini/Antigravity s Trinity MCP a schvaľovaním.';
     case '/health':{
       const state=await readiness(env);
