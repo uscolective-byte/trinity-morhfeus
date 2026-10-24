@@ -13,5 +13,8 @@
     "docs:sync": "node scripts/sync-release-docs.mjs",
     "docs:check": "node scripts/sync-release-docs.mjs --check",
     "setup": "node scripts/project-pipeline.mjs setup"
+  },
+  "dependencies": {
+    "ethers": "^6.17.0"
   }
 }

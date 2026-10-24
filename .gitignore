@@ -15,6 +15,11 @@ Local-Desktop/Data/
 Local-Desktop/runtime/
 Local-Desktop/Workspace/
 .dev.vars
+.secrets/
+*.seed
+*wallet*.json
+*treasury*.json
+*.key
 
 **/dist-integrations/
 

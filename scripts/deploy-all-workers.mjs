@@ -29,7 +29,8 @@ const STANDALONE_WORKERS = [
   { name: 'trinity-knowledge', dir: 'Knowledge-Worker', config: 'wrangler.jsonc' },
   { name: 'trinity-integrations', dir: 'Integrations-Worker', config: 'wrangler.jsonc' },
   { name: 'trinity-pc-bridge', dir: 'PC-Bridge-Worker', config: 'wrangler.jsonc' },
-  { name: 'trinity-audit', dir: 'Audit-Worker', config: 'wrangler.jsonc' }
+  { name: 'trinity-audit', dir: 'Audit-Worker', config: 'wrangler.jsonc' },
+  { name: 'jericho123', dir: 'Jericho-Worker', config: 'wrangler.jsonc' }
 ];
 
 console.log('====================================================');
