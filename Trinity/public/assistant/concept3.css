@@ -320,15 +320,19 @@ header {
 .living-core > span {
   color: #26d6f0 !important;
   font-size: 10px !important;
-  letter-spacing: .34em !important;
-  margin-top: -9px !important;
+  letter-spacing: .12em !important;
+  line-height: 1.4 !important;
+  margin-top: 0 !important;
+  white-space: nowrap !important;
 }
 
 .living-core > small {
   color: #7f91b2 !important;
   font-size: 8px !important;
-  letter-spacing: .28em !important;
-  margin-top: 5px !important;
+  letter-spacing: .08em !important;
+  line-height: 1.5 !important;
+  margin-top: 7px !important;
+  white-space: nowrap !important;
 }
 
 .metric-grid {
