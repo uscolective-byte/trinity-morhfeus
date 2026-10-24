@@ -498,7 +498,7 @@ export async function runTool(env, agent, name, input, executionContext={}) {
     assertCopilotSkillEnabled(args.skill);
     const fn=skillRegistry.get(args.skill);
     if(!fn)throw new Error(`Skill '${args.skill}' nebol nájdený v registry.`);
-    const result=await fn(args.params,env);
+    const result=await fn(args.params,env,{adminAuthorized:executionContext.adminAuthorized===true});
     return {skill:args.skill,ok:true,result};
   }
   if(name==='copilot_chat'){
@@ -924,8 +924,8 @@ export async function runTool(env, agent, name, input, executionContext={}) {
     }
     return {results,cached:false};
   }
-  if(name==='delegate_worker')return {...await delegateWorker(env,args.worker,args.action,args.data),_evidence:{effect:'mutation',action:'delegate_worker',receipt_id:crypto.randomUUID()}};
-  if(name==='orchestrate_team')return {...await orchestratePipeline(env,args.task),_evidence:{effect:'mutation',action:'orchestrate_team',receipt_id:crypto.randomUUID()}};
+  if(name==='delegate_worker'){ const result=await delegateWorker(env,args.worker,args.action,args.data,{adminAuthorized:executionContext.adminAuthorized===true}); return {...result,_evidence:{effect:result.ok?'read':'proposal',action:'delegate_worker'}}; }
+  if(name==='orchestrate_team'){ const result=await orchestratePipeline(env,args.task,{adminAuthorized:executionContext.adminAuthorized===true}); return {...result,_evidence:{effect:result.ok?'read':'proposal',action:'orchestrate_team'}}; }
   if(name==='fleet_status')return {...await inspectFleet(env),_evidence:{effect:'read',action:'fleet_status',receipt_id:crypto.randomUUID()}};
 }
 export async function recallMemory(env,task){

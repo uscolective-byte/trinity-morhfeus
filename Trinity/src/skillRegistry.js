@@ -1,3 +1,4 @@
+import {runtimeSecretStatus} from './runtime-secrets.js';
 /**
  * Trinity Copilot Skill Registry
  * Komplexný zoznam skillov a pluginov pre agenta TrinityCopilotAgent:
@@ -1635,7 +1636,7 @@ export const domainSkills = {
 export const coreCatalogSkills = {
   planning: async (params = {}) => ({
     skill: "planning",
-    status: "completed",
+    status: "plan-ready",
     actionable_plan: {
       goal: String(params.query || params.goal || "Plánovanie zadania").slice(0, 300),
       phases: [
@@ -1650,7 +1651,7 @@ export const coreCatalogSkills = {
   }),
   "secure-development": async (params = {}) => ({
     skill: "secure-development",
-    status: "completed",
+    status: "plan-ready",
     security_verifications: {
       input_validation: "zod / strict schema enforced",
       least_privilege: "bounded RBAC + signed proposals",
@@ -1662,7 +1663,7 @@ export const coreCatalogSkills = {
   }),
   "cloud-operations": async (params = {}, env = {}) => ({
     skill: "cloud-operations",
-    status: "completed",
+    status: "plan-ready",
     bindings_status: {
       d1_db: Boolean(env?.DB),
       kv_mastermind: Boolean(env?.Mastermind),
@@ -1673,7 +1674,7 @@ export const coreCatalogSkills = {
   }),
   "evidence-research": async (params = {}) => ({
     skill: "evidence-research",
-    status: "completed",
+    status: "plan-ready",
     evidence_structure: {
       topic: String(params.query || params.topic || "Výskum").slice(0, 300),
       truth_policy: "evidence-required",
@@ -1683,7 +1684,7 @@ export const coreCatalogSkills = {
   }),
   "integration-design": async (params = {}) => ({
     skill: "integration-design",
-    status: "completed",
+    status: "plan-ready",
     contract: {
       target_service: String(params.service || "External Connector").slice(0, 100),
       auth_type: "vault-encrypted-token",
@@ -1694,7 +1695,7 @@ export const coreCatalogSkills = {
   }),
   "quality-review": async (params = {}) => ({
     skill: "quality-review",
-    status: "completed",
+    status: "plan-ready",
     quality_checklist: {
       unit_tests_passed: true,
       truth_mode_compliant: true,
@@ -1705,7 +1706,7 @@ export const coreCatalogSkills = {
   }),
   "paper-trading": async (params = {}) => ({
     skill: "paper-trading",
-    status: "completed",
+    status: "plan-ready",
     commodity_sectors: ["Drahé kovy", "Energie", "Priemyselné kovy", "Poľnohospodárstvo", "Mäso & dobytok"],
     total_commodities_tracked: 22,
     mode: "simulation-only",
@@ -1713,17 +1714,17 @@ export const coreCatalogSkills = {
   }),
   "memory-hygiene": async (params = {}) => ({
     skill: "memory-hygiene",
-    status: "completed",
+    status: "plan-ready",
     hygiene_report: {
-      duplicates_pruned: true,
-      stale_assertions_archived: true,
-      provenance_retained: true
+      duplicates_pruned: false,
+      stale_assertions_archived: false,
+      provenance_retained: null
     },
     timestamp: new Date().toISOString()
   }),
   "integration-recovery": async (params = {}) => ({
     skill: "integration-recovery",
-    status: "completed",
+    status: "plan-ready",
     recovery_protocol: {
       backoff: "exponential",
       fallback_provider: "workers-ai",
@@ -1733,7 +1734,7 @@ export const coreCatalogSkills = {
   }),
   "clear-communication": async (params = {}) => ({
     skill: "clear-communication",
-    status: "completed",
+    status: "plan-ready",
     guidelines: [
       "Najprv výsledok",
       "Krátke a vecné vysvetlenie v slovenskom jazyku",
@@ -1743,7 +1744,7 @@ export const coreCatalogSkills = {
   }),
   "customer-acquisition": async (params = {}) => ({
     skill: "customer-acquisition",
-    status: "completed",
+    status: "plan-ready",
     blueprint: {
       segment: String(params.segment || "Všeobecný").slice(0, 100),
       offer_type: "managed-services",
@@ -1754,7 +1755,7 @@ export const coreCatalogSkills = {
   }),
   "managed-evolution": async (params = {}) => ({
     skill: "managed-evolution",
-    status: "completed",
+    status: "plan-ready",
     evolution_cycle: {
       ui_evolve_ready: true,
       self_evolve_ready: true,
@@ -1774,7 +1775,8 @@ export const catalogSkills = Object.fromEntries(
         name: skill.name,
         category: skill.clusters?.[0] || "catalog",
         description: skill.description,
-        status: "executed",
+        status: "catalog-only",
+        execution_verified: false,
         steps: skill.steps,
         success_checks: skill.success_checks,
         parameters: input,
@@ -1862,6 +1864,8 @@ skillRegistry.register('getAllCommands', (env) => memorySkills.getAllCommands(en
 skillRegistry.register('resolveCustomCommand', (text, env) => memorySkills.resolveCustomCommand(text, env), { category: 'memory' });
 
 import { delegateWorker, orchestratePipeline, inspectFleet } from './orchestrator.js';
-skillRegistry.register('callWorkerAction', (params = {}, env) => delegateWorker(env, params.worker, params.action, params.data), { category: 'orchestration' });
-skillRegistry.register('orchestrateTeamTask', (params = {}, env) => orchestratePipeline(env, params.task || params.prompt || ''), { category: 'orchestration' });
+skillRegistry.register('callWorkerAction', (params = {}, env, context = {}) => delegateWorker(env, params.worker, params.action, params.data, {adminAuthorized:context.adminAuthorized===true}), { category: 'orchestration' });
+skillRegistry.register('orchestrateTeamTask', (params = {}, env, context = {}) => orchestratePipeline(env, params.task || params.prompt || '', {adminAuthorized:context.adminAuthorized===true}), { category: 'orchestration' });
 skillRegistry.register('fleetHealthCheck', (_params, env) => inspectFleet(env), { category: 'orchestration' });
+
+skillRegistry.register('runtimeSecretStatus', (_params, env) => runtimeSecretStatus(env), {category:'diagnostics'});

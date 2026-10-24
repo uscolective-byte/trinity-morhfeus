@@ -184,6 +184,8 @@ export const WORKER_CATALOG = {
 /**
  * Zavolá konkrétny worker cez Cloudflare service binding alebo RPC
  */
+const READ_ACTIONS = new Set(['aura.status','aura.skills','core.state.get','core.personality.get','core.brain.state','build.list','task.list','job.list','connect.list','connect.test','audit.list','guardian.check','memory.get','memory.list','monitor.health','monitor.tokens','monitor.events','monitor.autonomous.list','skill.list','plugin.list','search','status','deploy.list','evolve.history','evolve.reflections','architect.graph','memory.semantic.search']);
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export async function delegateWorker(env, workerBinding, action, data = {}, options = {}) {
   const meta = WORKER_CATALOG[workerBinding];
   if (!meta) {
@@ -200,41 +202,49 @@ export async function delegateWorker(env, workerBinding, action, data = {}, opti
     };
   }
 
-  const timeoutMs = options.timeoutMs || 15000;
+  const allowed = action === 'status' || meta.actions?.includes(action) || meta.rpc && ['search','status'].includes(action);
+  if (!allowed) return {ok:false,worker:workerBinding,status:400,error:'Nepovolená akcia pracovníka.'};
+  const mutating = !READ_ACTIONS.has(action);
+  if (mutating && options.adminAuthorized !== true) return {ok:false,worker:workerBinding,status:403,error:'Akcia vyžaduje serverom overeného správcu.'};
+  const timeoutMs = Math.min(Math.max(Number(options.timeoutMs) || 15000, 100), 30000);
   const traceId = options.traceId || crypto.randomUUID();
-  const idempotency_key = options.idempotency_key || (options.mutating ? crypto.randomUUID() : undefined);
-  const approval = options.approval || { approved: true, actor_role: 'owner', request_id: crypto.randomUUID() };
+  const idempotency_key = mutating ? (UUID.test(options.idempotency_key || '') ? options.idempotency_key : crypto.randomUUID()) : undefined;
+  const approval = mutating ? {approved:true,actor_role:'admin',request_id:crypto.randomUUID()} : undefined;
+  const headers = {'Content-Type':'application/json'};
+  if (mutating && workerBinding.startsWith('AURA_')) {
+    if (typeof env.AURA_SERVICE_TOKEN !== 'string' || env.AURA_SERVICE_TOKEN.length < 32) return {ok:false,worker:workerBinding,status:503,error:'Interný service token nie je nakonfigurovaný.'};
+    headers['X-Aura-Service-Token'] = env.AURA_SERVICE_TOKEN;
+  }
 
   const started = Date.now();
 
   try {
+    if (action === 'status' && !meta.rpc) {
+      const response=await binding.fetch('https://trinity.internal/health',{method:'GET',signal:AbortSignal.timeout(timeoutMs)});
+      const result=JSON.parse(await boundedText(response));
+      return {ok:response.ok && result.status!=='degraded' && result.ok!==false,worker:workerBinding,status:response.status,result,traceId,duration_ms:Date.now()-started};
+    }
     // 1. RPC volanie (napr. KNOWLEDGE_SERVICE)
     if (meta.rpc) {
-      if (typeof binding[action] === 'function') {
+      const method = action === 'status' ? 'getStatus' : action;
+      if (typeof binding[method] !== 'function') return {ok:false,worker:workerBinding,status:503,error:'RPC metóda nie je dostupná.'};
+      let timer;
+      try {
         const result = await Promise.race([
-          binding[action](data),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('RPC Timeout')), timeoutMs))
+          binding[method](action === 'search' ? String(data.query || '') : data),
+          new Promise((_,reject) => {timer=setTimeout(()=>reject(new Error('RPC Timeout')),timeoutMs);})
         ]);
-        return { ok: true, worker: workerBinding, result, duration_ms: Date.now() - started, traceId };
-      }
-      if (typeof binding.search === 'function' && (action === 'search' || !action)) {
-        const query = typeof data === 'string' ? data : data.query || '';
-        const result = await binding.search(query);
-        return { ok: true, worker: workerBinding, result, duration_ms: Date.now() - started, traceId };
-      }
-      if (typeof binding.getStatus === 'function' && action === 'status') {
-        const result = await binding.getStatus();
-        return { ok: true, worker: workerBinding, result, duration_ms: Date.now() - started, traceId };
-      }
+        return {ok:result?.ok!==false,worker:workerBinding,result,duration_ms:Date.now()-started,traceId};
+      } finally {clearTimeout(timer);}
     }
 
     // 2. REST volanie (napr. MEMORY, CAPACITY, INTEGRATIONS)
     if (meta.rest || workerBinding === 'MEMORY') {
-      const path = options.path || (action.startsWith('/') ? action : `/${action}`);
-      const method = options.method || (options.mutating || Object.keys(data).length > 0 ? 'POST' : 'GET');
+      const path = workerBinding === 'MEMORY' ? (action === 'memory.get' ? `/memory/${encodeURIComponent(data.key || '')}` : '/memory') : `/${action}`;
+      const method = mutating ? 'POST' : 'GET';
       const init = {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         signal: AbortSignal.timeout(timeoutMs)
       };
       if (method === 'POST') {
@@ -245,7 +255,7 @@ export async function delegateWorker(env, workerBinding, action, data = {}, opti
       let payload;
       try { payload = JSON.parse(text); } catch { payload = { text }; }
       return {
-        ok: response.ok,
+        ok: response.ok && payload?.ok !== false && !payload?.error,
         status: response.status,
         worker: workerBinding,
         result: payload,
@@ -265,7 +275,7 @@ export async function delegateWorker(env, workerBinding, action, data = {}, opti
 
     const response = await binding.fetch('https://trinity.internal/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(timeoutMs)
     });
@@ -320,15 +330,15 @@ export async function orchestratePipeline(env, task, options = {}) {
   const traceId = crypto.randomUUID();
   const executionLog = [];
 
-  const taskLower = String(task).toLowerCase();
+  const taskLower = String(task).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 
   // FÁZA 1: Plánovanie a dekompozícia
   let planResult = null;
   if (env.AURA_PLANNER) {
-    planResult = await delegateWorker(env, 'AURA_PLANNER', 'plan.task', { prompt: task, title: task.slice(0, 80) }, { traceId, idempotency_key: crypto.randomUUID() });
+    planResult = await delegateWorker(env, 'AURA_PLANNER', 'plan.task', { prompt: task, title: task.slice(0, 80) }, { ...options, traceId, idempotency_key: crypto.randomUUID() });
     executionLog.push({ phase: 'planning', worker: 'AURA_PLANNER', ok: planResult.ok, result: planResult.result });
   } else if (env.CORE) {
-    planResult = await delegateWorker(env, 'CORE', 'core.reason', { prompt: `Rozlož požiadavku na konkrétne kroky: ${task}` }, { traceId });
+    planResult = await delegateWorker(env, 'CORE', 'core.reason', { prompt: `Rozlož požiadavku na konkrétne kroky: ${task}` }, { ...options, traceId });
     executionLog.push({ phase: 'planning', worker: 'CORE', ok: planResult.ok, result: planResult.result });
   }
 
@@ -336,15 +346,15 @@ export async function orchestratePipeline(env, task, options = {}) {
   const specialistCalls = [];
 
   // Coding & Refactoring
-  if (/\b(kód|kod|funkci|program|script|refactor|implement|vygeneruj|napíš kód)\b/i.test(taskLower)) {
+  if (/\b(kod|funkci|program|script|refactor|implement|vygeneruj|napis kod)\b/i.test(taskLower)) {
     if (env.AURA_CODEGEN) {
       specialistCalls.push(
-        delegateWorker(env, 'AURA_CODEGEN', 'codegen.generate', { prompt: task, language: 'javascript' }, { traceId, idempotency_key: crypto.randomUUID() })
+        delegateWorker(env, 'AURA_CODEGEN', 'codegen.generate', { prompt: task, language: 'javascript' }, { ...options, traceId, idempotency_key: crypto.randomUUID() })
           .then(async res => {
             executionLog.push({ phase: 'codegen', worker: 'AURA_CODEGEN', ok: res.ok, result: res.result });
             // Ak kód bol vygenerovaný, validujeme ho cez AURA_TESTER
             if (res.ok && env.AURA_TESTER && res.result) {
-              const testRes = await delegateWorker(env, 'AURA_TESTER', 'test.validate', { code: JSON.stringify(res.result) }, { traceId });
+              const testRes = await delegateWorker(env, 'AURA_TESTER', 'test.validate', { code: JSON.stringify(res.result) }, { ...options, traceId });
               executionLog.push({ phase: 'testing', worker: 'AURA_TESTER', ok: testRes.ok, result: testRes.result });
             }
           })
@@ -356,17 +366,17 @@ export async function orchestratePipeline(env, task, options = {}) {
   if (/\b(architekt|dizajn|navrh|systém|databáz|schema|diagram|komponent)\b/i.test(taskLower)) {
     if (env.AURA_ARCHITECT) {
       specialistCalls.push(
-        delegateWorker(env, 'AURA_ARCHITECT', 'architect.design', { prompt: task }, { traceId, idempotency_key: crypto.randomUUID() })
+        delegateWorker(env, 'AURA_ARCHITECT', 'architect.design', { prompt: task }, { ...options, traceId, idempotency_key: crypto.randomUUID() })
           .then(res => executionLog.push({ phase: 'architecture', worker: 'AURA_ARCHITECT', ok: res.ok, result: res.result }))
       );
     }
   }
 
   // Analýza kódu a dát
-  if (/\b(analyz|skontroluj|over|audit|prever|chyby|bugy|výkon|metriky)\b/i.test(taskLower)) {
+  if (/\b(analyz|skontroluj|over|audit|prever|chyby|bugy|vykon|metriky)\b/i.test(taskLower)) {
     if (env.AURA_ANALYZER) {
       specialistCalls.push(
-        delegateWorker(env, 'AURA_ANALYZER', 'analyze.code', { code: task }, { traceId, idempotency_key: crypto.randomUUID() })
+        delegateWorker(env, 'AURA_ANALYZER', 'analyze.code', { code: task }, { ...options, traceId, idempotency_key: crypto.randomUUID() })
           .then(res => executionLog.push({ phase: 'analysis', worker: 'AURA_ANALYZER', ok: res.ok, result: res.result }))
       );
     }
@@ -376,7 +386,7 @@ export async function orchestratePipeline(env, task, options = {}) {
   if (/\b(optimaliz|zrýchli|zrychli|token|query|latencia|výkon)\b/i.test(taskLower)) {
     if (env.AURA_OPTIMIZER) {
       specialistCalls.push(
-        delegateWorker(env, 'AURA_OPTIMIZER', 'optimize.tokens', { prompt: task }, { traceId })
+        delegateWorker(env, 'AURA_OPTIMIZER', 'optimize.tokens', { prompt: task }, { ...options, traceId })
           .then(res => executionLog.push({ phase: 'optimization', worker: 'AURA_OPTIMIZER', ok: res.ok, result: res.result }))
       );
     }
@@ -386,7 +396,7 @@ export async function orchestratePipeline(env, task, options = {}) {
   if (/\b(znalost|dokument|vedomost|hľadaj v znalostiach|knowhow)\b/i.test(taskLower)) {
     if (env.KNOWLEDGE_SERVICE) {
       specialistCalls.push(
-        delegateWorker(env, 'KNOWLEDGE_SERVICE', 'search', { query: task }, { traceId })
+        delegateWorker(env, 'KNOWLEDGE_SERVICE', 'search', { query: task }, { ...options, traceId })
           .then(res => executionLog.push({ phase: 'knowledge', worker: 'KNOWLEDGE_SERVICE', ok: res.ok, result: res.result }))
       );
     }
@@ -399,7 +409,7 @@ export async function orchestratePipeline(env, task, options = {}) {
 
   // FÁZA 3: Bezpečnostný audit a Sentinel kontrola
   if (env.AURA_SENTINEL) {
-    const sentinelCheck = await delegateWorker(env, 'AURA_SENTINEL', 'sentinel.scan', {}, { traceId });
+    const sentinelCheck = await delegateWorker(env, 'AURA_SENTINEL', 'sentinel.scan', {}, { ...options, traceId });
     executionLog.push({ phase: 'sentinel_scan', worker: 'AURA_SENTINEL', ok: sentinelCheck.ok, result: sentinelCheck.result });
   }
 
@@ -408,10 +418,13 @@ export async function orchestratePipeline(env, task, options = {}) {
   const failedSteps = executionLog.filter(l => !l.ok);
 
   return {
-    ok: successfulSteps.length > 0,
+    ok: successfulSteps.length > 0 && failedSteps.length === 0,
+    status: failedSteps.length ? 'failed' : successfulSteps.length ? 'completed' : 'not_configured',
     traceId,
     duration_ms: Date.now() - started,
     task,
+    task_completed: false,
+    execution_scope: 'delegated-steps-only',
     total_phases: executionLog.length,
     successful_phases: successfulSteps.length,
     failed_phases: failedSteps.length,
@@ -431,7 +444,15 @@ export async function inspectFleet(env) {
       if (!configured) {
         return { binding, service: meta.service, name: meta.name, status: 'not_configured', role: meta.role };
       }
-      const probe = await delegateWorker(env, binding, meta.rpc ? 'status' : 'aura.status', {}, { timeoutMs: 3000 });
+      let probe;
+      try {
+        if (meta.rpc) probe = await delegateWorker(env,binding,'status',{}, {timeoutMs:3000});
+        else {
+          const response=await env[binding].fetch('https://trinity.internal/health',{method:'GET',signal:AbortSignal.timeout(3000)});
+          const body=JSON.parse(await boundedText(response));
+          probe={ok:response.ok && body.status!=='degraded' && body.ok!==false};
+        }
+      } catch {probe={ok:false};}
       return {
         binding,
         service: meta.service,

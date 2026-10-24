@@ -4,7 +4,8 @@
  * Deploys all 23 specialized workers + Trinity main worker to Cloudflare Edge.
  */
 
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
+import {checkSource} from './source-policy.mjs';
 import { existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -36,6 +37,12 @@ console.log('🚀 TRINITY FULL FLEET DEPLOYMENT (23 WORKERS + CORE)');
 console.log('====================================================');
 
 const results = [];
+checkSource(ROOT_DIR);
+const releaseSha=execFileSync('git',['rev-parse','HEAD'],{cwd:ROOT_DIR,encoding:'utf8'}).trim();
+const npmCli=process.env.npm_execpath;
+if(!npmCli)throw new Error('Run through npm run deploy:all.');
+execFileSync(process.execPath,[npmCli,'run','check'],{cwd:ROOT_DIR,stdio:'inherit'});
+const wrangler=resolve(ROOT_DIR,'Trinity/node_modules/wrangler/bin/wrangler.js');
 
 function deployWorker(name, cwd, configPath, env = "") {
   console.log(`\n⏳ Deploying ${name}...`);
@@ -47,10 +54,7 @@ function deployWorker(name, cwd, configPath, env = "") {
   }
 
   try {
-    const envFlag = env ? ` --env "${env}"` : "";
-    const cmd = `npx wrangler deploy --config "${fullConfig}"${envFlag}`;
-    console.log(`   Running: ${cmd} (in ${cwd})`);
-    const output = execSync(cmd, { cwd, stdio: 'pipe', encoding: 'utf8', env: { ...process.env, CI: '1', WRANGLER_SEND_METRICS: 'false' } });
+    const output = execFileSync(process.execPath,[wrangler,'deploy','--config',fullConfig,'--env',env,'--tag',releaseSha], { cwd, stdio: 'pipe', encoding: 'utf8', env: { ...process.env, CI: '1', WRANGLER_SEND_METRICS: 'false' } });
     console.log(`✅ ${name} deployed successfully!`);
     results.push({ name, success: true, output });
     return true;
@@ -83,10 +87,15 @@ for (const w of STANDALONE_WORKERS) {
   deployWorker(w.name, dir, w.config);
 }
 
-// 4. Deploy Trinity Main Worker
-console.log('\n--- PHASE 4: Deploying Trinity Main Worker ---');
-const trinityMainDir = resolve(ROOT_DIR, 'Trinity');
-deployWorker('trinity-main', trinityMainDir, 'wrangler.jsonc');
+// Only promote the main application after every dependency deploy succeeded.
+if(results.some(result=>!result.success)) {
+  console.error('Dependency deployment failed; main application was not promoted.');
+  process.exit(1);
+}
+const bash=process.platform==='win32'?resolve(process.env.ProgramFiles||'C:/Program Files','Git/bin/bash.exe'):'bash';
+// Guarded rollout backs up both databases, applies migrations, deploys development,
+// verifies its SHA/readiness, then deploys and verifies production.
+execFileSync(bash,[resolve(ROOT_DIR,'scripts/trinity-environment.sh'),'deploy'],{cwd:ROOT_DIR,stdio:'inherit'});
 
 console.log('\n====================================================');
 console.log('📊 DEPLOYMENT SUMMARY');
@@ -99,7 +108,7 @@ for (const r of results) {
 }
 console.log(`\nTotal: ${successCount} / ${results.length} workers successfully deployed.`);
 
-if (successCount === 0) {
+if (successCount !== results.length) {
   console.error('\n❌ No workers deployed. Check Cloudflare authentication or network.');
   process.exit(1);
 } else {

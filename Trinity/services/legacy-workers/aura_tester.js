@@ -63,6 +63,6 @@ export default {
       }
       const text = await runAuraAi(env, "Si AURA Tester. Spusti testy a validáciu.", d.prompt || call.action);
       return Response.json({ ok: true, result: { response: text }, traceId, from: "aura-tester" });
-    } catch (e) { return Response.json({ ok: false, error: e.message, traceId, from: "aura-tester" }); }
+    } catch (e) { return Response.json({ ok: false, error: e.message, traceId, from: "aura-tester" }, {status: e.status || 500}); }
   }
 };

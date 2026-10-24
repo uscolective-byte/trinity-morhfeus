@@ -1,3 +1,5 @@
+import {WORKER_CATALOG} from './orchestrator.js';
+import {resolveRuntimeSecrets,runtimeSecretStatus} from './runtime-secrets.js';
 import {revolutProStatus,configureRevolutPro,handleRevolutProPublic,paypalStatus,configurePaypal,commerceStatus,configureCommerceAccounts,upsertCommerceProduct,deleteCommerceProduct,handleCommercePublic} from './revolut.js';
 import {paypalDiagnostics,createPayPalOrder,capturePayPalOrder,getPayPalOrderStatus} from './paypal-rest.js';
 import {getUiEvolutionState,applyUiEvolution,handleUiChangeAction,renderDynamicThemeCss} from './ui-evolution.js';
@@ -203,6 +205,8 @@ async function route(request,env,ctx){
     }
   }
   const ownerId=(user.email||user.id).trim().toLowerCase();
+  if(path==='/api/assistant/runtime/manifest'&&request.method==='GET'){requireAdmin(user);return json({version:TRINITY_VERSION,workers:Object.entries(WORKER_CATALOG).map(([binding,worker])=>({binding,name:worker.name,service:worker.service,configured:!!env[binding],execution_verified:false})),skills:skillRegistry.list(),secrets:runtimeSecretStatus(env),note:'Pracovníci vyžadujú úspešný health check a konkrétny doklad vykonania. Katalógový skill je návod, nie vykonaný skript.'});}
+  if(path==='/api/assistant/secrets/status'&&request.method==='GET'){requireAdmin(user);return json(runtimeSecretStatus(env));}
   if(path==='/api/assistant/capabilities'&&request.method==='GET')return json(await capabilityStatus(env));
   if(path==='/api/assistant/morpheus/status'&&request.method==='GET'){
     return json({
@@ -1255,11 +1259,11 @@ async function route(request,env,ctx){
 }
 export default {
   async fetch(request,env,ctx){
-    try{return secure(await route(request,env,ctx));}
+    try{env=await resolveRuntimeSecrets(env);return secure(await route(request,env,ctx));}
     catch(e){const status=e instanceof z.ZodError?400:e.status||500;
       if(status===500)console.error(JSON.stringify({event:'request_failed',path:new URL(request.url).pathname}));
       return secure(json({error:status===500?'Interná chyba. Pozri záznamy služby.':e instanceof z.ZodError?'Neplatné údaje požiadavky.':e.message},status));}
   },
-  async scheduled(controller,env,ctx){if(isBuildOnlyPreview(env))return;ctx.waitUntil((async()=>{const summary=await runScheduledHealth(env,controller.cron);await recordHealthIncident(env,summary);await runBrainCycle(env);await runEvolutionCycle(env);await scanForImprovements(env);})());},
+  async scheduled(controller,env,ctx){if(isBuildOnlyPreview(env))return;env=await resolveRuntimeSecrets(env);ctx.waitUntil((async()=>{const summary=await runScheduledHealth(env,controller.cron);await recordHealthIncident(env,summary);await runBrainCycle(env);await runEvolutionCycle(env);await scanForImprovements(env);})());},
   async email(message,env){if(isBuildOnlyPreview(env)){message.setReject('Build-only Preview does not accept email.');return;}await handleInboundEmail(message,env);}
 };
