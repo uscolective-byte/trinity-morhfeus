@@ -2049,14 +2049,45 @@ header {
   text-transform: uppercase !important;
 }
 
+/* Keep the composer in the layout so it never covers the conversation. */
+main {
+  height: 100dvh;
+  min-height: 0;
+}
+
+main > header {
+  flex-shrink: 0;
+}
+
+#chat-view {
+  flex: 1 1 0;
+  min-height: 0;
+  height: auto;
+}
+
+#chat-area {
+  min-height: 0;
+  overscroll-behavior-y: contain;
+  scroll-padding-bottom: 16px;
+}
+
 .composer-wrap {
-  position: fixed !important;
-  bottom: 24px !important;
-  left: 288px !important;
-  right: 32px !important;
+  position: relative !important;
+  bottom: auto !important;
+  left: auto !important;
+  right: auto !important;
+  width: 100%;
   max-width: 960px !important;
   margin: 0 auto !important;
+  flex: 0 0 auto;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
   z-index: 10 !important;
+}
+
+@media (max-width: 680px) {
+  main {
+    height: calc(100dvh - 64px);
+  }
 }
 
 .composer-wrap form {
