@@ -42,6 +42,25 @@ html[data-theme="light"] body {
   --workshop-action: #f5a17b;
   background: var(--sl-bg) !important;
 }
+/* Accessible light-mode controls keep the strong poster contrast. */
+html[data-theme="light"] body .sidebar button.new,
+html[data-theme="light"] #app-views .primary,
+html[data-theme="light"] #welcome::before {
+  color: #fff !important;
+}
+html[data-theme="light"] .main-nav button.active {
+  background: #dafa76 !important;
+  color: #201821 !important;
+}
+html[data-theme="light"] #send {
+  background: #dafa76 !important;
+  color: #201821 !important;
+}
+html[data-theme="light"] .suggestions button::after,
+html[data-theme="light"] .message.assistant .name,
+html[data-theme="light"] #activity {
+  color: #4b6420 !important;
+}
 ::selection { background: var(--sl-hot); color: var(--sl-bg); }
 :focus-visible { outline: 2px solid var(--sl-hot) !important; outline-offset: 3px !important; }
 .sidebar {
