@@ -485,3 +485,26 @@ dialog { border-radius:0 !important; border:2px solid var(--workshop-line) !impo
 @media(prefers-reduced-motion:reduce) {
   *,*::before,*::after { animation:none !important; scroll-behavior:auto !important; transition:none !important; }
 }
+
+/* Shared tokens keep dashboard, dialogs, file tools and Studio on-brand. */
+:root {
+  --bg-deep:#090b0c; --bg-surface:#121517; --bg-card:#171c1d;
+  --bg-card-hover:#202626; --bg-input:#121517;
+  --bg-glass:rgba(18,21,23,.96); --bg-glass-heavy:rgba(10,12,13,.98);
+  --text-main:#f2f0e8; --text-secondary:#d2d4cd; --text-muted:#b4b5a9;
+  --line:rgba(201,206,192,.23); --line-bright:rgba(201,206,192,.39);
+  --cyan:#ff6a43; --blue:#dfff70; --indigo:#ff6a43;
+  --gradient-brand:linear-gradient(135deg,#ff6a43,#dfff70);
+  --gradient-accent:linear-gradient(135deg,#ff6a43,#df4f30);
+  --gradient-hero:linear-gradient(115deg,#0d1213,#242a26);
+  --radius-sm:2px; --radius-md:3px; --radius-lg:4px; --radius-xl:4px;
+}
+html[data-theme="light"] {
+  --bg-deep:#eae7df; --bg-surface:#f8f5ed; --bg-card:#f8f5ed;
+  --bg-card-hover:#e0dfd5; --bg-input:#fffdf8;
+  --bg-glass:rgba(248,245,237,.96); --bg-glass-heavy:rgba(248,245,237,.99);
+  --text-main:#151819; --text-secondary:#303735; --text-muted:#49504b;
+  --line:rgba(31,38,36,.22); --line-bright:rgba(31,38,36,.42);
+  --blue:#395900; --cyan:#b03820;
+  --gradient-hero:linear-gradient(115deg,#e0dfd5,#f8f5ed);
+}
