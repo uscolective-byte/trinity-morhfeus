@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-10-24T07:25:23.836Z",
+  "network": "Base Sepolia Testnet",
+  "chainId": 84532,
+  "contract": "TetrakisToken",
+  "symbol": "TTK",
+  "initialTreasury": "0x4d308452a96D7dAbFd2f33d92677A3a2724f387e",
+  "totalSupply": "1,000,000,000 TTK (10^27 wei)",
+  "status": "PLAN_GENERATED_AWAITING_TESTNET_GAS",
+  "treasuryBalanceWei": "0",
+  "estimatedDeploymentCostWei": "7531271000000",
+  "bytecodeSha256": "0xfb9db665171c88a8b085a7825e25616573760776079f612cacd6f398d0edf004"
+}

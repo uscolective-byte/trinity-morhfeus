@@ -50,12 +50,18 @@ export default {
         return secure(Response.json(state, { status: state.ok ? 200 : 503 }));
       }
 
+      const authHeader = request.headers.get('Authorization') || '';
+      const bearerToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+      const expectedSecret = env?.TRINITY_INTERNAL_KEY || env?.TRINITY_GATEWAY_KEY;
       const isInternalBinding = url.hostname === 'trinity.internal' || url.hostname === 'localhost' || url.hostname === '127.0.0.1';
-      const hasAuthHeader = Boolean(request.headers.get('Authorization'));
+
+      const isAuthorized = expectedSecret
+        ? (Boolean(bearerToken) && bearerToken === expectedSecret)
+        : isInternalBinding;
 
       // Protected REST endpoints
-      if ((path === '/api/logs' || path === '/api/check') && !isInternalBinding && !hasAuthHeader) {
-        return secure(Response.json({ ok: false, error: 'Unauthorized: internal access only' }, { status: 401 }));
+      if ((path === '/api/logs' || path === '/api/check') && !isAuthorized) {
+        return secure(Response.json({ ok: false, error: 'Unauthorized: valid internal authentication required' }, { status: 401 }));
       }
 
       // Action-based internal service call
@@ -63,10 +69,8 @@ export default {
         let call = null;
         try { call = await request.json(); } catch (_) {}
         if (call && typeof call === 'object' && call.action) {
-          const isApproved = Boolean(call.approval && call.approval.approved);
-          const isAuthorized = isInternalBinding || isApproved || hasAuthHeader;
           if (!isAuthorized) {
-            return secure(Response.json({ ok: false, error: 'Unauthorized: internal approval required' }, { status: 401 }));
+            return secure(Response.json({ ok: false, error: 'Unauthorized: valid internal secret required' }, { status: 401 }));
           }
 
           const traceId = call.traceId || crypto.randomUUID();

@@ -21,12 +21,12 @@ export const TRACKED_ASSETS = [
 ];
 
 export const DEFI_YIELD_VAULTS = [
-  { protocol: 'Aave v3', asset: 'USDC', chain: 'Arbitrum', apy: 5.85, risk: 'LOW', tvl_usd: '840M', type: 'Lending', verified: true },
-  { protocol: 'Lido', asset: 'stETH', chain: 'Ethereum', apy: 3.25, risk: 'LOW', tvl_usd: '24.2B', type: 'Liquid Staking', verified: true },
-  { protocol: 'Solana Native', asset: 'SOL', chain: 'Solana', apy: 6.95, risk: 'LOW', tvl_usd: '5.1B', type: 'Native Staking', verified: true },
-  { protocol: 'Uniswap v3', asset: 'ETH/USDC', chain: 'Ethereum', apy: 14.20, risk: 'MEDIUM', tvl_usd: '320M', type: 'Concentrated Liquidity', verified: true },
-  { protocol: 'Raydium CLMM', asset: 'SOL/USDC', chain: 'Solana', apy: 18.40, risk: 'MEDIUM', tvl_usd: '95M', type: 'DEX Liquidity', verified: true },
-  { protocol: 'Curve Finance', asset: '3pool (USDC/USDT/DAI)', chain: 'Ethereum', apy: 4.10, risk: 'LOW', tvl_usd: '480M', type: 'Stable Swap', verified: true }
+  { protocol: 'Aave v3', asset: 'USDC', chain: 'Arbitrum', apy: 5.85, risk: 'LOW', tvl_usd: '840M', type: 'Lending', verified: false, source: 'unverified-reference-estimate' },
+  { protocol: 'Lido', asset: 'stETH', chain: 'Ethereum', apy: 3.25, risk: 'LOW', tvl_usd: '24.2B', type: 'Liquid Staking', verified: false, source: 'unverified-reference-estimate' },
+  { protocol: 'Solana Native', asset: 'SOL', chain: 'Solana', apy: 6.95, risk: 'LOW', tvl_usd: '5.1B', type: 'Native Staking', verified: false, source: 'unverified-reference-estimate' },
+  { protocol: 'Uniswap v3', asset: 'ETH/USDC', chain: 'Ethereum', apy: 14.20, risk: 'MEDIUM', tvl_usd: '320M', type: 'Concentrated Liquidity', verified: false, source: 'unverified-reference-estimate' },
+  { protocol: 'Raydium CLMM', asset: 'SOL/USDC', chain: 'Solana', apy: 18.40, risk: 'MEDIUM', tvl_usd: '95M', type: 'DEX Liquidity', verified: false, source: 'unverified-reference-estimate' },
+  { protocol: 'Curve Finance', asset: '3pool (USDC/USDT/DAI)', chain: 'Ethereum', apy: 4.10, risk: 'LOW', tvl_usd: '480M', type: 'Stable Swap', verified: false, source: 'unverified-reference-estimate' }
 ];
 
 export const TETRAKIS_TOKEN = {

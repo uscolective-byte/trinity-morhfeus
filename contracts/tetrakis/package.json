@@ -1,0 +1,20 @@
+{
+  "name": "tetrakis-token",
+  "version": "1.0.0",
+  "description": "Tetrakis ($TTK) ERC-20 Smart Contract for Trinity",
+  "type": "module",
+  "scripts": {
+    "compile": "node scripts/compile.mjs",
+    "test": "node scripts/compile.mjs && node --test tests/*.test.mjs",
+    "deploy:plan": "node scripts/deploy-base-sepolia.mjs --dry-run",
+    "deploy:base-sepolia": "node scripts/deploy-base-sepolia.mjs"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "5.1.0",
+    "ethers": "6.17.0",
+    "solc": "0.8.24"
+  },
+  "devDependencies": {
+    "ganache": "7.9.2"
+  }
+}

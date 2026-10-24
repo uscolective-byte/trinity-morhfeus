@@ -228,13 +228,19 @@ export async function delegateWorker(env, workerBinding, action, data = {}, opti
       }
     }
 
+    const internalSecret = env?.TRINITY_INTERNAL_KEY || env?.TRINITY_GATEWAY_KEY || '';
+    const internalHeaders = {
+      'Content-Type': 'application/json',
+      ...(internalSecret ? { 'Authorization': `Bearer ${internalSecret}` } : {})
+    };
+
     // 2. REST volanie (napr. MEMORY, CAPACITY, INTEGRATIONS)
     if (meta.rest || workerBinding === 'MEMORY') {
       const path = options.path || (action.startsWith('/') ? action : `/${action}`);
       const method = options.method || (options.mutating || Object.keys(data).length > 0 ? 'POST' : 'GET');
       const init = {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: internalHeaders,
         signal: AbortSignal.timeout(timeoutMs)
       };
       if (method === 'POST') {
@@ -265,7 +271,7 @@ export async function delegateWorker(env, workerBinding, action, data = {}, opti
 
     const response = await binding.fetch('https://trinity.internal/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: internalHeaders,
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(timeoutMs)
     });
