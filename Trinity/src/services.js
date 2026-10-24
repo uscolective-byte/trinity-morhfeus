@@ -92,6 +92,10 @@ export function extractModelText(result) {
 }
 export function extractGeminiInteractionText(result){
   if(typeof result?.output_text==='string')return result.output_text.trim();
+  if(Array.isArray(result?.candidates?.[0]?.content?.parts)){
+    const partsText=result.candidates[0].content.parts.map(p=>p.text||'').join('\n').trim();
+    if(partsText)return partsText;
+  }
   const blocks=(result?.steps||[]).flatMap(step=>Array.isArray(step?.content)?step.content:Array.isArray(step?.output)?step.output:[]);
   return blocks.filter(block=>block?.type==='text'||typeof block?.text==='string').map(block=>block.text||'').join('\n').trim();
 }
@@ -133,12 +137,31 @@ export async function callModel(env, provider, messages, maxTokens = 1200, custo
     const input=messages.filter(message=>message.role!=='system').slice(-12)
       .map(message=>`${message.role==='assistant'?'TRINITY':'POUŽÍVATEĽ'}:\n${String(message.content).slice(0,20000)}`).join('\n\n');
     const interactionModel=String(model).replace(/^models\//,'');
-    const response=await fetch('https://generativelanguage.googleapis.com/v1beta/interactions',{
+    let response=await fetch('https://generativelanguage.googleapis.com/v1beta/interactions',{
       method:'POST',headers:{'x-goog-api-key':apiKey,'Content-Type':'application/json'},
       body:JSON.stringify({model:interactionModel,input,system_instruction:system||undefined,store:false,
         generation_config:{max_output_tokens:Math.min(maxTokens,8192),temperature:0.25}}),
       signal:AbortSignal.timeout(65000),redirect:'manual'
     });
+    if(!response.ok && (response.status===404 || response.status===400)){
+      const contents=[];
+      if(system)contents.push({role:'user',parts:[{text:`Systémové inštrukcie:\n${system}`}]},{role:'model',parts:[{text:'Rozumiem inštrukciám.'}]});
+      contents.push({role:'user',parts:[{text:input}]});
+      const fallbackUrl=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(interactionModel)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+      const fallbackResponse=await fetch(fallbackUrl,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          contents,
+          generationConfig:{maxOutputTokens:Math.min(maxTokens,8192),temperature:0.25}
+        }),
+        signal:AbortSignal.timeout(65000),
+        redirect:'manual'
+      });
+      if(fallbackResponse.ok){
+        response=fallbackResponse;
+      }
+    }
     const data=JSON.parse(await boundedText(response,250000));
     if(!response.ok)throw new Error(`Gemini HTTP ${response.status}: ${data.error?.message||'požiadavka zlyhala'}`);
     const text=extractGeminiInteractionText(data);

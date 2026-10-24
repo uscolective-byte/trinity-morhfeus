@@ -238,6 +238,18 @@
     {
       "binding": "AURA_TESTER",
       "service": "aura_tester"
+    },
+    {
+      "binding": "CAPACITY_SERVICE",
+      "service": "trinity-capacity"
+    },
+    {
+      "binding": "INTEGRATIONS_SERVICE",
+      "service": "trinity-integrations"
+    },
+    {
+      "binding": "AUDIT_SERVICE",
+      "service": "trinity-audit"
     }
   ],
   "secrets_store_secrets": [
@@ -389,7 +401,10 @@
         {"binding":"AURA_OPTIMIZER","service":"aura_optimizer"},
         {"binding":"AURA_PLANNER","service":"aura_planner"},
         {"binding":"AURA_SENTINEL","service":"aura_sentinel"},
-        {"binding":"AURA_TESTER","service":"aura_tester"}
+        {"binding":"AURA_TESTER","service":"aura_tester"},
+        {"binding":"CAPACITY_SERVICE","service":"trinity-capacity"},
+        {"binding":"INTEGRATIONS_SERVICE","service":"trinity-integrations"},
+        {"binding":"AUDIT_SERVICE","service":"trinity-audit"}
       ]
     }
   },

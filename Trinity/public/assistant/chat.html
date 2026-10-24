@@ -1,50 +1,25 @@
 <!doctype html><html lang="sk"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b1220"><title>Trinity 11.0 · Tvoja autonómna asistentka</title><link rel="stylesheet" href="/chat.css?v=11.0.0"><link rel="stylesheet" href="/builder.css?v=11.0.0"><link rel="stylesheet" href="/theme.css?v=11.0.0"><script src="/auth-bootstrap.js" defer></script><script src="/chat.js?v=11.0.0" defer></script></head><body>
 <aside class="sidebar">
-  <a href="#dashboard" class="brand" data-view-link="dashboard"><span class="brand-mark">T</span><span>Trinity 11.0<small>Basterix Sovereign Edition · auru.space & auru.dev</small></span></a>
+  <a href="#chat" class="brand" data-view-link="chat"><span class="brand-mark">T</span><span>Trinity 11.0<small>Sovereign Core · auru.dev & auru.space</small></span></a>
   <nav class="main-nav" aria-label="Hlavné menu">
-    <button data-view="dashboard" class="active"><span>⌂</span><b data-i18n="overview">Prehľad</b></button>
-    <button data-view="chat"><span>◌</span><b data-i18n="chat">Chat</b></button>
-    <button data-view="agentlab"><span>🤖</span><b>AI Agent Lab</b></button>
-    <button data-view="workflows"><span>⚡</span><b>Visual Workflows</b></button>
-    <button data-view="studio"><span>✦</span><b>AI Studio</b></button>
-    <button data-view="projects"><span>▦</span><b data-i18n="projects">Projekty</b></button>
-    <button data-view="domains"><span>◈</span><b>Domény a hosting</b></button>
-    <button data-view="commodities"><span>📈</span><b>Komodity & Banky</b></button>
-    <button data-view="wallet"><span>💳</span><b>Peňaženka & Terminály</b></button>
-    <button data-view="modules"><span>🌐</span><b>Open-Data Moduly</b></button>
-    <button data-view="documents"><span>📚</span><b>Dokumentácia & Help</b></button>
-    <button id="memory-nav"><span>◇</span><b data-i18n="memoryPlain">Pamäť</b></button>
-    <button data-view="graph"><span>🕸</span><b>Pamäťový Graf</b></button>
+    <button data-view="chat" class="active"><span>💬</span><b data-i18n="chat">Chat & Práca</b></button>
+    <button data-view="dashboard"><span>⚡</span><b data-i18n="overview">Prehľad & Stav</b></button>
+    <button data-view="agentlab"><span>🤖</span><b>Morpheus & Agenti</b></button>
+    <button data-view="studio"><span>✦</span><b>AI Studio (Weby)</b></button>
+    <button data-view="domains"><span>◈</span><b>Domény & Hosting</b></button>
+    <button data-view="wallet"><span>💳</span><b>Platby & Peňaženka</b></button>
     <button data-view="settings"><span>⚙</span><b data-i18n="settings">Nastavenia</b></button>
   </nav>
-  <button id="new-chat" class="new"><span>＋</span><span data-i18n="newChatPlain">Nový rozhovor</span></button>
-  <div class="side-label" data-i18n="recent">NAŠE ROZHOVORY</div><div id="sessions"></div>
-  <div class="sidebar-status-card">
-    <div class="status-card-header">
-      <span>👑 BASTERIX CORE</span>
-      <span class="status-pulse-badge">ONLINE</span>
-    </div>
-    <div class="status-card-row">
-      <small>Revolut:</small>
-      <a href="https://revolut.me/isabo91" target="_blank" rel="noopener">@isabo91 ↗</a>
-    </div>
-    <div class="status-card-row">
-      <small>PayPal:</small>
-      <b>saboivan2008@gmail.com</b>
-    </div>
-    <div class="status-card-row">
-      <small>TRNT Token:</small>
-      <b class="crypto-glow">1,000,000 TRNT</b>
-    </div>
-    <div class="status-card-row">
-      <small>Agent Jericho:</small>
-      <a href="https://jericho.dev" target="_blank" rel="noopener" class="jericho-glow">jericho.dev ↗</a>
-    </div>
+  <button id="new-chat" class="new"><span>＋</span><span data-i18n="newChatPlain">Nová úloha</span></button>
+  <div class="side-label" data-i18n="recent">HISTÓRIA ÚLOH</div><div id="sessions"></div>
+  <div class="sidebar-status-clean">
+    <div class="status-pill-clean"><span class="signal-dot"></span> <b>Trinity Online</b></div>
+    <small>Zjednotené jadro · auru.dev / auru.space</small>
   </div>
   <div class="sidebar-bottom"><div><span class="signal"></span><span id="engine-state">…</span></div><small data-i18n="boundary">Citlivé zmeny len s tvojím súhlasom.</small><span id="operations" hidden></span></div>
 </aside>
 <main>
-  <header><div class="page-heading"><span id="page-kicker">TRINITY 11.0</span><strong id="page-title">Prehľad</strong><small id="subtitle" data-i18n="dashboardHere">Tvoj priestor pre tvorbu, prácu a nápady.</small></div><div class="header-actions"><span id="environment-badge" class="environment-badge" title="Aktívne prostredie">TRINITY 11.0</span><span class="fast-model-pill" title="Meta Llama 3.3 70B Turbo aktívny"><span class="fast-dot"></span> ⚡ <b>Turbo AI</b></span><span id="pc-bridge-badge" class="pc-bridge-badge" title="Stav lokálneho PC Bridge"><span class="pc-dot"></span> <b id="pc-bridge-text">PC: Kontrola…</b></span><div id="account-state" class="account-state" role="status" aria-live="polite" hidden><span class="account-dot" aria-hidden="true"></span><span><b id="account-label">Prihlásený</b><small id="account-detail">—</small></span></div><button id="theme" type="button" aria-label="Prepnúť farebný režim">◐ Vzhľad</button><button id="memory-button" data-i18n="memory" style="display:none">◇ Pamäť</button><button id="tools-button" data-i18n="tools" style="display:none">✦ Schopnosti</button><select id="language" aria-label="Language"><option value="auto">AUTO</option><option value="sk">SK</option><option value="en">EN</option><option value="cs">CS</option><option value="de">DE</option><option value="fr">FR</option><option value="es">ES</option><option value="it">IT</option><option value="pl">PL</option><option value="uk">UK</option><option value="ja">JA</option><option value="ko">KO</option><option value="zh">ZH</option></select><button id="logout" type="button" hidden>Odhlásiť</button></div></header>
+  <header><div class="page-heading"><span id="page-kicker">TRINITY 11.0</span><strong id="page-title">Prehľad</strong><small id="subtitle" data-i18n="dashboardHere">Tvoj priestor pre tvorbu, prácu a nápady.</small></div><div class="header-actions"><span id="environment-badge" class="environment-badge" title="Aktívne prostredie">TRINITY 11.0</span><div class="domain-bridge-switch" title="Jednotná Trinity: Prepojenie medzi Owner Labom a Klientskym Portálom"><a href="https://auru.dev" class="bridge-link dev-link" title="Súkromný Owner Lab">auru.dev</a><span class="bridge-sep">⇄</span><a href="https://auru.space" class="bridge-link space-link" title="Verejný Klientsky Portál">auru.space</a></div><span class="fast-model-pill" title="Meta Llama 3.3 70B Turbo aktívny"><span class="fast-dot"></span> ⚡ <b>Turbo AI</b></span><span id="pc-bridge-badge" class="pc-bridge-badge" title="Stav lokálneho PC Bridge"><span class="pc-dot"></span> <b id="pc-bridge-text">PC: Kontrola…</b></span><div id="account-state" class="account-state" role="status" aria-live="polite" hidden><span class="account-dot" aria-hidden="true"></span><span><b id="account-label">Prihlásený</b><small id="account-detail">—</small></span></div><button id="theme" type="button" aria-label="Prepnúť farebný režim">◐ Vzhľad</button><button id="memory-button" data-i18n="memory" style="display:none">◇ Pamäť</button><button id="tools-button" data-i18n="tools" style="display:none">✦ Schopnosti</button><select id="language" aria-label="Language"><option value="auto">AUTO</option><option value="sk">SK</option><option value="en">EN</option><option value="cs">CS</option><option value="de">DE</option><option value="fr">FR</option><option value="es">ES</option><option value="it">IT</option><option value="pl">PL</option><option value="uk">UK</option><option value="ja">JA</option><option value="ko">KO</option><option value="zh">ZH</option></select><button id="logout" type="button" hidden>Odhlásiť</button></div></header>
   <div id="notice" role="status" hidden></div>
   <section id="login" hidden>
     <h2 data-i18n="loginTitle">Vitaj v Trinity</h2>
@@ -58,7 +33,7 @@
     <form id="login-form"><input id="key" type="password" autocomplete="current-password" aria-label="Access key" placeholder="Prístupový kľúč"><button class="primary" data-i18n="login">Prihlásiť</button></form>
   </section>
   <div id="app-views">
-    <section id="dashboard-view" class="view dashboard-view">
+    <section id="dashboard-view" class="view dashboard-view" hidden>
       <div id="user-dashboard" class="role-dashboard">
         <div class="hero-card user-hero"><div class="hero-copy"><span class="eyebrow">OSOBNÝ PRIESTOR</span><h1><span data-i18n="hello">Ahoj.</span> <em data-i18n="ready">Čo dnes vytvoríme?</em></h1><p data-i18n="dashboardIntro">Trinity spája rozhovor, pamäť, projekty a nástroje do jedného pokojného pracovného priestoru.</p><div class="hero-actions"><button class="primary" data-open-chat data-prompt="" data-i18n="startChat">Začať rozhovor</button><button data-view="studio" data-i18n="openStudio">Otvoriť AI Studio</button></div></div><div class="living-core" aria-label="Trinity core"><div class="orbit one"></div><div class="orbit two"></div><div class="core">✦</div><span>TRINITY USER</span></div></div>
         <div class="metric-grid"><article class="metric coral"><span data-i18n="today">Dnes</span><strong id="metric-tasks">—</strong><small data-i18n="tasksDone">dokončených úloh</small></article><article class="metric blue"><span data-i18n="memoryPlain">Pamäť</span><strong id="metric-memory">—</strong><small data-i18n="memories">uložených záznamov</small></article><article class="metric teal"><span data-i18n="projects">Projekty</span><strong id="metric-projects">—</strong><small data-i18n="activeProjects">aktívnych priestorov</small></article><article class="metric gold"><span>TRINITY</span><strong id="metric-health">—</strong><small>pripojené služby</small></article></div>
@@ -83,7 +58,18 @@
       </div>
       <div id="ui-custom-widgets-slot" class="ui-custom-widgets-grid" hidden></div>
     </section>
-    <section id="chat-view" class="view chat-view" hidden><div id="chat-area"><section id="welcome"><div class="avatar large">✦</div><span class="eyebrow" data-i18n="welcomeLabel">TRINITY 11.0 SOVEREIGN</span><h1 data-i18n="greeting">Ahoj, Basterix.</h1><p data-i18n="intro">S čím ti dnes pomôžem?</p><div class="suggestions"><button data-suggestion="multimedia_studio">✦ AI Štúdio</button><button data-suggestion="wallet">💳 Peňaženka & Financie</button><button data-suggestion="domain_prod">🌐 Domény & Web</button><button data-suggestion="trinity_docs">📚 Dokumentácia</button></div><div class="welcome-features-grid"><div class="welcome-card" data-open-chat data-prompt="Priprav modernú responzívnu webovú aplikáciu s čistým UI a exportom."><div class="welcome-card-icon">✦</div><strong>AI Studio & Weby</strong><p>Generovanie živých webov, prezentácií a export</p></div><div class="welcome-card" data-open-chat data-prompt="Skontroluj stav mojich domén auru.space a auru.dev a priprav predajnú landing page."><div class="welcome-card-icon">◈</div><strong>Domény & Cloudflare</strong><p>DNS zóny, registrácie a okamžitý predaj či prenájom</p></div><div class="welcome-card" data-open-chat data-prompt="Vygeneruj platobný odkaz cez Revolut Tag isabo91 a PayPal saboivan2008@gmail.com na balík 49 €."><div class="welcome-card-icon">💳</div><strong>Revolut & PayPal POS</strong><p>Bleskové osobné platobné brány bez nutnosti firmy</p></div><div class="welcome-card" data-open-chat data-prompt="Navrhni a spusti autonómnu úlohu pre agenta Jericho na jericho.dev."><div class="welcome-card-icon">🤖</div><strong>Agent Jericho Sandbox</strong><p>Autonómny vývoj, multi-agent orchester a D1 pamäť</p></div></div></section><section id="messages" aria-live="polite" aria-label="Conversation"></section></div><section class="composer-wrap"><div id="activity" role="status"></div><form id="chat-form"><label class="sr-only" for="message" data-i18n="message">Správa pre Trinity</label><textarea id="message" rows="2" maxlength="12000" required data-placeholder="placeholder" placeholder="Napíš mi, čo máš na mysli…"></textarea><div id="media-preview" class="media-preview" hidden></div><div class="compose-bottom"><div class="compose-settings"><select id="engine" aria-label="AI engine">
+    <section id="chat-view" class="view chat-view"><div id="chat-area"><section id="welcome" class="welcome-zen">
+        <div class="avatar large">✦</div>
+        <span class="eyebrow" data-i18n="welcomeLabel">TRINITY 11.0 SOVEREIGN CORE</span>
+        <h1 data-i18n="greeting">Ahoj, Basterix.</h1>
+        <p data-i18n="intro">Zadaj úlohu — Trinity ju okamžite rozloží a vykoná v reálnom čase bez simulácií.</p>
+        <div class="suggestions">
+          <button type="button" data-open-chat data-prompt="Vytvor modernú webovú stránku v AI Studiu s čistým dizajnom.">✦ Vytvoriť web</button>
+          <button type="button" data-open-chat data-prompt="Skontroluj stav mojich domén auru.dev a auru.space a over DNS.">◈ Overiť domény</button>
+          <button type="button" data-open-chat data-prompt="Vygeneruj platobný odkaz a SEPA EPC QR kód pre klienta.">💳 Pripraviť platbu</button>
+          <button type="button" data-open-chat data-prompt="Spusti diagnostiku cez PC Bridge a skontroluj stav systému.">💻 Spustiť PC akciu</button>
+        </div>
+      </section><section id="messages" aria-live="polite" aria-label="Conversation"></section></div><section class="composer-wrap"><div id="activity" role="status"></div><form id="chat-form"><label class="sr-only" for="message" data-i18n="message">Správa pre Trinity</label><textarea id="message" rows="2" maxlength="12000" required data-placeholder="placeholder" placeholder="Zadaj úlohu pre Trinity (napr. Vytvor web, Spravuj domény, Priprav platbu, PC akcia)…"></textarea><div id="media-preview" class="media-preview" hidden></div><div class="compose-bottom"><div class="compose-settings"><select id="engine" aria-label="AI engine">
 <option value="auto" selected>✨ Trinity Turbo Auto (Blesková odpoveď & inteligentná voľba)</option>
 <option value="fast">⚡ Trinity Ultra-Fast (Sub-sekundový Meta Llama 3.1 8B)</option>
 <option value="cloud">☁️ Cloudflare Workers AI (Llama 3.3 70B Turbo)</option>

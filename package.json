@@ -3,19 +3,12 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "docs:sync": "node scripts/sync-release-docs.mjs",
-    "docs:check": "node scripts/sync-release-docs.mjs --check",
-    "command-center": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/trinity-command-center.ps1",
-    "install:all": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install-all.ps1",
-    "desktop": "node Local-Desktop/server.mjs",
-    "gateway": "node Local-Gateway/src/server.mjs",
-    "sync": "node scripts/project-pipeline.mjs sync",
-    "build": "node scripts/project-pipeline.mjs build",
-    "deploy": "node scripts/project-pipeline.mjs deploy",
-    "test": "node scripts/project-pipeline.mjs test",
-    "gemini:chat": "node scripts/gemini-dev-chat.mjs",
-    "inventory": "node scripts/project-inventory.mjs",
-    "setup": "node scripts/project-pipeline.mjs setup",
-    "check": "node scripts/project-pipeline.mjs check"
+    "sync": "powershell -ExecutionPolicy Bypass -File ./SYNC-BUILD.ps1 -Full -Test",
+    "build": "powershell -ExecutionPolicy Bypass -File ./SYNC-BUILD.ps1 -Full -Test",
+    "deploy": "powershell -ExecutionPolicy Bypass -File ./SYNC-BUILD.ps1 -Full -Test -Deploy",
+    "test": "npm --prefix Trinity test",
+    "check": "node scripts/run-all-tests.mjs",
+    "deploy:all": "node scripts/deploy-all-workers.mjs",
+    "gemini:chat": "node scripts/gemini-dev-chat.mjs"
   }
 }

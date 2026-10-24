@@ -66,8 +66,7 @@ export class HybridBrain {
     }
 
     return {
-      success: true,
-      context: 'SIMULATED_LOCAL_BRIDGE_DISPATCH',
+      success: false, context: 'PC_BRIDGE_UNAVAILABLE', error: 'PC Bridge nie je pripojený.',
       task: decision.task,
       dispatchedAt: new Date().toISOString()
     };

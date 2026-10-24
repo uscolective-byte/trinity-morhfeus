@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "trinity-audit",
+  "main": "src/index.mjs",
+  "account_id": "b60342e5e52f5646fbd4e913bb409334",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  "vars": {
+    "AUDIT_ALLOWED_REPOS": "uscolective-byte/trinity,saboivan2008/trinity,morfeus/trinity"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "trinity-v03",
+      "database_id": "ca8ea24e-f7db-431e-b8bf-97f713ae4533"
+    }
+  ]
+}

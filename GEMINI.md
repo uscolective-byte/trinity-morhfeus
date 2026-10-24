@@ -15,3 +15,4 @@ The current Worker source is `Trinity/`; historical copies and prototypes are no
 - Browser availability, readiness, external provider inference, and PC connectivity are separate claims and need separate evidence.
 
 For a personal Google AI Pro subscription use the official Antigravity CLI (`agy`) with Google account sign-in. Google ended personal-account access through the older Gemini CLI on 18 June 2026. This subscription is separate from the Gemini API credential used by the deployed Worker. The same scoped Trinity MCP bridge is configured in the supported client.
+[](https://)

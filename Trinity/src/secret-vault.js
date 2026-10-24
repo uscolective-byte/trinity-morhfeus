@@ -95,15 +95,27 @@ async function verifyGemini(secret){
   if(!response.ok)throw new Error(`Gemini odmietlo API kľúč (HTTP ${response.status}).`);
   const models=(data.models||[]).filter(item=>(item.supportedGenerationMethods||[]).includes('generateContent')).map(item=>item.name).filter(name=>/^models\/gemini-/i.test(name)).slice(0,100);
   if(!models.length)throw new Error('Gemini nevrátilo žiadny model pre generovanie textu.');
-  const model=models.includes('models/gemini-3.8-flash')?'models/gemini-3.8-flash':models.find(name=>/flash/i.test(name)&&!/image|tts|preview/i.test(name))||models[0];
-  const live=await fetch('https://generativelanguage.googleapis.com/v1beta/interactions',{
+  const model=models.includes('models/gemini-2.5-flash')?'models/gemini-2.5-flash':models.includes('models/gemini-3.8-flash')?'models/gemini-3.8-flash':models.find(name=>/flash/i.test(name)&&!/image|tts|preview/i.test(name))||models[0];
+  let live=await fetch('https://generativelanguage.googleapis.com/v1beta/interactions',{
     method:'POST',headers:{'x-goog-api-key':secret,'Content-Type':'application/json'},
     body:JSON.stringify({model:model.replace(/^models\//,''),input:'Reply exactly OK.',store:false,generation_config:{max_output_tokens:8,temperature:0}}),
     signal:AbortSignal.timeout(30000),redirect:'manual'
   });
-  const liveData=await live.json().catch(()=>({}));
-  if(!live.ok)throw new Error(`Gemini živý test zlyhal (HTTP ${live.status}): ${String(liveData.error?.message||'projekt nemá prístup').slice(0,240)}`);
-  if(!String(liveData.output_text||'').trim())throw new Error('Gemini živý test vrátil prázdnu odpoveď.');
+  let liveData=await live.json().catch(()=>({}));
+  let outputText=String(liveData.output_text||'').trim();
+  if(!live.ok || !outputText){
+    const cleanModel=model.replace(/^models\//,'');
+    const genResp=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(cleanModel)}:generateContent?key=${encodeURIComponent(secret)}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{role:'user',parts:[{text:'Reply exactly OK.'}]}],generationConfig:{maxOutputTokens:8,temperature:0}}),
+      signal:AbortSignal.timeout(30000),redirect:'manual'
+    });
+    const genData=await genResp.json().catch(()=>({}));
+    if(!genResp.ok)throw new Error(`Gemini živý test zlyhal (HTTP ${genResp.status}): ${String(genData.error?.message||'overenie zlyhalo').slice(0,240)}`);
+    outputText=genData.candidates?.[0]?.content?.parts?.[0]?.text?.trim()||'';
+    if(!outputText)throw new Error('Gemini živý test vrátil prázdnu odpoveď.');
+    return {connected:true,models,model_count:models.length,generation_verified:true,verified_model:model};
+  }
   return {connected:true,models,model_count:models.length,generation_verified:true,verified_model:model};
 }
 async function verifyOpenAI(secret){

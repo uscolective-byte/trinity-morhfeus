@@ -37,9 +37,10 @@ export const APPLICATION_TEMPLATES = [
   {templateId: 'security-scanner', name: 'Web Security & Header Auditor', type: 'tool', domain: 'cybersecurity'},
   {templateId: 'agent-studio', name: 'Multi-Agent Workflow Builder', type: 'web-app', domain: 'ai-agents'},
   {templateId: 'media-gallery', name: 'AI Image & Asset Studio', type: 'web-app', domain: 'media-design'},
-  {templateId: 'finance-tracker', name: 'Simulated Portfolio & Cashflow Tracker', type: 'web-app', domain: 'fintech'},
+  {templateId: 'finance-tracker', name: 'Real Portfolio & Cashflow Tracker', type: 'web-app', domain: 'fintech'},
   {templateId: 'knowledge-base', name: 'Self-hosted Verified Knowledge Base', type: 'web-app', domain: 'education-edtech'},
-  {templateId: 'pc-operator-ui', name: 'Remote PC Control & Automation Panel', type: 'tool', domain: 'iot-automation'}
+  {templateId: 'pc-operator-ui', name: 'Remote PC Control & Automation Panel', type: 'tool', domain: 'iot-automation'},
+  {templateId: 'morpheus-social', name: 'Morpheus Autonomous Social Media Commander', type: 'web-app', domain: 'marketing-seo'}
 ];
 
 class UniversalEcosystem {

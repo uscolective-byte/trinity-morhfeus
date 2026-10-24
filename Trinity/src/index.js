@@ -1,4 +1,5 @@
 import {revolutProStatus,configureRevolutPro,handleRevolutProPublic,paypalStatus,configurePaypal,commerceStatus,configureCommerceAccounts,upsertCommerceProduct,deleteCommerceProduct,handleCommercePublic} from './revolut.js';
+import {paypalDiagnostics,createPayPalOrder,capturePayPalOrder,getPayPalOrderStatus} from './paypal-rest.js';
 import {getUiEvolutionState,applyUiEvolution,handleUiChangeAction,renderDynamicThemeCss} from './ui-evolution.js';
 import {provisionDomainWithEnvironments,deployDomainEnvironment,listDomainEnvironments,handlePublicSiteRoute,seedTwentyCloudflareDomains} from './domain-environments.js';
 import {generateMusicTrack,generateVideoCreation,generatePresentationDeck,generatePhotoCreation,generateCreativePack,listMultimediaCreations} from './multimedia-studio.js';
@@ -203,6 +204,24 @@ async function route(request,env,ctx){
   }
   const ownerId=(user.email||user.id).trim().toLowerCase();
   if(path==='/api/assistant/capabilities'&&request.method==='GET')return json(await capabilityStatus(env));
+  if(path==='/api/assistant/morpheus/status'&&request.method==='GET'){
+    return json({
+      agent:'Morpheus',
+      version:'1.0.0',
+      role:'Social Media Autonomous Commander',
+      domain:env.TRINITY_ENV==='production'?'auru.space':'dev.auru.space',
+      service_url:'https://morpheus.auru.space',
+      capabilities:['oauth_pkce','meta_graph','x_twitter_v2','linkedin_share','youtube_data','tiktok_creator','auto_posting','comment_moderation','link_shortening'],
+      endpoints:{
+        dashboard:'/dashboard',
+        auth_status:'/api/v1/auth/status',
+        webhooks_meta:'/api/v1/webhooks/meta',
+        webhooks_x:'/api/v1/webhooks/x',
+        short_link:'/l/:code',
+        landing_page:'/p/:slug'
+      }
+    });
+  }
   const control=await readControl(env);
   if(control.emergency_stop&&!['/api/ops/status','/api/ops/control','/api/ops/logout','/api/assistant/rbac','/api/assistant/audit/export'].includes(path))assertRunning(control);
   if(path==='/api/assistant/media/status'&&request.method==='GET')return json(mediaStatus(env));
@@ -626,6 +645,9 @@ async function route(request,env,ctx){
     return json(await configureRevolutPro(env,ownerId,await readJSON(request,20000)));
   }
   if(path==='/api/assistant/paypal/status'&&request.method==='GET'){requireOwner(user);return json(await paypalStatus(env));}
+  if(path==='/api/assistant/paypal/rest-status'&&request.method==='GET'){requireOwner(user);return json(paypalDiagnostics(env));}
+  if(path==='/api/assistant/paypal/order/create'&&request.method==='POST'){requireOwner(user);await rateLimit(env,`paypal-order:${user.id}`,20,300);return json(await createPayPalOrder(env,await readJSON(request,10000)),201);}
+  if(path==='/api/assistant/paypal/order/capture'&&request.method==='POST'){requireOwner(user);await rateLimit(env,`paypal-capture:${user.id}`,20,300);const b=await readJSON(request,10000);return json(await capturePayPalOrder(env,b.order_id));}
   if(path==='/api/assistant/paypal/products'&&request.method==='POST'){
     requireOwner(user);await rateLimit(env,`paypal-config:${user.id}`,10,300);
     return json(await configurePaypal(env,ownerId,await readJSON(request,20000)));
