@@ -54,6 +54,7 @@ import {getWalletTerminalOverview,saveWalletTerminalConfig,createPaymentTerminal
 import {handleInboundEmail} from './email.js';
 import {TRINITY2_CAPABILITIES,rolePermissions,requireCapability,updateRolePermission,analyzeImage,transcribeAudio,synthesizeSpeech,listVisualWorkflows,saveVisualWorkflow,listIncidents,resolveIncident,recordHealthIncident,exportAudit} from './trinity2.js';
 import {TrinityCopilotAgent} from './copilot-agent.js';
+import {TELEGRAM_WEBHOOK_PATH,handleTelegramWebhook} from './telegram-webhook.js';
 import {copilotChatOptionsSchema} from './copilot-options.js';
 import {assertCopilotSkillEnabled} from './copilot-plugins.js';
 import {skillRegistry} from './skillRegistry.js';
@@ -100,6 +101,8 @@ async function route(request,env,ctx){
   const knowledgeResponse=await handleKnowledge(request,env);
   if(knowledgeResponse)return knowledgeResponse;
   const url=new URL(request.url),path=url.pathname;
+  // Telegram updates are authenticated by the Telegram webhook secret before session auth.
+  if(path===TELEGRAM_WEBHOOK_PATH)return handleTelegramWebhook(request,env,ctx,(message,options)=>TrinityCopilotAgent(message,env,options));
   const proPayment=await handleCommercePublic(request,env);if(proPayment)return proPayment;
   const publicSite=await handlePublicSiteRoute(request,env);if(publicSite)return publicSite;
   const brokerMatch=path.match(/^\/broker\/([a-z0-9.-]+\.[a-z]{2,})$/i);
