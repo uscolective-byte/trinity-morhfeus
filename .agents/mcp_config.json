@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "trinity": {
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "Trinity/scripts/start-trinity-codex-mcp.ps1",
+        "-CredentialName",
+        "gemini-mcp"
+      ],
+      "timeout": 90000,
+      "trust": false
+    }
+  }
+}
