@@ -1,4 +1,5 @@
 import {equal, HttpError, rateLimit, readJSON} from './security.js';
+import {resolveTelegramReadCommand,runTelegramReadTool} from './telegram-tools.js';
 
 export const TELEGRAM_WEBHOOK_PATH = '/api/integrations/telegram/webhook';
 const TOKEN_FORMAT = /^\d{5,20}:[A-Za-z0-9_-]{30,100}$/;
@@ -42,17 +43,19 @@ export async function sendTelegramWebhookReply(env, chatId, text, replyToMessage
   return {sent: true};
 }
 
-export async function processTelegramMessage(message, env, askAgent, sendReply = sendTelegramWebhookReply) {
+export async function processTelegramMessage(message, env, askAgent, sendReply = sendTelegramWebhookReply, readTool = runTelegramReadTool) {
   const chatId = String(message.chat.id);
   const raw = message.text.trim();
   const command = raw.split(/\s+/, 1)[0].toLowerCase().split('@')[0];
   let answer;
   if (command === '/start' || command === '/help') {
-    answer = 'Trinity je pripojená k Telegramu. Napíš otázku, alebo použi /ask otázka. Príkazy: /ping, /status, /help. Tento kanál nepovoľuje zmeny kódu, spúšťanie príkazov ani prácu so secrets.';
+    answer = 'Trinity Telegram — môžeš sa pýtať alebo použiť /ask otázka. Dostupné /ping, /status, /tools, /agents, /health, /services, /capabilities, /tasks. Tento kanál má iba čítacie nástroje, nie právo meniť kód, nasadzovať či používať platby.';
   } else if (command === '/ping') {
     answer = 'Pong — Telegram webhook Trinity prijal správu.';
   } else if (command === '/status') {
     answer = 'Telegram webhook odpovedá. Stav AI modelu sa overí pri skutočnej otázke; nasadenie a ostatné integrácie tým nie sú overené.';
+  } else if (resolveTelegramReadCommand(raw)) {
+    answer = await readTool(resolveTelegramReadCommand(raw), env);
   } else if (raw.startsWith('/')) {
     if (command !== '/ask') answer = 'Neznámy príkaz. Použi /help.';
   }
