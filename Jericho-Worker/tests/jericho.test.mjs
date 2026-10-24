@@ -58,8 +58,9 @@ test('Jericho Worker: /api/treasury returns derived treasury wallets', async () 
   assert.equal(res.status, 200);
   const data = await res.json();
   assert.ok(data.evm_address.startsWith('0x'));
-  assert.ok(data.solana_address);
-  assert.ok(data.bitcoin_address);
+  assert.equal(data.chains_status.evm, 'ACTIVE_DEPLOYED_TREASURY');
+  assert.equal(data.solana_address, null);
+  assert.equal(data.bitcoin_address, null);
 });
 
 test('Jericho Worker: /api/yields returns DeFi vaults', async () => {

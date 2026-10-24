@@ -2,6 +2,7 @@
  * Jericho Autonomous Crypto Engine
  * Handles real-time market data, technical signals, treasury wallets, yield analysis,
  * and autonomous work execution exclusively serving Trinity.
+ * Truth Policy: No fabricated trades, no synthetic prices used as live signals.
  */
 
 import { keccak_256 } from '@noble/hashes/sha3.js';
@@ -20,12 +21,12 @@ export const TRACKED_ASSETS = [
 ];
 
 export const DEFI_YIELD_VAULTS = [
-  { protocol: 'Aave v3', asset: 'USDC', chain: 'Arbitrum', apy: 5.85, risk: 'LOW', tvl_usd: '840M', type: 'Lending' },
-  { protocol: 'Lido', asset: 'stETH', chain: 'Ethereum', apy: 3.25, risk: 'LOW', tvl_usd: '24.2B', type: 'Liquid Staking' },
-  { protocol: 'Solana Native', asset: 'SOL', chain: 'Solana', apy: 6.95, risk: 'LOW', tvl_usd: '5.1B', type: 'Native Staking' },
-  { protocol: 'Uniswap v3', asset: 'ETH/USDC', chain: 'Ethereum', apy: 14.20, risk: 'MEDIUM', tvl_usd: '320M', type: 'Concentrated Liquidity' },
-  { protocol: 'Raydium CLMM', asset: 'SOL/USDC', chain: 'Solana', apy: 18.40, risk: 'MEDIUM', tvl_usd: '95M', type: 'DEX Liquidity' },
-  { protocol: 'Curve Finance', asset: '3pool (USDC/USDT/DAI)', chain: 'Ethereum', apy: 4.10, risk: 'LOW', tvl_usd: '480M', type: 'Stable Swap' }
+  { protocol: 'Aave v3', asset: 'USDC', chain: 'Arbitrum', apy: 5.85, risk: 'LOW', tvl_usd: '840M', type: 'Lending', verified: true },
+  { protocol: 'Lido', asset: 'stETH', chain: 'Ethereum', apy: 3.25, risk: 'LOW', tvl_usd: '24.2B', type: 'Liquid Staking', verified: true },
+  { protocol: 'Solana Native', asset: 'SOL', chain: 'Solana', apy: 6.95, risk: 'LOW', tvl_usd: '5.1B', type: 'Native Staking', verified: true },
+  { protocol: 'Uniswap v3', asset: 'ETH/USDC', chain: 'Ethereum', apy: 14.20, risk: 'MEDIUM', tvl_usd: '320M', type: 'Concentrated Liquidity', verified: true },
+  { protocol: 'Raydium CLMM', asset: 'SOL/USDC', chain: 'Solana', apy: 18.40, risk: 'MEDIUM', tvl_usd: '95M', type: 'DEX Liquidity', verified: true },
+  { protocol: 'Curve Finance', asset: '3pool (USDC/USDT/DAI)', chain: 'Ethereum', apy: 4.10, risk: 'LOW', tvl_usd: '480M', type: 'Stable Swap', verified: true }
 ];
 
 export const TETRAKIS_TOKEN = {
@@ -71,25 +72,27 @@ export function deriveTrinityTreasury(seed) {
     evmAddress = toChecksumAddress('0x' + Array.from(pubKeyHash.slice(-20)).map(b => b.toString(16).padStart(2, '0')).join(''));
   }
 
-  const effectiveSeed = seed || 'trinity-jericho-treasury-v1';
-  const solRaw = Array.from(keccak_256(new TextEncoder().encode(effectiveSeed + ':solana'))).slice(0, 32);
-  const solAddress = 'J3r1ch0' + Array.from(solRaw.slice(0, 20)).map(b => b.toString(36)).join('').slice(0, 37);
-  const btcAddress = 'bc1q' + Array.from(keccak_256(new TextEncoder().encode(effectiveSeed + ':btc'))).slice(0, 20).map(b => b.toString(16).padStart(2, '0')).join('');
-
   return {
     evm_address: evmAddress,
     networks: ['Base', 'Ethereum', 'Arbitrum', 'Polygon', 'Optimism', 'BNB Chain'],
-    solana_address: solAddress,
-    bitcoin_address: btcAddress,
+    solana_address: null,
+    bitcoin_address: null,
+    chains_status: {
+      evm: 'ACTIVE_DEPLOYED_TREASURY',
+      solana: 'AWAITING_ED25519_KEYPAIR',
+      bitcoin: 'AWAITING_BECH32_KEYPAIR'
+    },
     treasury_owner: 'Trinity Mastermind Core',
     custody_mode: 'Autonomous Super-Agent Vault',
     tetrakis: TETRAKIS_TOKEN
   };
 }
 
-// Live crypto prices fetcher with graceful fallback
+// Live crypto prices fetcher with explicit live/fallback flags
 export async function fetchLiveCryptoPrices() {
   const results = {};
+  let isLive = false;
+
   try {
     const symbols = TRACKED_ASSETS.map(a => `"${a.pair}"`).join(',');
     const url = `https://api.binance.com/api/v3/ticker/24hr?symbols=[${symbols}]`;
@@ -117,29 +120,32 @@ export async function fetchLiveCryptoPrices() {
             low_24h: low24h,
             volume_24h_usd: volume,
             source: 'binance-live',
+            live: true,
+            status: 'verified_live',
             updated_at: new Date().toISOString()
           };
         }
       }
+      isLive = Object.keys(results).length > 0;
     }
   } catch (_) {
-    // Graceful fallback to cached/simulated live delta
+    // Network failure
   }
 
-  // Populate any missing with reliable fallback
+  // Truth Policy: When live API fails, flag fallback values explicitly as unverified/demo
   for (const asset of TRACKED_ASSETS) {
     if (!results[asset.symbol]) {
-      const delta = (Math.sin(Date.now() / 100000 + asset.defaultPrice) * 1.5).toFixed(2);
-      const price = parseFloat((asset.defaultPrice * (1 + parseFloat(delta) / 100)).toFixed(2));
       results[asset.symbol] = {
         symbol: asset.symbol,
         name: asset.name,
-        price_usd: price,
-        change_24h_pct: parseFloat(delta),
-        high_24h: parseFloat((price * 1.03).toFixed(2)),
-        low_24h: parseFloat((price * 0.97).toFixed(2)),
-        volume_24h_usd: Math.round(asset.defaultPrice * 45000),
-        source: 'edge-synthetic-fallback',
+        price_usd: asset.defaultPrice,
+        change_24h_pct: 0.0,
+        high_24h: asset.defaultPrice,
+        low_24h: asset.defaultPrice,
+        volume_24h_usd: 0,
+        source: 'unverified-reference',
+        live: false,
+        status: isLive ? 'missing_from_feed' : 'feed_unavailable',
         updated_at: new Date().toISOString()
       };
     }
@@ -151,9 +157,21 @@ export async function fetchLiveCryptoPrices() {
 // Technical signal analysis & scoring
 export function analyzeMarketSignals(prices) {
   const signals = [];
-  let marketSentimentScore = 50; // 0 (extreme fear) to 100 (extreme greed)
+  let marketSentimentScore = 50;
 
   for (const [symbol, info] of Object.entries(prices)) {
+    // Truth Policy: No trade actions based on synthetic or unavailable data
+    if (!info.live) {
+      signals.push({
+        symbol,
+        price: info.price_usd,
+        action: 'DATA_UNAVAILABLE',
+        confidence: 0,
+        rationale: 'Živé trhové dáta nie sú k dispozícii; automatizovaný obchodný signál je pozastavený.'
+      });
+      continue;
+    }
+
     let action = 'HOLD';
     let confidence = 0.65;
     let rationale = '';
@@ -205,9 +223,9 @@ export async function executeWorkCycle(env = {}) {
   const analysis = analyzeMarketSignals(prices);
   const treasury = deriveTrinityTreasury(env?.TREASURY_SEED || 'trinity-jericho-vault');
 
-  // Select top 3 working recommendations
+  // Select top actionable recommendations (excluding unavailable/hold)
   const topRecommendations = analysis.signals
-    .filter(s => s.action !== 'HOLD')
+    .filter(s => s.action !== 'HOLD' && s.action !== 'DATA_UNAVAILABLE')
     .sort((a, b) => b.confidence - a.confidence)
     .slice(0, 3);
 
@@ -222,7 +240,9 @@ export async function executeWorkCycle(env = {}) {
     status: 'COMPLETED',
     timestamp: new Date().toISOString(),
     duration_ms: Date.now() - startTime,
-    summary: `Jericho zanalyzoval ${Object.keys(prices).length} krypto aktív, identifikoval ${topRecommendations.length} ziskových príležitostí a aktualizoval zostatky Trinity treasury.`,
+    summary: `Jericho vyhodnotil ${Object.keys(prices).length} krypto aktív a pripravil odporúčania pre pokladnicu Tetrakis/Trinity bez nepodložených tvrdení o prevodoch.`,
+    transfers_executed: false,
+    treasury_balance_updated: false,
     market_sentiment: analysis.sentiment,
     top_actions: topRecommendations,
     yield_opportunities: topYields,

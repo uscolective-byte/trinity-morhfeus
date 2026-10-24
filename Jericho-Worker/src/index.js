@@ -344,11 +344,11 @@ function renderDashboard(prices, signals, treasury, latestWork) {
         </div>
         <div class="wallet-field">
           <div class="wallet-label">Solana Peňaženka</div>
-          <div class="wallet-val">${treasury.solana_address}</div>
+          <div class="wallet-val">${treasury.solana_address || '<span style="color: #94a3b8; font-style: italic;">Pripravuje sa (Awaiting Ed25519 SDK)</span>'}</div>
         </div>
         <div class="wallet-field">
           <div class="wallet-label">Bitcoin SegWit Peňaženka</div>
-          <div class="wallet-val">${treasury.bitcoin_address}</div>
+          <div class="wallet-val">${treasury.bitcoin_address || '<span style="color: #94a3b8; font-style: italic;">Pripravuje sa (Awaiting Bech32 SDK)</span>'}</div>
         </div>
         <div class="wallet-field">
           <div class="wallet-label">Trhový sentiment</div>

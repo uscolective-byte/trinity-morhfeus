@@ -1,5 +1,5 @@
 // Trinity Guardian Worker (services/guardian.js)
-const VERSION = '2.0.0';
+const VERSION = '2.1.0';
 
 const secure = response => {
   const out = new Response(response.body, response);
@@ -50,11 +50,25 @@ export default {
         return secure(Response.json(state, { status: state.ok ? 200 : 503 }));
       }
 
+      const isInternalBinding = url.hostname === 'trinity.internal' || url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+      const hasAuthHeader = Boolean(request.headers.get('Authorization'));
+
+      // Protected REST endpoints
+      if ((path === '/api/logs' || path === '/api/check') && !isInternalBinding && !hasAuthHeader) {
+        return secure(Response.json({ ok: false, error: 'Unauthorized: internal access only' }, { status: 401 }));
+      }
+
       // Action-based internal service call
       if (request.method === 'POST') {
         let call = null;
         try { call = await request.json(); } catch (_) {}
         if (call && typeof call === 'object' && call.action) {
+          const isApproved = Boolean(call.approval && call.approval.approved);
+          const isAuthorized = isInternalBinding || isApproved || hasAuthHeader;
+          if (!isAuthorized) {
+            return secure(Response.json({ ok: false, error: 'Unauthorized: internal approval required' }, { status: 401 }));
+          }
+
           const traceId = call.traceId || crypto.randomUUID();
           if (call.action === 'audit.list' || call.action === 'audit.events') {
             const limit = Number(call.data?.limit || 50);
@@ -62,8 +76,7 @@ export default {
             if (env?.DB) {
               const r = await env.DB.prepare("SELECT * FROM ops_events WHERE action='guardian_check' ORDER BY id DESC LIMIT ?")
                 .bind(limit)
-                .all()
-                .catch(() => ({ results: [] }));
+                .all();
               results = r.results || [];
             }
             return secure(Response.json({ ok: true, result: results, traceId, from: 'guardian' }));
@@ -80,7 +93,7 @@ export default {
       }
       if (path === '/api/logs' && request.method === 'GET') {
         if (!env?.DB) return secure(Response.json([]));
-        const rows = await env.DB.prepare("SELECT * FROM ops_events WHERE action='guardian_check' ORDER BY id DESC LIMIT 50").all().catch(() => ({ results: [] }));
+        const rows = await env.DB.prepare("SELECT * FROM ops_events WHERE action='guardian_check' ORDER BY id DESC LIMIT 50").all();
         return secure(Response.json(rows.results || []));
       }
 

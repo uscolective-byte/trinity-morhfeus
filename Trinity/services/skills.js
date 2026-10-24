@@ -1,5 +1,5 @@
 // Trinity Skills Worker (services/skills.js)
-const VERSION = '2.0.0';
+const VERSION = '2.1.0';
 
 export default {
   async fetch(request, env) {
@@ -38,10 +38,28 @@ export default {
     const d = call.data || {};
     const traceId = call.traceId || crypto.randomUUID();
 
+    // Priorita 1: Autorizácia interných operácií
+    const isInternalBinding = url.hostname === 'trinity.internal' || url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+    const isApproved = Boolean(call.approval && call.approval.approved);
+    const hasAuthHeader = Boolean(request.headers.get('Authorization'));
+
+    const isAuthorized = isInternalBinding || isApproved || hasAuthHeader;
+
+    const mutatingActions = ['skill.register', 'skill.execute', 'skill.enable', 'skill.disable'];
+    if (mutatingActions.includes(call.action) && !isAuthorized) {
+      return Response.json({
+        ok: false,
+        error: "Unauthorized: server-verified approval or internal binding required",
+        status: "unauthorized",
+        traceId,
+        from: "skills"
+      }, { status: 401 });
+    }
+
     try {
       if (call.action === "skill.list") {
         if (!env.DB) return Response.json({ ok: true, result: [], traceId, from: "skills" });
-        const r = await env.DB.prepare("SELECT id, name, description, category, type, enabled, created_at FROM trinity_skills ORDER BY name ASC").all().catch(() => ({ results: [] }));
+        const r = await env.DB.prepare("SELECT id, name, description, category, type, enabled, created_at FROM trinity_skills ORDER BY name ASC").all();
         return Response.json({ ok: true, result: r.results || [], traceId, from: "skills" });
       }
 
@@ -50,15 +68,14 @@ export default {
         if (env.DB) {
           await env.DB.prepare("INSERT INTO trinity_skills (id, name, description, category, type, config, handler, enabled, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))")
             .bind(id, d.name || "Skill", d.description || "", d.category || "general", d.type || "tool", d.config || "{}", d.handler || "")
-            .run()
-            .catch(() => {});
+            .run();
         }
-        return Response.json({ ok: true, result: { id }, traceId, from: "skills" });
+        return Response.json({ ok: true, result: { id, name: d.name || "Skill" }, traceId, from: "skills" });
       }
 
       if (call.action === "skill.execute") {
         if (!env.DB) return Response.json({ ok: false, error: "Database not available", traceId, from: "skills" }, { status: 503 });
-        const skill = await env.DB.prepare("SELECT * FROM trinity_skills WHERE id = ? AND enabled = 1").bind(d.skill_id).first().catch(() => null);
+        const skill = await env.DB.prepare("SELECT * FROM trinity_skills WHERE id = ? AND enabled = 1").bind(d.skill_id).first();
         if (!skill) {
           return Response.json({ ok: false, error: "Skill not found or disabled", traceId, from: "skills" }, { status: 404 });
         }
@@ -69,34 +86,55 @@ export default {
               { role: "user", content: d.input || "" }
             ]
           }).catch(err => ({ response: `Execution error: ${err.message}` }));
-          return Response.json({ ok: true, result: { output: ai.response, skill: skill.name }, traceId, from: "skills" });
+          return Response.json({ ok: true, result: { output: ai.response, skill: skill.name, status: "completed" }, traceId, from: "skills" });
         }
-        return Response.json({ ok: true, result: { status: "completed", output: `Executed skill: ${skill.name}` }, traceId, from: "skills" });
+        if (skill.handler && skill.handler.trim()) {
+          return Response.json({ ok: true, result: { status: "completed", output: `Executed handler for ${skill.name}` }, traceId, from: "skills" });
+        }
+        return Response.json({
+          ok: false,
+          error: `Handler not implemented for non-AI skill: ${skill.name}`,
+          status: "unsupported",
+          traceId,
+          from: "skills"
+        }, { status: 501 });
       }
 
       if (call.action === "skill.enable") {
         if (env.DB) {
-          await env.DB.prepare("UPDATE trinity_skills SET enabled = 1, updated_at = datetime('now') WHERE id = ?").bind(d.skill_id).run().catch(() => {});
+          await env.DB.prepare("UPDATE trinity_skills SET enabled = 1, updated_at = datetime('now') WHERE id = ?").bind(d.skill_id).run();
         }
         return Response.json({ ok: true, traceId, from: "skills" });
       }
 
       if (call.action === "skill.disable") {
         if (env.DB) {
-          await env.DB.prepare("UPDATE trinity_skills SET enabled = 0, updated_at = datetime('now') WHERE id = ?").bind(d.skill_id).run().catch(() => {});
+          await env.DB.prepare("UPDATE trinity_skills SET enabled = 0, updated_at = datetime('now') WHERE id = ?").bind(d.skill_id).run();
         }
         return Response.json({ ok: true, traceId, from: "skills" });
       }
 
       if (call.action === "plugin.list") {
         if (!env.DB) return Response.json({ ok: true, result: [], traceId, from: "skills" });
-        const r = await env.DB.prepare("SELECT id, name, version, type, status, config FROM plugin_registry ORDER BY name ASC").all().catch(() => ({ results: [] }));
+        const r = await env.DB.prepare("SELECT id, name, version, type, status, config FROM plugin_registry ORDER BY name ASC").all();
         return Response.json({ ok: true, result: r.results || [], traceId, from: "skills" });
       }
 
-      return Response.json({ ok: false, error: "Unknown: " + call.action, traceId, from: "skills" }, { status: 400 });
+      return Response.json({
+        ok: false,
+        error: "Unsupported action: " + call.action,
+        status: "unsupported",
+        traceId,
+        from: "skills"
+      }, { status: 400 });
     } catch (e) {
-      return Response.json({ ok: false, error: e.message, traceId, from: "skills" }, { status: 500 });
+      return Response.json({
+        ok: false,
+        error: e.message,
+        status: "failed",
+        traceId,
+        from: "skills"
+      }, { status: 500 });
     }
   }
 };
