@@ -4,11 +4,14 @@
   "version": "1.0.0",
   "scripts": {
     "sync": "powershell -ExecutionPolicy Bypass -File ./SYNC-BUILD.ps1 -Full -Test",
-    "build": "powershell -ExecutionPolicy Bypass -File ./SYNC-BUILD.ps1 -Full -Test",
+    "build": "node scripts/project-pipeline.mjs build",
     "deploy": "powershell -ExecutionPolicy Bypass -File ./SYNC-BUILD.ps1 -Full -Test -Deploy",
     "test": "npm --prefix Trinity test",
-    "check": "node scripts/run-all-tests.mjs",
+    "check": "node scripts/project-pipeline.mjs check",
     "deploy:all": "node scripts/deploy-all-workers.mjs",
-    "gemini:chat": "node scripts/gemini-dev-chat.mjs"
+    "gemini:chat": "node scripts/gemini-dev-chat.mjs",
+    "docs:sync": "node scripts/sync-release-docs.mjs",
+    "docs:check": "node scripts/sync-release-docs.mjs --check",
+    "setup": "node scripts/project-pipeline.mjs setup"
   }
 }
