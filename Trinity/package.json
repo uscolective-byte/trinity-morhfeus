@@ -12,7 +12,9 @@
     "test:truth-live": "node scripts/live-truth-test.mjs",
     "build:development": "node scripts/build-mcp-app.mjs && wrangler deploy --dry-run --env development --outdir dist-development",
     "deploy:development": "node scripts/build-mcp-app.mjs && wrangler deploy --env development",
-    "migrate:development": "wrangler d1 migrations apply trinity-development --remote --env development"
+    "migrate:development": "wrangler d1 migrations apply trinity-development --remote --env development",
+    "build:chat-maintainer": "wrangler deploy --dry-run --config ../Chat-Maintenance-Worker/wrangler.jsonc --outdir ../Chat-Maintenance-Worker/dist",
+    "deploy:chat-maintainer": "wrangler deploy --config ../Chat-Maintenance-Worker/wrangler.jsonc"
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "2.0.3",

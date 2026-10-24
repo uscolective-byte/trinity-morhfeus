@@ -13,6 +13,11 @@
 import { boundedText } from './services.js';
 
 export const WORKER_CATALOG = {
+  CHAT_MAINTENANCE: {
+    service:'trinity-chat-maintainer',name:'Správca chatu Trinity',domain:'chat-maintenance',
+    role:'Údržbár a opravár chatu: kvalita odpovedí, kontrola zaseknutých workflow a diagnostika bez opakovania akcií',
+    rpc:true,actions:['status','reviewReply']
+  },
   // ── AURA SPECIALISTS ──
   AURA_ANALYZER: {
     service: 'aura_analyzer',
@@ -208,6 +213,13 @@ export async function delegateWorker(env, workerBinding, action, data = {}, opti
   const started = Date.now();
 
   try {
+    if(workerBinding==='CHAT_MAINTENANCE'){
+      if(!['status','getStatus','reviewReply'].includes(action))throw new Error('Správca chatu nepovoľuje túto delegovanú akciu.');
+      let timer;
+      const call=action==='reviewReply'?binding.reviewReply(String(data.text||'').slice(0,40000)):binding.getStatus(env.TRINITY_ENV||'production');
+      const result=await Promise.race([call,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('RPC Timeout')),timeoutMs);})]).finally(()=>clearTimeout(timer));
+      return {ok:true,worker:workerBinding,result,duration_ms:Date.now()-started,traceId};
+    }
     // 1. RPC volanie (napr. KNOWLEDGE_SERVICE)
     if (meta.rpc) {
       if (typeof binding[action] === 'function') {
@@ -456,7 +468,7 @@ export async function inspectFleet(env) {
   const total = results.length;
 
   return {
-    fleet: 'Trinity 23-Worker Autonomous Fleet',
+    fleet: `Trinity ${total}-Worker Autonomous Fleet`,
     total_workers: total,
     online_count: online,
     offline_count: total - online,

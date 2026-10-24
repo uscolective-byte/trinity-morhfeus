@@ -1,5 +1,6 @@
 import {createSystemAction,getSystemAction} from './system-actions.js';
 import {getConfiguredAIProvider} from './ai-providers.js';
+import {reviewReply} from '../../Chat-Maintenance-Worker/src/quality.mjs';
 
 export const SERVICES = {
   KNOWLEDGE_SERVICE:{name:'Znalostná knižnica',rpc:'getStatus'},
@@ -100,10 +101,7 @@ export function extractGeminiInteractionText(result){
   return blocks.filter(block=>block?.type==='text'||typeof block?.text==='string').map(block=>block.text||'').join('\n').trim();
 }
 export function usableModelText(text) {
-  const compact = text.replace(/\s/g, '');
-  if (!compact) return false;
-  const repeated = compact.match(/(.)\1{79,}/gu) || [];
-  return repeated.reduce((size, run) => size + run.length, 0) < compact.length * 0.8;
+  return reviewReply(text).ok;
 }
 export async function callModel(env, provider, messages, maxTokens = 1200, customModel = null) {
   if(provider==='local'){

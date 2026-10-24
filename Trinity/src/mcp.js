@@ -9,9 +9,10 @@ import {TRINITY_VERSION,releaseMetadata} from './version.js';
 import {dailyPlanShape,createDailyPlan} from './daily-planner.js';
 import {createMcpHandler} from 'agents/mcp/server';
 import {z} from 'zod';
-import {AGENTS} from './registry.js';
+import {AGENTS,agentById} from './registry.js';
+import {chatMaintenanceStatus} from './chat-maintenance.js';
 import {createJob,getJob,listJobs} from './jobs.js';
-import {searchMemory} from './tools.js';
+import {searchMemory,runTool} from './tools.js';
 import {serviceStatus,readiness} from './services.js';
 import {listPlugins} from './plugins.js';
 import {createSystemAction,getSystemAction,listSystemActions,approveSystemAction} from './system-actions.js';
@@ -27,6 +28,8 @@ const result=data=>({content:[{type:'text',text:JSON.stringify(data,null,2)}]});
 export function handleMcp(request,env,ctx,access={}){
   return createMcpHandler(()=>{
   const server=new McpServer({name:'trinity',version:TRINITY_VERSION});
+    server.registerTool('chat_health',{description:'Stav správcu chatu Trinity, posledná kontrola a incidenty bez opakovania úloh.',inputSchema:{}},async()=>result(await chatMaintenanceStatus(env)));
+    server.registerTool('tool_catalog',{description:'Vyhľadá zapnuté nástroje Trinity a presné schémy ich vstupov. Neudeľuje oprávnenia.',inputSchema:{query:z.string().min(1).max(100),limit:z.number().int().min(1).max(12).default(6)}},async args=>result(await runTool(env,agentById('orchestrator'),'tool_catalog',args)));
     const requireProjectAccess=()=>{if(access.projectControl!==true)throw new Error('Tento MCP klient nemá projektové oprávnenie.');};
     server.registerTool('infrastructure_status',{description:'Stav konfigurácie domén, hostingu a vývoja Trinity.',inputSchema:{}},async()=>result(infrastructureStatus(env)));
     server.registerTool('project_inspect',{description:'Nájde relevantné zdrojové súbory a presný commit Trinity.',inputSchema:{query:z.string().max(2000).default('')}},async({query})=>{requireProjectAccess();return result(await inspectProject(env,query));});

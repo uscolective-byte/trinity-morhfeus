@@ -25,6 +25,7 @@ const TRINITY_CORE_WORKERS = [
 ];
 
 const STANDALONE_WORKERS = [
+  { name: 'trinity-chat-maintainer', dir: 'Chat-Maintenance-Worker', config: 'wrangler.jsonc' },
   { name: 'trinity-capacity', dir: 'Capacity-Worker', config: 'wrangler.jsonc' },
   { name: 'trinity-knowledge', dir: 'Knowledge-Worker', config: 'wrangler.jsonc' },
   { name: 'trinity-integrations', dir: 'Integrations-Worker', config: 'wrangler.jsonc' },

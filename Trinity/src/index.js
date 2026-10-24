@@ -1,3 +1,4 @@
+import {chatMaintenanceStatus} from './chat-maintenance.js';
 import {WORKER_CATALOG} from './orchestrator.js';
 import {resolveRuntimeSecrets,runtimeSecretStatus} from './runtime-secrets.js';
 import {revolutProStatus,configureRevolutPro,handleRevolutProPublic,paypalStatus,configurePaypal,commerceStatus,configureCommerceAccounts,upsertCommerceProduct,deleteCommerceProduct,handleCommercePublic} from './revolut.js';
@@ -77,7 +78,7 @@ export {TrinityAgent,ChatAgent,GuardianAgent,TrinityOperations};
 const json=(data,status=200)=>Response.json(data,{status});
 const runtimeEnvironment=(request,env)=>['localhost','127.0.0.1','::1'].includes(new URL(request.url).hostname)?'local':env.TRINITY_ENV||'local';
 const uuid=z.string().uuid();
-const MCP_READ_TOOLS=new Set(['trinity_control_panel','infrastructure_status','project_inspect','project_read','list_improvements','get_capability_status','trinity_status','list_agents','get_task','list_tasks','search_memory','check_services','get_source_file','list_project_files','get_project_action','list_system_actions','pc_status','ecosystem_stats','search_ecosystem']);
+const MCP_READ_TOOLS=new Set(['chat_health','tool_catalog','trinity_control_panel','infrastructure_status','project_inspect','project_read','list_improvements','get_capability_status','trinity_status','list_agents','get_task','list_tasks','search_memory','check_services','get_source_file','list_project_files','get_project_action','list_system_actions','pc_status','ecosystem_stats','search_ecosystem']);
 function requireAdmin(user){if(!['admin','owner'].includes(user.role))throw new HttpError(403,'Táto operácia je dostupná iba správcovi Trinity.');}
 function requireOwner(user){if(user.role!=='owner')throw new HttpError(403,'Táto operácia je dostupná iba vlastníkovi Trinity.');}
 async function handleScopedMcp(request,env,ctx){
@@ -757,6 +758,16 @@ async function route(request,env,ctx){
     const rows=(await env.DB.prepare('SELECT task,result,error FROM ops_jobs WHERE session_id=? ORDER BY created_at,rowid LIMIT 50').bind(id).all()).results;
     return json(rows.flatMap(r=>[{role:'user',content:r.task},...(r.result?[{role:'assistant',content:r.result}]:r.error?[{role:'assistant',content:'Úloha zlyhala: '+r.error}]:[])]));
   }
+  if(path==='/api/assistant/chat/health'&&request.method==='GET'){
+    requireAdmin(user);
+    return json(await chatMaintenanceStatus(env));
+  }
+  if(path==='/api/assistant/chat/maintenance'&&request.method==='POST'){
+    requireAdmin(user);
+    await rateLimit(env,`chat-maintenance:${user.id}`,2,60);
+    if(!env.CHAT_MAINTENANCE)throw new HttpError(503,'Správca chatu nie je pripojený.');
+    return json(await env.CHAT_MAINTENANCE.inspect(env.TRINITY_ENV||'production'));
+  }
   if(path==='/api/assistant/chat'&&request.method==='POST'){
     await rateLimit(env,`job:${user.id}`,12);
     const d=z.object({message:z.string().min(1).max(12000),session:z.string().uuid(),language:z.string().max(35).default('auto').transform(normalizeLanguage),engine:z.enum(['auto','cloud','fast','openai','gemini','ollama','local','deepseek-r1','llama','qwen','groq','deepseek','anthropic','mistral','openrouter']).default('auto'),remember:z.boolean().optional(),allow_files:z.boolean().optional()}).strict().parse(await readJSON(request));
@@ -770,7 +781,7 @@ async function route(request,env,ctx){
       else if(/\b(kód|kod|programuj|funkci|debug|refactor|sql|skript|script|chyb|algoritm|matematik|prepočítaj|reasoning)\b/i.test(msg))provider='deepseek-r1';
       else if(/\b(kreatív|báseň|článok|marketing|prezentáci|scenár|píš text|sloh|príbeh)\b/i.test(msg))provider='llama';
       else if(/\b(preklad|čínšt|japon|ázij|viacjazyč|qwen)\b/i.test(msg))provider='qwen';
-      else provider='workers-ai';
+      else provider=delegated?'workers-ai':'fast';
     }else if(d.engine==='fast')provider='fast';
     else if(d.engine==='local')provider='local';
     else if(d.engine==='ollama')provider='ollama';

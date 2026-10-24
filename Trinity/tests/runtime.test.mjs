@@ -6,6 +6,7 @@ import {readFileSync,readdirSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
 import {createSystemAction} from '../src/system-actions.js';
+import {createApiKey} from '../src/api-keys.js';
 let mf,db;const key='test-only-not-a-real-secret-123456789';const gatewayKey='test-only-gateway-secret-123456789012345';
 const url='https://trinity.test';
 async function req(path,body,auth=true,extra={}){return mf.dispatchFetch(url+path,{method:body===undefined?'GET':'POST',headers:{...(auth?{Authorization:'Bearer '+key}:{}),...(body===undefined?{}:{'Content-Type':'application/json'}),...extra},body:body===undefined?undefined:JSON.stringify(body)});}
@@ -43,6 +44,19 @@ before(async()=>{
   }
 });
 after(async()=>{await mf?.dispose();});
+test('chat maintainer APIs are private and read-only MCP keys can discover tool schemas',async()=>{
+  assert.equal((await req('/api/assistant/chat/health',undefined,false)).status,401);
+  const health=await req('/api/assistant/chat/health');
+  assert.equal(health.status,200);
+  assert.equal((await health.json()).connected,false);
+  assert.equal((await req('/api/assistant/chat/maintenance',{})).status,503);
+  const created=await createApiKey({DB:db},'chat-test',{name:'Chat read-only',scopes:['mcp:read']});
+  const response=await mf.dispatchFetch(url+'/mcp',{method:'POST',headers:{Authorization:'Bearer '+created.secret,'Content-Type':'application/json',Accept:'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',id:999,method:'tools/call',params:{name:'tool_catalog',arguments:{query:'calculate'}}})});
+  assert.equal(response.status,200);
+  const content=await response.text();
+  assert.match(content,/calculate/);
+  assert.match(content,/operation/);
+});
 test('CI audit migrations preserve a pre-existing legacy audit table',async()=>{
   const legacy=await db.prepare("SELECT details FROM audit_log WHERE module='legacy'").first();
   assert.equal(legacy.details,'existing history');

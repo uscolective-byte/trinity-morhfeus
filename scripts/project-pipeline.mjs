@@ -26,6 +26,7 @@ function build(){
  docs();
  for(const project of workers)script(project,'build');
  script('Trinity','build:development');
+ script('Trinity','build:chat-maintainer');
  run(npm,['exec','--','wrangler','deploy','--config','wrangler.integrations.jsonc','--dry-run','--outdir','dist-integrations'],resolve(root,'Trinity'));
 }
 function test(){

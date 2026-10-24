@@ -21,8 +21,7 @@ export class TrinityOperations extends WorkflowEntrypoint {
       assertRunning(await readControl(this.env));
       const history=await step.do('load-context',async()=>{
         const rows=await this.env.DB.prepare("SELECT task,substr(result,1,1600) AS result FROM ops_jobs WHERE session_id=? AND id<>? AND status='completed' ORDER BY created_at DESC LIMIT 4").bind(job.session_id,id).all();
-        const memory=await recallMemory(this.env,job.task);
-        const pcBridge=await getPCBridgeStatus(this.env);
+        const [memory,pcBridge]=await Promise.all([recallMemory(this.env,job.task),getPCBridgeStatus(this.env)]);
         const conversations=rows.results.filter(row=>usableModelText(row.result||''));
         const summary={conversations:conversations.length,memories:memory.map(r=>({key:r.key,source:r.source})),retrieved_at:new Date().toISOString()};
         await this.env.DB.prepare('UPDATE ops_jobs SET context_summary=? WHERE id=?').bind(JSON.stringify(summary),id).run();
@@ -41,6 +40,8 @@ export class TrinityOperations extends WorkflowEntrypoint {
         try{output=await step.do(`agent-${position}-${agent}`,{retries:{limit:1,delay:'5 seconds',backoff:'exponential'},timeout:'4 minutes'},async()=>{
           const done=await this.env.DB.prepare("SELECT result,model,tool_log,duration_ms FROM ops_steps WHERE id=? AND status='completed'").bind(stepId).first();
           if(done)return {text:done.result,model:done.model,agent_id:agent,tool_log:JSON.parse(done.tool_log||'[]'),duration_ms:done.duration_ms};
+          const current=await this.env.DB.prepare('SELECT status FROM ops_jobs WHERE id=?').bind(id).first();
+          if(!current||['cancelled','failed'].includes(current.status))throw new Error('Úloha bola ukončená.');
           await this.env.DB.prepare(`INSERT INTO ops_steps(id,job_id,position,agent_id,status) VALUES(?,?,?,?,'running')
             ON CONFLICT(id) DO UPDATE SET status='running',error=NULL,updated_at=datetime('now')`).bind(stepId,id,position,agent).run();
           try {
@@ -60,12 +61,14 @@ export class TrinityOperations extends WorkflowEntrypoint {
       }
       return await step.do('save-result',async()=>{
         if(!outputs.length)throw new Error('Všetky kroky workflow zlyhali; neexistuje overiteľný výsledok.');
+        const current=await this.env.DB.prepare('SELECT status FROM ops_jobs WHERE id=?').bind(id).first();
+        if(!current||['cancelled','failed'].includes(current.status))return {job_id:id,status:current?.status||'failed'};
         const text=outputs.at(-1).text;
         const key=`operations/${id}/result.md`;
         const document=`# Trinity\n\n${job.task}\n\n${outputs.map(o=>`## ${o.agent_id}\n\n${o.text}`).join('\n\n')}\n`;
         await this.env.ARTIFACTS.put(key,document,{httpMetadata:{contentType:'text/markdown; charset=utf-8'}});
         await this.env.DB.batch([
-          this.env.DB.prepare("UPDATE ops_jobs SET status='completed',result=?,artifact_key=?,error=NULL,updated_at=datetime('now') WHERE id=?").bind(text,key,id),
+          this.env.DB.prepare("UPDATE ops_jobs SET status='completed',result=?,artifact_key=?,error=NULL,updated_at=datetime('now') WHERE id=? AND status IN ('queued','running')").bind(text,key,id),
           this.env.DB.prepare("INSERT INTO ops_events(job_id,action,details) VALUES(?,'completed',?)").bind(id,JSON.stringify({team,models:outputs.map(o=>o.model),skipped}))
         ]);
         await recordStepDocument(this.env,{
@@ -84,7 +87,7 @@ export class TrinityOperations extends WorkflowEntrypoint {
       });
     }catch(e){
       await step.do('record-failure',async()=>{
-        await this.env.DB.prepare("UPDATE ops_jobs SET status='failed',error=?,updated_at=datetime('now') WHERE id=? AND status<>'cancelled'").bind(e.message||'Workflow zlyhal.',id).run();
+        await this.env.DB.prepare("UPDATE ops_jobs SET status='failed',error=?,updated_at=datetime('now') WHERE id=? AND status IN ('queued','running')").bind(e.message||'Workflow zlyhal.',id).run();
       });throw e;
     }
   }

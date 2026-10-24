@@ -127,7 +127,7 @@ test('inspectFleet reports connectivity for entire 23-worker fleet', async () =>
   };
 
   const fleet = await inspectFleet(env);
-  assert.equal(fleet.total_workers, 23);
+  assert.equal(fleet.total_workers, Object.keys(WORKER_CATALOG).length);
   assert.ok(fleet.online_count >= 2);
   assert.ok(fleet.offline_count <= 21);
 });
@@ -154,7 +154,7 @@ test('runTool supports delegate_worker, orchestrate_team, and fleet_status', asy
   assert.equal(teamRes._evidence.action, 'orchestrate_team');
 
   const fleetRes = await runTool(env, orchestrator, 'fleet_status', {});
-  assert.equal(fleetRes.total_workers, 23);
+  assert.equal(fleetRes.total_workers, Object.keys(WORKER_CATALOG).length);
   assert.equal(fleetRes._evidence.effect, 'read');
 });
 

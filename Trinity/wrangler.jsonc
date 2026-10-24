@@ -144,6 +144,10 @@
   ],
   "services": [
     {
+      "binding": "CHAT_MAINTENANCE",
+      "service": "trinity-chat-maintainer"
+    },
+    {
       "binding": "KNOWLEDGE_SERVICE",
       "service": "trinity-knowledge"
     },
@@ -378,6 +382,10 @@
         "binding": "CF_VERSION_METADATA"
       },
       "services": [
+        {
+          "binding": "CHAT_MAINTENANCE",
+          "service": "trinity-chat-maintainer"
+        },
         {"binding":"KNOWLEDGE_SERVICE","service":"trinity-knowledge-development"},
         {"binding":"PC_BRIDGE_V2","service":"trinity-pc-bridge-v2"},
         {"binding":"PC_BRIDGE_SERVICE","service":"trinity-pc-bridge"},

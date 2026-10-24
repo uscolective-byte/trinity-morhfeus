@@ -29,6 +29,9 @@ case "${1:-check}" in
     TASK_DEV_BACKUP="$TASK_ROOT/.deployment-backups/trinity-development-$(date -u +%Y%m%dT%H%M%SZ).sql"
     (cd Trinity && npx --no-install wrangler d1 export trinity-development --remote --env development --output "$TASK_DEV_BACKUP")
     test -s "$TASK_DEV_BACKUP"
+    # The chat caretaker uses both databases; create its tables before enabling its cron.
+    (cd Trinity && npm run migrate:development && npx --no-install wrangler d1 migrations apply trinity-v03 --remote --env="")
+    (cd Trinity && npm run deploy:chat-maintainer -- --tag "$TASK_RELEASE_SHA")
     (cd Knowledge-Worker && npx --no-install wrangler deploy)
     (cd Integrations-Worker && npx --no-install wrangler deploy)
     (cd Trinity && npm run migrate:development && npm run deploy:development -- --tag "$TASK_RELEASE_SHA" && node scripts/verify-deployment.mjs https://auru.dev "$TASK_RELEASE_SHA")

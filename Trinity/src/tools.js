@@ -1,3 +1,4 @@
+import {chatMaintenanceStatus} from './chat-maintenance.js';
 import { delegateWorker, orchestratePipeline, inspectFleet } from './orchestrator.js';
 import {fetchPublicWeb} from './web-access.js';
 import {inspectProject,readProjectSource} from './project-evolution.js';
@@ -41,6 +42,8 @@ export const DEVELOPMENT_TOOLS=['project_inspect','project_read','improvement_su
 export const PC_TOOLS=new Set(['pc_screenshot','pc_run_script','pc_run','pc_file_read','pc_file_write','pc_file_append','pc_file_edit','pc_directory_create','pc_open_app','pc_app_control','pc_notify','pc_system_info','pc_scrape','pc_web_fetch','pc_download','pc_git_commit','pc_git_pr']);
 export const OWNER_BUSINESS_TOOLS=new Set(['prospect_queries','prospect_score','outreach_draft','revenue_model','improvement_plan','commerce_status','commerce_add_offer','monetization_blueprint','ui_evolve','self_evolve','domain_env_provision','domain_env_deploy','commodity_trade','commodity_auto_invest','morpheus_status']);
 export const TOOL_SCHEMAS={
+  tool_catalog:z.object({query:z.string().trim().min(1).max(100),limit:z.number().int().min(1).max(12).default(6)}).strict(),
+  chat_health:z.object({}).strict(),
   web_fetch:z.object({url:z.string().url()}).strict(),
   project_inspect:z.object({query:z.string().max(2000).default('')}).strict(),
   project_read:z.object({path:z.string().max(500),ref:z.string().regex(/^[a-f0-9]{40}$/).optional()}).strict(),
@@ -461,6 +464,16 @@ export async function runTool(env, agent, name, input, executionContext={}) {
   if(name==='current_time'){
     let localized;try{localized=new Intl.DateTimeFormat('sk-SK',{dateStyle:'full',timeStyle:'long',timeZone:args.timezone}).format(new Date());}catch{throw new Error('Neplatné časové pásmo. Použi názov napríklad Europe/Bratislava.');}
     return {timezone:args.timezone,localized,utc:new Date().toISOString()};
+  }
+  if(name==='chat_health'){const report=await chatMaintenanceStatus(env);return executionContext.adminAuthorized===true?report:{connected:report.connected,role:report.role,last_check:report.last_check,reason:report.reason};}
+  if(name==='tool_catalog'){
+    const enabled=new Set((await listPlugins(env)).filter(p=>p.enabled).flatMap(p=>p.tools));
+    const query=args.query.toLocaleLowerCase('sk');
+    const tools=[...new Set(agent.tools)].filter(name=>enabled.has(name)&&TOOL_SCHEMAS[name]&&(`${name} ${TOOL_HELP[name]||''}`).toLocaleLowerCase('sk').includes(query));
+    return {total:tools.length,items:tools.slice(0,args.limit).map(name=>{
+      let parameters;try{parameters=z.toJSONSchema(TOOL_SCHEMAS[name],{io:'input',unrepresentable:'any'});}catch{parameters=null;}
+      return {name,description:TOOL_HELP[name]||name,parameters};
+    }),note:'Katalóg neudeľuje nové oprávnenia. Použi presné parametre a over výsledok nástroja.'};
   }
   if(name==='list_capabilities'){
     const query=args.query.toLocaleLowerCase('sk');const plugins=await listPlugins(env);
@@ -937,6 +950,8 @@ export async function recallMemory(env,task){
   return selectMemoryRecords(records,task);
 }
 export const TOOL_HELP={
+  tool_catalog:'Vyhľadá povolené nástroje a presné JSON schémy parametrov: {query:string,limit?:1..12}',
+  chat_health:'Skutočný stav správcu chatu, posledná kontrola a incidenty: {}',
   web_fetch:'Prečíta konkrétnu verejnú webovú adresu priamo z cloudu bez PC: {url}',
   project_inspect:'Sama nájde aktuálny commit a relevantné súbory Trinity podľa problému: {query}',
   project_read:'Prečíta konkrétny zdroj Trinity z GitHubu: {path,ref?:commit SHA}',
