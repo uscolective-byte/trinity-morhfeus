@@ -98,7 +98,7 @@ const DEFAULT_UI_STATE = {
   secondary_color: null,
   font_scale: 'normal',
   radius_scale: 'rounded',
-  brand_title: 'Trinity 10.3',
+  brand_title: 'Trinity 11.0',
   brand_subtitle: 'Tvoja osobná asistentka',
   welcome_heading: 'Ahoj. Som Trinity.',
   welcome_subtext: 'Môžeme sa porozprávať, upraviť moje vlastné UI, spravovať domény a prostredia alebo zarábať.',

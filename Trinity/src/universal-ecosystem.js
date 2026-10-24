@@ -9,6 +9,7 @@
 import {skillRegistry, skills} from './skillRegistry.js';
 import {copilotPluginRegistry} from './copilot-plugins.js';
 import {EXTENDED_SKILLS, EXTENDED_PLUGINS} from './extended-catalog.js';
+import {FREE_MODULES_CATALOG, fetchWeather, fetchWikipedia, resolveDns, fetchCryptoMarkets, fetchTechNews, fetchWorldBankIndicator} from './free-modules.js';
 
 export const UNIVERSAL_DOMAINS = [
   {id: 'software-dev', name: 'Softvérový vývoj', icon: '</>', description: 'Full-stack vývoj, API, refaktoring, databázy a CI/CD pipeline.'},

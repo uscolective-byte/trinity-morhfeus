@@ -28,6 +28,16 @@ jobs:
       run:
         working-directory: Trinity
     steps:
+      - name: Require the canonical repository and main branch
+        working-directory: .
+        env:
+          SOURCE_REPOSITORY: ${{ github.repository }}
+          SOURCE_REF: ${{ github.ref }}
+        run: |
+          if [ "$SOURCE_REPOSITORY" != 'uscolective-byte/trinity-morhfeus' ] || [ "$SOURCE_REF" != 'refs/heads/main' ]; then
+            echo '::error::Both domains must be deployed from uscolective-byte/trinity-morhfeus on main.'
+            exit 1
+          fi
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -35,6 +45,9 @@ jobs:
           cache: npm
           cache-dependency-path: Trinity/package-lock.json
       - run: npm ci
+      - name: Check synchronized release documentation
+        working-directory: .
+        run: npm run docs:check
       - run: npm test
 
   deploy-development:

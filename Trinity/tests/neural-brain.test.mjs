@@ -23,9 +23,9 @@ test('NeuralMemorySystem: STM, LTM, CTM, ETM layers operate correctly', async ()
   assert.equal(ltmItem.value, 'Dôkazy sú povinné');
 
   // CTM
-  memory.setContext('active_project', { name: 'Trinity 10.3', phase: 'neural_integration' });
+  memory.setContext('active_project', { name: 'Trinity 11.0', phase: 'neural_integration' });
   const ctm = memory.getContext('active_project');
-  assert.equal(ctm.data.name, 'Trinity 10.3');
+  assert.equal(ctm.data.name, 'Trinity 11.0');
 
   // ETM
   const ep = await memory.recordEpisode('Otestovať neurálnu pamäť', 'Úspešné overenie', { passed: true }, 0.98);
@@ -83,7 +83,7 @@ test('TrinityAgent DO: REST handlers for /mode, /memory, /reflect', async () => 
   const infoRes = await agent.fetch(infoReq);
   const info = await infoRes.json();
   assert.equal(info.service, 'Trinity Neural Brain DO');
-  assert.equal(info.version, '10.3.0');
+  assert.equal(info.version, '11.0.0');
   assert.equal(info.mode, 'creativity');
 
   // 2. POST /mode

@@ -1,14 +1,14 @@
-# 📚 TRINITY 10.3 — Oficiálna Dokumentácia, Architektúra, Banky, Licencie & Help
+# 📚 TRINITY 11.0 — Oficiálna Dokumentácia, Architektúra, Banky, Licencie & Help
 
-> **Verzia systému:** `Trinity 10.3 (Cloudflare Edge + Multi-Agent OS)`
+> **Verzia systému:** `Trinity 11.0 (Cloudflare Edge + Multi-Agent OS)`
 > **Produkčná doména:** [`https://auru.space`](https://auru.space) · **Vývojová doména:** [`https://auru.dev`](https://auru.dev)
 > **Pravdivostná politika:** `Truth Policy 2.0 (evidence-required)`
 
 ---
 
-## 📖 KAPITOLA 1: Ako správne používať Trinity 10.3 (Používateľská príručka & Help)
+## 📖 KAPITOLA 1: Ako správne používať Trinity 11.0 (Používateľská príručka & Help)
 
-Trinity 10.3 nie je obyčajný textový chatbot. Je to **autonómny cloudový operačný systém a asistentka**, ktorá má priamy prístup k databáze Cloudflare D1, úložiskám KV a R2, správe domén a DNS, platobným odkazom Revolut Pro / PayPal, bankovým SEPA príkazom, komoditnému desku a živému štúdiu vzhľadu UI.
+Trinity 11.0 nie je obyčajný textový chatbot. Je to **autonómny cloudový operačný systém a asistentka**, ktorá má priamy prístup k databáze Cloudflare D1, úložiskám KV a R2, správe domén a DNS, platobným odkazom Revolut Pro / PayPal, bankovým SEPA príkazom, komoditnému desku a živému štúdiu vzhľadu UI.
 
 ### 1.1 Komunikácia v Chate, Výber AI Motora & Multimodálny vstup
 V sekcii **◌ Chat** si v dolnej lište môžeš kedykoľvek zvoliť, ktorý mozog má tvoju požiadavku spracovať:
@@ -48,9 +48,9 @@ V sekcii **⚙ Nastavenia → 🎨 Živý vzhľad & UI** (alebo priamo príkazom
 
 ---
 
-## 🏗️ KAPITOLA 2: Kompletná Architektúra Trinity 10.3
+## 🏗️ KAPITOLA 2: Kompletná Architektúra Trinity 11.0
 
-Trinity 10.3 je postavená na bezserverovej (serverless) architektúre **Cloudflare Edge** s viacvrstvovým úložiskom a multi-agentovým jadrom.
+Trinity 11.0 je postavená na bezserverovej (serverless) architektúre **Cloudflare Edge** s viacvrstvovým úložiskom a multi-agentovým jadrom.
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────────────────┐
@@ -124,7 +124,7 @@ Sekcia **📈 Komodity & Banky** je rozdelená do 3 prehľadných pod-záložiek
 ## ⚖️ KAPITOLA 4: Licencie, Bezpečnosť & Právne informácie
 
 ### 4.1 Licenčná matica
-- **Trinity Morhfeus 10.3 Core & Business Logic:**
+- **Trinity Morhfeus 11.0 Core & Business Logic:**
   `Copyright © 2026 Trinity Morhfeus / Auru Digital Studio. Všetky práva vyhradené (Proprietary Owner License).`
 - **Open-Source závislosti a štandardy tretej strany:**
   - **Cloudflare Workers Runtime (`workerd`)** — `Apache License 2.0`

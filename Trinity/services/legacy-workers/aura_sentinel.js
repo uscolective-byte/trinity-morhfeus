@@ -1,5 +1,5 @@
 // AURA Sentinel — monitoruje bezpečnosť a detekuje anomálie (Trinity 10.2)
-import {runAuraAi, parseAuraJson, safeDbRun} from './aura_helpers.js';
+import {runAuraAi, parseAuraJson, safeDbRun, safeDbWrite, AURA_SERVICE_VERSION} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
@@ -18,7 +18,7 @@ export default {
           "Events: " + JSON.stringify(events.results) + "\nCritical: " + (critical?.c || 0) + "\nErrors: " + (errors?.c || 0)
         );
         const result = parseAuraJson(text);
-        await safeDbRun(env.DB.prepare("INSERT INTO timeline (id, event, category, details, created_at) VALUES (lower(hex(randomblob(16))), 'SENTINEL_SCAN', 'security', ?, datetime('now'))").bind("Risk: " + (result.risk_level || "unknown")).run());
+        await safeDbWrite(env.DB.prepare("INSERT INTO timeline (id, event, category, details, created_at) VALUES (lower(hex(randomblob(16))), 'SENTINEL_SCAN', 'security', ?, datetime('now'))").bind("Risk: " + (result.risk_level || "unknown")).run());
         return Response.json({ ok: true, result, traceId, from: "aura-sentinel" });
       }
       if (call.action === "sentinel.monitor") {
@@ -32,11 +32,11 @@ export default {
         return Response.json({ ok: true, result, traceId, from: "aura-sentinel" });
       }
       if (call.action === "sentinel.alert") {
-        await safeDbRun(env.DB.prepare("INSERT INTO security_events (event_type, severity, source, details, created_at) VALUES (?, ?, 'aura-sentinel', ?, datetime('now'))").bind(d.event_type || "alert", d.severity || "warning", d.details || "").run());
+        await safeDbWrite(env.DB.prepare("INSERT INTO security_events (event_type, severity, source, details, created_at) VALUES (?, ?, 'aura-sentinel', ?, datetime('now'))").bind(d.event_type || "alert", d.severity || "warning", d.details || "").run());
         return Response.json({ ok: true, traceId, from: "aura-sentinel" });
       }
       if (call.action === "aura.status") {
-        return Response.json({ ok: true, result: { agent: "sentinel", role: "Monitoruje bezpečnosť, deteguje anomálie a riadi alerty", status: "active", version: "10.2.0" }, traceId, from: "aura-sentinel" });
+        return Response.json({ ok: true, result: { agent: "sentinel", role: "Monitoruje bezpečnosť, deteguje anomálie a riadi alerty", status: "active", version: AURA_SERVICE_VERSION }, traceId, from: "aura-sentinel" });
       }
       const text = await runAuraAi(env, "Si AURA Sentinel. Vykonaj bezpečnostné monitorovanie.", d.prompt || call.action);
       return Response.json({ ok: true, result: { response: text }, traceId, from: "aura-sentinel" });

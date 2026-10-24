@@ -1,4 +1,10 @@
-export const TRINITY_VERSION='10.3.0';
+export const TRINITY_VERSION='11.0.0';
+
+export const TRINITY_SOURCE={repository:'uscolective-byte/trinity-morhfeus',branch:'main'};
+
+export function sourceMetadata(env){
+  return {repository:env.TRINITY_GITHUB_REPO||TRINITY_SOURCE.repository,branch:env.TRINITY_GITHUB_BRANCH||TRINITY_SOURCE.branch};
+}
 
 export function releaseMetadata(env){
   const version=env.CF_VERSION_METADATA;

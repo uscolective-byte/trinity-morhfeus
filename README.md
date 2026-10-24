@@ -1,84 +1,72 @@
-# Morhfeus / Trinity 10.3
+# Trinity / Morhfeus
 
-[![CodeQL Security](https://github.com/uscolective-byte/trinity-morhfeus/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/uscolective-byte/trinity-morhfeus/actions/workflows/codeql.yml?query=branch%3Amain)
-![Trinity Version](https://img.shields.io/badge/version-10.3.0-blue.svg)
-![Validation](https://img.shields.io/badge/validation-see_PR-blue.svg)
-![Deployment](https://img.shields.io/badge/deployment-verify_health-yellow.svg)
+Osobná asistentka, webové rozhranie a Cloudflare backend v jednom repozitári.
+Hlavná aplikácia a konfigurácia sú v `Trinity/`. Koreňové `src/` a `tests/`
+obsahujú kompatibilné vstupy; zdrojové zmeny smerujú do kanonických modulov.
 
-Hlavný pracovný priečinok autonómneho ekosystému **Trinity 10.3**. Trinity predstavuje osobnú AI asistentku s jednotnou stálou identitou, 45 odbornými špecializáciami, 57 zručnosťami a distribuovanou cloudovou aj desktopovou architektúrou.
+<!-- trinity-release:start -->
+Verzia zdroja: **11.0.0**. Repozitár: [uscolective-byte/trinity-morhfeus](https://github.com/uscolective-byte/trinity-morhfeus), vetva **`main`**.
 
----
+| Doména | Prostredie | Worker |
+|---|---|---|
+| auru.space | production | `trinity` |
+| auru.dev | development | `trinity-development` |
 
-## 🌐 Prostredia a evidencia nasadenia
+Tieto údaje sa generujú zo zdrojov a konfigurácie. Aktuálne nasadenie over cez `/health`, `/ready` a commit tag; nejde o živý stav integrácií.
+<!-- trinity-release:end -->
 
-Zdrojové vydanie: **10.3.0**. Produkčný `/health` počas prípravy stále vracal **10.2.0**; nasadenie 10.3 sa musí potvrdiť verziou a commit tagom. Podrobnosti zmien a aktivácie: [EVOLUTION-10.3](Dokumentacia/EVOLUTION-10.3.md).
+## Spustenie a overenie
 
-Tabuľka nižšie je historická evidencia, nie nová kontrola pripravenosti všetkých služieb.
+Použi Node.js 22 alebo novší a npm. Na Windows používaj `npm.cmd`, ak
+PowerShell blokuje `npm.ps1`.
 
-| Prostredie | Doména | Worker | Cloudflare Version ID | Stav |
-|---|---|---|---|---|
-| **Produkcia** | <https://auru.space> | `trinity` | `fc77de09-aabf-473b-8d33-2d83b186de01` | `serving` |
-| **Vývoj** | <https://auru.dev> | `trinity-development` | `ad654534-4efd-4bc2-ac14-be07add85799` | `serving` |
-| **Lokálna brána** | `http://127.0.0.1:8791` | `Local-Gateway` | v1.3.0 | offline / on-demand |
-
----
-
-## 🏛️ Architektúra 7 modulov ekosystému
-
-Celý projekt pozostáva zo 7 synchronizovaných modulov:
-
-1. **`Trinity/`** – Hlavné operačné centrum a backendový Cloudflare Worker (zdrojové vydanie v10.3.0).
-   - Riadenie chatu a workflows (Cloudflare Workflow, Durable Objects `Brain`, `CHAT_AGENT`, `GUARDIAN_AGENT`).
-   - Perzistentná pamäť (Cloudflare D1 `trinity-v03`), rýchla vyrovnávacia pamäť (Workers KV `Mastermind`) a archív artefaktov (Cloudflare R2 `trinity-artifacts`).
-   - Webové rozhranie Trinity 10.2 (`/` pre chat asistent a `/ops` pre operačné centrum).
-   - Zabudovaná rýchla cesta pre priame otváranie programov na počítači cez PC Bridge.
-2. **`PC-Bridge-Worker/`** – Cloudflare Worker zabezpečujúci most medzi cloudom a lokálnym počítačom. Prijíma heartbeaty a synchronizuje schválené systémové akcie.
-3. **`Local-Gateway/`** – Privátna lokálna systémová brána na porte `127.0.0.1:8791`. Vykonáva bezpečné desktopové operácie na Windows PC (Kalkulačka, Poznámkový blok, Google Chrome, Paint, Prieskumník, Git a vývojárske príkazy).
-4. **`Capacity-Worker/`** – Monitorovanie systémových kapacít, tokenových rozpočtov, limitov a nákladov.
-5. **`Audit-Worker/`** – Zber telemetrie, auditných záznamov a bezpečnostných logov.
-6. **`Integrations-Worker/`** – Správa konektorov, externých poskytovateľov a OAuth rozhraní.
-7. **`Knowledge-Worker/`** – Sémantické vyhľadávanie v znalostnej báze a správa indexovaných dokumentov.
-
-### Pomocné priečinky
-- **`Dokumentacia/`** – Aktuálny stav, história zmien, architektúra a operačné manuály.
-- **`Firebase/`** – Stavový most a konfigurácia hostingu.
-- **`Navrhy/`** – Vizuálne a architektonické koncepty.
-
----
-
-## 🚀 Spustenie a vývoj
-
-### 1. Spustenie PC Bridge na počítači
-Pre prepojenie Trinity s tvojím počítačom a aktiváciu zeleného odznaku **`PC: Online`**:
-- Dvojklikom spusti [Local-Gateway\SPUSTIT-LOCAL.cmd](file:///c:/Users/saboi/OneDrive/trinity/Local-Gateway/SPUSTIT-LOCAL.cmd).
-- Alebo cez PowerShell:
-  ```powershell
-  cd Local-Gateway
-  .\start.ps1
-  ```
-- Pre trvalé automatické spustenie pri štarte Windows:
-  ```powershell
-  cd Local-Gateway
-  .\install-autostart.ps1
-  ```
-
-### 2. Zostavenie a synchronizácia všetkých modulov
-Celý ekosystém je možné zostaviť a overiť jedným príkazom:
 ```powershell
-.\SYNC-BUILD.ps1 -Test
+npm.cmd run setup
+npm.cmd run docs:check
+npm.cmd run build
+npm.cmd run check
 ```
 
-### 3. Spustenie testov v Trinity
+`setup` inštaluje závislosti cloudových modulov a lokálnej brány. `build`
+vykonáva dry-run zostavenia; nič nenasadzuje. `check` spúšťa testy modulov,
+integračný runtime a kontrolu závislostí. Skutočný výsledok určuje návratový kód.
+
+Na synchronizáciu čistého `main` s `origin/main` a následné overenie:
+
 ```powershell
-cd Trinity
-npm test
+npm.cmd run sync
 ```
-*(Aktuálny počet a výsledok testov je v protokole testovania a PR; staré počty nie sú dôkaz aktuálneho stavu.)*
 
----
+Synchronizácia odmietne nesprávny repozitár, vetvu aj rozpracované súbory.
+Starší Windows vstup `SYNC-BUILD.ps1` zostáva podporovaný; `-SkipSync` umožňuje
+lokálne overenie rozpracovaného stromu a `-Deploy` vyžaduje čistý kanonický zdroj.
+NPM chyby z tohto vstupu sa ukladajú do ignorovaného priečinka `logs/`.
 
-## 🔒 Bezpečnostné pravidlá a pravdivosť (Truth Policy)
+Verzia, domény a vetva v oboch README sa generujú z aplikácie a Wrangler
+konfigurácie. Po zmene vydania spusti `npm.cmd run docs:sync`; CI kontroluje
+`npm.cmd run docs:check`.
 
-- **Žiadne tajomstvá v git repozitári**: Poverenia, kľúče, DPAPI súbory, `.env` a `.credentials` sa nikdy nečítajú verejne ani necommitujú.
-- **Režim dôkazov (Truth Mode)**: Trinity nepredstiera vedomie a neoznačuje externú akciu za hotovú bez potvrdeného záznamu (receipt) z overeného nástroja.
-- **Administrátorská autorizácia**: Nezvratné systémové akcie vyžadujú serverom overenú rolu administrátora alebo explicitné schválenie.
+## Moduly
+
+- `Trinity/`: chat, AI Studio, domény, pamäť, platobné odkazy, API a MCP.
+- `Knowledge-Worker/`, `Integrations-Worker/`, `Capacity-Worker/`: znalosti, konektory a kapacity.
+- `PC-Bridge-Worker/`, `Local-Gateway/`, `Local-Desktop/`: cloudový most a lokálne nástroje.
+- `Audit-Worker/`: auditné záznamy.
+
+Lokálnu bránu spusti cez `npm.cmd run gateway`; desktop cez
+`npm.cmd run desktop`. Spúšťacie súbory a oprávnenia opisujú README týchto modulov.
+
+## Nasadenie a integrácie
+
+[Postup jedného repozitára pre obe domény](Trinity/docs/SINGLE_REPOSITORY.md)
+opisuje nasadenie vývoja, overenie commitu a následnú produkciu. Primárne
+D1/KV/R2 úložiská sú oddelené; niektoré pomocné Workers služby sú spoločné.
+Staršie repozitáre sa synchronizáciou nemažú.
+
+[Konfigurácia aplikácie a prihlasovania](Trinity/README.md) odlišuje hotový kód
+od aktivovaných účtov. E-mail, RevTag ani telefónne číslo nenahrádzajú
+OAuth súhlas, platobný checkout alebo pripojenú SMS bránu.
+
+`/health` potvrdzuje dostupnosť a verziu; `/ready` pripravenosť väzieb a schémy.
+Samy nepotvrdzujú vykonanie platby, registráciu domény ani dostupnosť každého modelu.
+Tajomstvá patria do Worker secrets alebo ignorovaných lokálnych súborov.

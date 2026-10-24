@@ -2,7 +2,7 @@
   "generated_by": "openai-codex",
   "reviewed": false,
   "risk": "medium",
-  "component": "Trinity/release-sync",
-  "description": "Synchronizes the validated release: real Pro hosted-link support with an empty catalog, portable project build/check entrypoints, safe synchronization, corrected deployment verification and source/live status reporting. Local module checks passed; external credentials and live Pro payments are not claimed.",
-  "source_pr": 47
+  "component": "Trinity/auth-and-source-sync",
+  "description": "Synchronizes source-derived README release data, canonical main-only synchronization and deployment entrypoints. Shares authentication bootstrap across both interfaces, checks redemption errors and preserves ticket issuer identity with a D1 migration. External OAuth, payments and messaging activation are not claimed.",
+  "source_pr": null
 }

@@ -1,5 +1,5 @@
 // AURA Planner — dekomponuje ciele, plánuje projekty a šprinty (Trinity 10.2)
-import {runAuraAi, parseAuraJson, safeDbRun} from './aura_helpers.js';
+import {runAuraAi, parseAuraJson, safeDbRun, safeDbWrite, AURA_SERVICE_VERSION} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
@@ -16,10 +16,10 @@ export default {
         );
         const result = parseAuraJson(text);
         const id = crypto.randomUUID();
-        await safeDbRun(env.DB.prepare("INSERT INTO tasks (id, title, description, status, assigned_agent, priority, created_at, updated_at) VALUES (?,?,?,?, 'planner', ?, datetime('now'), datetime('now'))").bind(id, d.task || d.title || "plan", JSON.stringify(result), 'pending', d.priority || 'normal').run());
+        await safeDbWrite(env.DB.prepare("INSERT INTO tasks (id, title, description, status, assigned_agent, priority, created_at, updated_at) VALUES (?,?,?,?, 'planner', ?, datetime('now'), datetime('now'))").bind(id, d.task || d.title || "plan", JSON.stringify(result), 'pending', d.priority || 'normal').run());
         if (result.steps && Array.isArray(result.steps)) {
           for (const s of result.steps) {
-            await safeDbRun(env.DB.prepare("INSERT INTO autonomous_tasks (id, title, description, status, priority, created_at) VALUES (lower(hex(randomblob(16))), ?, ?, 'pending', ?, datetime('now'))").bind(s.title, s.description, s.priority || 'normal').run());
+            await safeDbWrite(env.DB.prepare("INSERT INTO autonomous_tasks (id, title, description, status, priority, created_at) VALUES (lower(hex(randomblob(16))), ?, ?, 'pending', ?, datetime('now'))").bind(s.title, s.description, s.priority || 'normal').run());
           }
         }
         return Response.json({ ok: true, result, traceId, from: "aura-planner" });
@@ -30,7 +30,7 @@ export default {
           "Projekt: " + (d.project || "") + "\nCiele: " + (d.goals || "") + "\nObmedzenia: " + (d.constraints || "")
         );
         const result = parseAuraJson(text);
-        await safeDbRun(env.DB.prepare("INSERT INTO ops_roadmap (id, title, status, priority, created_at) VALUES (lower(hex(randomblob(16))), ?, 'planned', ?, datetime('now'))").bind(d.project || "project", d.priority || "normal").run());
+        await safeDbWrite(env.DB.prepare("INSERT INTO ops_roadmap (id, title, status, priority, created_at) VALUES (lower(hex(randomblob(16))), ?, 'planned', ?, datetime('now'))").bind(d.project || "project", d.priority || "normal").run());
         return Response.json({ ok: true, result, traceId, from: "aura-planner" });
       }
       if (call.action === "plan.sprint") {
@@ -57,7 +57,7 @@ export default {
         );
         const plan = parseAuraJson(text);
         const goalId = crypto.randomUUID();
-        await safeDbRun(env.DB.prepare("INSERT INTO goals (id, goal, priority, status, owner, created_at, updated_at) VALUES (?, ?, ?, 'active', 'aura-planner', datetime('now'), datetime('now'))").bind(goalId, d.goal || "goal", d.priority || 5).run());
+        await safeDbWrite(env.DB.prepare("INSERT INTO goals (id, goal, priority, status, owner, created_at, updated_at) VALUES (?, ?, ?, 'active', 'aura-planner', datetime('now'), datetime('now'))").bind(goalId, d.goal || "goal", d.priority || 5).run());
         return Response.json({ ok: true, result: { goalId, plan }, traceId, from: "aura-planner" });
       }
       if (call.action === "plan.decompose") {
@@ -73,7 +73,7 @@ export default {
         return Response.json({ ok: true, result: r.results, traceId, from: "aura-planner" });
       }
       if (call.action === "aura.status") {
-        return Response.json({ ok: true, result: { agent: "planner", role: "Dekomponuje ciele, plánuje projekty, šprinty a časové osi", status: "active", version: "10.2.0" }, traceId, from: "aura-planner" });
+        return Response.json({ ok: true, result: { agent: "planner", role: "Dekomponuje ciele, plánuje projekty, šprinty a časové osi", status: "active", version: AURA_SERVICE_VERSION }, traceId, from: "aura-planner" });
       }
       const text = await runAuraAi(env, "Si AURA Planner. Plánuj ciele a koordinuj tím.", d.prompt || call.action);
       return Response.json({ ok: true, result: { response: text }, traceId, from: "aura-planner" });

@@ -1,6 +1,7 @@
 import {z} from 'zod';
 import {callModel} from './services.js';
 import {HttpError} from './security.js';
+import {auditHtmlQuality, recordStudioReview} from './studio-review.js';
 
 const studioOptions={provider:z.enum(['auto','workers-ai','ollama','gemini','openai']).default('auto'),quality:z.enum(['fast','balanced','high']).default('balanced')};
 const createSchema=z.object({name:z.string().trim().min(1).max(80).optional(),prompt:z.string().trim().min(8).max(8000),...studioOptions}).strict();
@@ -40,7 +41,9 @@ export async function getStudioProject(env,owner,id){
   const row=await env.DB.prepare('SELECT * FROM ops_studio_projects WHERE id=? AND owner_id=?').bind(id,owner).first();if(!row)throw new HttpError(404,'Studio projekt neexistuje.');
   const object=await env.ARTIFACTS.get(row.html_key);if(!object)throw new HttpError(404,'Náhľad projektu chýba.');
   const versions=(await env.DB.prepare('SELECT version,prompt,model,created_at FROM ops_studio_versions WHERE project_id=? ORDER BY version DESC LIMIT 20').bind(id).all()).results;
-  return {...rowOut(row),html:await object.text(),versions};
+  const html=await object.text();
+  const latest_review=auditHtmlQuality(html);
+  return {...rowOut(row),html,versions,latest_review};
 }
 export async function createStudioProject(env,owner,input){
   const data=createSchema.parse(input),id=crypto.randomUUID(),built=await generate(env,data.prompt,'',data),name=data.name||nameFromPrompt(data.prompt),key='studio/'+id+'/v1.html';
@@ -50,6 +53,8 @@ export async function createStudioProject(env,owner,input){
     env.DB.prepare('INSERT INTO ops_studio_versions(project_id,version,prompt,html_key,model) VALUES(?,?,?,?,?)').bind(id,1,data.prompt,key,built.model),
     env.DB.prepare("INSERT INTO ops_events(action,details) VALUES('studio_created',?)").bind(JSON.stringify({id,name,model:built.model,provider:built.provider,quality:built.quality}))
   ]);
+  const review = auditHtmlQuality(built.html);
+  await recordStudioReview(env, id, 1, review).catch(()=>{});
   return getStudioProject(env,owner,id);
 }
 export async function reviseStudioProject(env,owner,id,input){
@@ -60,5 +65,7 @@ export async function reviseStudioProject(env,owner,id,input){
     env.DB.prepare('INSERT INTO ops_studio_versions(project_id,version,prompt,html_key,model) VALUES(?,?,?,?,?)').bind(id,version,data.prompt,key,built.model),
     env.DB.prepare("INSERT INTO ops_events(action,details) VALUES('studio_revised',?)").bind(JSON.stringify({id,version,model:built.model,provider:built.provider,quality:built.quality}))
   ]);
+  const review = auditHtmlQuality(built.html);
+  await recordStudioReview(env, id, version, review).catch(()=>{});
   return getStudioProject(env,owner,id);
 }

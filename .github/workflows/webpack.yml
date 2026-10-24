@@ -55,6 +55,9 @@ jobs:
         working-directory: Trinity
         run: npm ci
 
+      - name: Check synchronized release documentation
+        run: npm run docs:check
+
       - name: Audit dependencies (high+)
         working-directory: Trinity
         run: npm audit --audit-level=high

@@ -1,6 +1,13 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {googleAuthRequired,googleOAuthConfigured,isGoogleAdminEmail,verifyGoogleIdToken} from '../src/google-auth.js';
+
+test('Google enabled flag cannot replace OAuth secret or a secure callback',()=>{
+ const config={GOOGLE_ENABLED:'true',GOOGLE_CLIENT_ID:'client',TRINITY_ADMIN_EMAILS:'owner@example.test',GOOGLE_REDIRECT_URI:'https://auru.space/auth/google/callback'};
+ assert.equal(googleOAuthConfigured(config),false);
+ assert.equal(googleOAuthConfigured({...config,GOOGLE_CLIENT_SECRET:'secret'}),true);
+ assert.equal(googleOAuthConfigured({...config,GOOGLE_CLIENT_SECRET:'secret',GOOGLE_REDIRECT_URI:'http://other.test/callback'}),false);
+});
 import {authenticate,hash,isOwnerEmail} from '../src/security.js';
 
 const encode=value=>btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(value)))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');

@@ -1,5 +1,5 @@
 // AURA Architect — navrhuje architektúru systémov a komponentov (Trinity 10.2)
-import {runAuraAi, parseAuraJson, safeDbRun} from './aura_helpers.js';
+import {runAuraAi, parseAuraJson, safeDbRun, safeDbWrite, AURA_SERVICE_VERSION} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
@@ -15,7 +15,7 @@ export default {
           "Požiadavky: " + (d.requirements || "") + "\nŠkála: " + (d.scale || "medium") + "\nObmedzenia: " + (d.constraints || "")
         );
         const result = parseAuraJson(text);
-        await safeDbRun(env.DB.prepare("INSERT INTO thoughts (id, thought_type, content, trigger_message, resulting_action, created_at) VALUES (?, 'architecture', ?, ?, ?, datetime('now'))").bind(crypto.randomUUID(), JSON.stringify(result), d.requirements||"", "architect.design").run());
+        await safeDbWrite(env.DB.prepare("INSERT INTO thoughts (id, thought_type, content, trigger_message, resulting_action, created_at) VALUES (?, 'architecture', ?, ?, ?, datetime('now'))").bind(crypto.randomUUID(), JSON.stringify(result), d.requirements||"", "architect.design").run());
         return Response.json({ ok: true, result, traceId, from: "aura-architect" });
       }
       if (call.action === "architect.review") {
@@ -48,15 +48,15 @@ export default {
         return Response.json({ ok: true, result: { nodes: nodes.results, edges: edges.results }, traceId, from: "aura-architect" });
       }
       if (call.action === "architect.node.add") {
-        await safeDbRun(env.DB.prepare("INSERT INTO graph_nodes (id, type, label, properties, content, created_at) VALUES (lower(hex(randomblob(16))), ?, ?, '{}', ?, datetime('now'))").bind(d.type||"concept", d.label, d.content||"").run());
+        await safeDbWrite(env.DB.prepare("INSERT INTO graph_nodes (id, type, label, properties, content, created_at) VALUES (lower(hex(randomblob(16))), ?, ?, '{}', ?, datetime('now'))").bind(d.type||"concept", d.label, d.content||"").run());
         return Response.json({ ok: true, traceId, from: "aura-architect" });
       }
       if (call.action === "architect.edge.add") {
-        await safeDbRun(env.DB.prepare("INSERT INTO graph_edges (id, source_id, target_id, relation, weight, created_at) VALUES (lower(hex(randomblob(16))), ?, ?, ?, ?, datetime('now'))").bind(d.source_id, d.target_id, d.relation||"related", d.weight||1.0).run());
+        await safeDbWrite(env.DB.prepare("INSERT INTO graph_edges (id, source_id, target_id, relation, weight, created_at) VALUES (lower(hex(randomblob(16))), ?, ?, ?, ?, datetime('now'))").bind(d.source_id, d.target_id, d.relation||"related", d.weight||1.0).run());
         return Response.json({ ok: true, traceId, from: "aura-architect" });
       }
       if (call.action === "aura.status") {
-        return Response.json({ ok: true, result: { agent: "architect", role: "Navrhuje systémovú architektúru, diagramy a grafové závislosti", status: "active", version: "10.2.0" }, traceId, from: "aura-architect" });
+        return Response.json({ ok: true, result: { agent: "architect", role: "Navrhuje systémovú architektúru, diagramy a grafové závislosti", status: "active", version: AURA_SERVICE_VERSION }, traceId, from: "aura-architect" });
       }
       return Response.json({ ok: false, error: "Unknown action: " + call.action, traceId, from: "aura-architect" });
     } catch (e) { return Response.json({ ok: false, error: e.message, traceId, from: "aura-architect" }); }

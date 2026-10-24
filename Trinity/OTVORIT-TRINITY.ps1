@@ -1,7 +1,8 @@
-$ErrorActionPreference = 'Stop'
 param(
+  [ValidateSet('production', 'development')]
   [string]$Environment = 'production'
 )
+$ErrorActionPreference = 'Stop'
 
 $targetUrl = if ($Environment -eq 'development') { 'https://auru.dev' } else { 'https://auru.space' }
 $secretPath = Join-Path $PSScriptRoot '.credentials\access.dpapi'

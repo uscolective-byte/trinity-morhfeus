@@ -4,6 +4,7 @@
 **/.firebase/
 **/dist/
 **/*.log
+/logs/
 Zaznamy/
 Referencie/
 Prototypy/

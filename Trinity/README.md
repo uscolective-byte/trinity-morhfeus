@@ -1,130 +1,81 @@
 # Trinity na Cloudflare
 
-Produkčné operačné centrum jednej osobnej asistentky Trinity. Verejný chat používa jednu identitu; 45 interných špecializácií, dva AI poskytovatelia a nástroje zostávajú v pozadí.
+Jedna asistentka so spoločným zdrojom, dvoma prostrediami a samostatnou
+konfiguráciou prihlásenia a externých služieb.
 
-## Google účty a schvaľovanie profilov
+<!-- trinity-release:start -->
+Verzia zdroja: **11.0.0**. Repozitár: [uscolective-byte/trinity-morhfeus](https://github.com/uscolective-byte/trinity-morhfeus), vetva **`main`**.
 
-Google login je implementovaný, ale zámerne sa nezapne, kým nie sú nastavené OAuth credentials. Admin allowlist (`TRINITY_ADMIN_EMAILS`) obsahuje `saboivan2008@gmail.com`, `usc31@auru.space`, `uscolective@gmail.com` a `delirium.trade12@gmail.com`. Google musí vrátiť overenú zhodu e-mailu; admin rola sa nastavuje iba podľa tohto allowlistu.
+| Doména | Prostredie | Worker |
+|---|---|---|
+| auru.space | production | `trinity` |
+| auru.dev | development | `trinity-development` |
 
-Po nakonfigurovaní Google OAuth sa ostatné overené Google účty môžu zaregistrovať do stavu `pending`. Admin ich schváli alebo zamietne v technickom centre v sekcii Používateľské účty. Každá session sa pri požiadavke kontroluje voči aktuálnemu stavu a role v D1.
+Tieto údaje sa generujú zo zdrojov a konfigurácie. Aktuálne nasadenie over cez `/health`, `/ready` a commit tag; nejde o živý stav integrácií.
+<!-- trinity-release:end -->
 
-Pred prepnutím produkcie na Google-only režim:
+## Lokálny vývoj
 
-1. V Google Cloud vytvor OAuth Client typu Web application a pridaj autorizovaný redirect URI `https://auru.dev/api/auth/google/callback`.
-2. Nastav `GOOGLE_CLIENT_ID` ako Worker variable a ulož iba `GOOGLE_CLIENT_SECRET` cez `npx wrangler secret put GOOGLE_CLIENT_SECRET` v priečinku `Trinity`; secret nevkladaj do repozitára.
-3. Skontroluj `GOOGLE_REDIRECT_URI=https://auru.dev/api/auth/google/callback` a až po otestovaní nastav `TRINITY_AUTH_MODE=google` ako Worker variable.
-4. Najprv otestuj Google login a admin účet na stagingu. V Google-only režime sa prístupový kľúč a jednorazové legacy linky odmietnu.
-
-Bez týchto credentials zostáva Google tlačidlo skryté a doterajší prihlasovací režim sa nemení.
-
-Trinity má stálu komunikačnú osobnosť a rozhodovací proces `kontext → plán → nástroje → kontrola dôkazov → odpoveď`. Nie je vydávaná za vedomú ani živú bytosť. Pri tvrdeniach o vykonanej externej akcii platí režim dôkazov: bez potvrdenia schváleného nástroja odpoveď takú akciu nesmie označiť za hotovú.
-
-## Živé adresy
-
-- Chat: <https://auru.space/>
-- Pokročilé centrum: <https://auru.space/ops>
-- Worker: <https://trinity.saboivan2008.workers.dev/>
-- MCP: `POST https://auru.space/mcp` (vyžaduje autorizáciu)
-
-## Gemini MCP most
-
-Gemini sa nepripája cez voľne spustiteľný Python skript. Používa produkčný MCP endpoint a samostatný 90-dňový kľúč s oprávneniami `mcp:read` a `mcp:write`. Kľúč nie je správca Trinity, nefunguje na ostatných privátnych API a zmenové nástroje zostávajú za schvaľovacou bránou a auditným dokladom PC Bridge.
-
-1. Vytvor kľúč bez vypísania hodnoty: `powershell -ExecutionPolicy Bypass -File scripts/provision-gemini-mcp.ps1`.
-2. V Gemini pridaj vlastnú MCP aplikáciu s URL `https://auru.space/mcp`.
-3. Keď formulár vyžiada Bearer token, skopíruj ho bezpečne cez `powershell -ExecutionPolicy Bypass -File scripts/copy-gemini-mcp-token.ps1`.
-
-Token je lokálne uložený iba zašifrovaný Windows DPAPI v ignorovanom priečinku `.credentials`. Opätovné vytvorenie je zámerne blokované; rotácia vyžaduje prepínač `-Rotate` a starý záznam treba následne zrušiť v Nastaveniach Trinity.
-
-## Ako Trinity pracuje
-
-1. Bežná konverzácia ide priamo cez jednu identitu Trinity.
-2. Pracovný príkaz sa automaticky rozdelí na odolné kroky v Cloudflare Workflow.
-3. Interné špecializácie pripravia plán, vykonajú odbornú časť a skontrolujú výsledok.
-4. Posledný krok zjednotí odpoveď do jedného hlasu Trinity.
-5. Stav a konverzácia sa ukladajú do D1; úplný výstup pracovnej úlohy sa archivuje v R2.
-
-```text
-auru.dev chat
-    -> Worker trinity
-        -> autentifikácia + limity
-        -> D1 pamäť a história
-        -> Cloudflare Workflow
-            -> Ollama alebo Workers AI
-            -> povolené nástroje
-            -> kontrola výsledku
-        -> R2 artefakt
-```
-
-## Zapojené Cloudflare služby
-
-- Worker `trinity`
-- Workflow `trinity-operations`
-- D1 `trinity-v03`
-- R2 `trinity-artifacts`
-- KV `Mastermind`
-- Workers AI
-- Secrets Store pre Ollama API kľúč
-- tri zachované Durable Objects
-- interné service bindings pre existujúce Trinity/Aura Workery
-
-## Schopnosti
-
-- slovenský a anglický chat
-- trvalá pamäť s označením pôvodu
-- čítanie projektov a úloh
-- webový výskum
-- presné výpočty a analýza textu
-- kontrola dostupnosti interných služieb
-- MCP nástroje: `list_agents`, `dispatch_task`, `get_task`, `search_memory`, `check_services`
-- bezpečný návrat z Ollama na Workers AI pri výpadku primárneho modelu
-- AI Studio: generovanie kompletného webu, živý sandboxovaný náhľad, iterácie, verzie v D1/R2 a export HTML
-- samostatná sekcia Nastavenia s prepínaním voliteľných modulov
-- privátne systémové operácie cez lokálnu bránu, samostatné schválenie a auditné potvrdenie
-- stála osobnosť uložená v D1, bez predstierania vedomia alebo biologických emócií
-- automatická blokácia nepodložených tvrdení typu „nasadila som“, „vymazala som“ alebo „overila som“
-- potvrdenia nástrojov s identifikátorom, časom a typom účinku
-
-## Nainštalované moduly
-
-Všetkých 11 modulov je súčasťou jadra Trinity a ich stav je uložený v D1: pamäť, projekty, webový výskum, strážca služieb, výpočty, analýza textu, čas a dátum, katalóg schopností, strážca pravdivosti, MCP most a archív výstupov. Nejde o samostatné osobnosti; sú to nástroje jednej Trinity. Strážca pravdivosti a archív sa nedajú vypnúť cez rozhranie.
-
-## Bezpečnostné hranice
-
-- tajomstvá nie sú v zdrojovom kóde ani vo Wrangler konfigurácii
-- všetky súkromné API a MCP vyžadujú autorizáciu
-- požiadavky z cudzieho originu sú blokované
-- vstupy majú schémy, limity veľkosti a rýchlostné limity
-- SQL dotazy používajú parametre a nástroje majú pevný zoznam povolení
-- starý verejný SQL executor je vyradený
-- pamäť sa považuje za nedôveryhodný kontext, nie za systémový príkaz
-- automatický self-write jadra nie je povolený; zmena kódu sa nasadzuje až po výslovnom schválení
-- stará pamäť, plán ani dostupná konfigurácia sa nepovažujú za dôkaz vykonanej akcie
-
-## Lokálne overenie
+Z koreňa repozitára spusti `npm.cmd run setup`. Potom v `Trinity/`:
 
 ```powershell
-npm install
-npm run types
-npm run build
-npm test
+npm.cmd run dev
+npm.cmd test
+npm.cmd run build:development
 ```
+
+`npm test` zahŕňa produkčný dry-run build a testy; neznamená nasadenie.
+Úplné overenie všetkých modulov spúšťa koreňový príkaz `npm.cmd run check`.
+
+## Prihlásenie a jednorazové odkazy
+
+Chat je na `/`, technické centrum na `/ops`, autorizované MCP na `/mcp`.
+Obe rozhrania používajú spoločný `/auth-bootstrap.js`: kontrolujú HTTP chyby,
+nesprávne odpovede a časový limit a zobrazia čitateľnú chybu prihlásenia.
+
+Autorizovaný klient vytvorí odkaz cez `POST /api/ops/login-ticket`.
+Fragment `#login=...` sa odstráni z adresy pred ďalšími požiadavkami.
+`POST /api/ops/redeem` spotrebuje token iba raz; platnosť je 120 sekúnd.
+Nové tokeny prenášajú e-mail autentifikovaného vydavateľa do relácie.
+Staršie tokeny bez identity nezískavajú rolu vlastníka. Vypršaný alebo použitý
+odkaz vyžaduje vytvorenie nového odkazu cez spúšťač.
+
+V Google-only režime (`TRINITY_AUTH_MODE=google`) sú legacy kľúče a jednorazové
+odkazy vypnuté. Google OAuth musí mať klienta a súhlas vlastníka. Povolené návraty:
+
+- produkcia: `https://auru.space/auth/google/callback`;
+- vývoj: `https://auru.dev/auth/google/callback`.
+
+Podporované sú aj aliasy `/api/auth/google/callback`. V OAuth klientovi povoľ
+presné URL použité prihlasovacím vstupom; `/api/auth/google/start` používa
+`/api/auth/google/callback` a vstupy `/auth/google/...` používajú
+`/auth/google/callback`. `GOOGLE_ENABLED=true` nenahrádza klientsky secret
+ani overenie prihlásenia.
+
+`GOOGLE_CLIENT_ID` a `GOOGLE_CLIENT_SECRET` nastav osobitne pre každý Worker;
+napríklad `npx.cmd wrangler secret put GOOGLE_CLIENT_SECRET --env development`
+pre vývoj a rovnaký príkaz s `--env=""` pre produkciu. Hodnoty neukladaj do Gitu.
+`GOOGLE_REDIRECT_URI` už rozlišuje prostredia vo `wrangler.jsonc`.
+Google-only režim zapni až po overení klienta, návratu a admin allowlistu.
+`GET /api/auth/config` zobrazuje aktuálny režim; implementácia OAuth sama
+nepotvrdzuje jeho aktiváciu. Google login neposkytuje automaticky prístup
+k Workspace, Drive ani Google Cloud; tie potrebujú samostatné oprávnenia.
 
 ## Nasadenie
 
-```powershell
-npx wrangler d1 migrations apply DB --remote
-npm run deploy
-```
+Použi [postup pre obe prostredia](docs/SINGLE_REPOSITORY.md). Pred novým kódom
+aplikuj migrácie príslušnej databázy. Nasadenie označ celým commit SHA a over
+cez `scripts/verify-deployment.mjs`; výsledok musí sedieť na doméne, verzii,
+prostredí, repozitári, vetve a commit tagu.
 
-Lokálna verzia 8.0.0 pridáva viacjazyčný chat s automatickým výberom jazyka, model `@cf/openai/gpt-oss-120b`, rozšírené vedecké a technické inštrukcie, väčší kontext rozhovoru, štyri bezpečné nástrojové kroky, rozšírenú matematiku a skutočné generovanie obrázkov cez Workers AI + R2. Video a hudba zostávajú pravdivo označené ako nepripojené, kým nebude nakonfigurovaný a živým testom overený vhodný generátor. Táto verzia nie je produkčná, kým neprejde nasadením a živým overením.
+## Platby, komunikácia a lokálny počítač
 
-Aktuálny Cloudflare Version ID: `e1999413-7972-46fd-ab30-4dce85a3a9d2`.
+[Revolut integrácia](REVOLUT.md) rozlišuje platobný odkaz od overenej úhrady.
+PayPal/Revolut účty, webhooky a poskytovatelia upozornení vyžadujú vlastnú
+konfiguráciu a skutočné overenie. Telefónny kontakt sám neaktivuje SMS ani WhatsApp.
+Papierové portfólio a sandbox peňaženka nie sú bankový zostatok.
 
-## Denný plánovač a Microsoft Copilot
-
-Lokálny MCP nástroj `create_daily_plan` pripravuje plán z úloh a časového rozpočtu cez existujúci workflow. [Inštrukcie, Copilot Studio a úplný testovací postup](DAILY-PLANNER.md) rozlišujú lokálne testy od živých integrácií. Táto zmena zatiaľ nie je nasadená.
-
-## Revolut Pro – platobné odkazy
-
-[Integrácia skutočných Revolut Pro platobných odkazov](REVOLUT.md) používa owner-only katalóg a verejné presmerovanie zákazníka na uložený odkaz. Bez Merchant API kľúča a bez novej D1 migrácie. Katalóg čaká na skutočný Pro odkaz, službu a cenu; automatické potvrdenie úhrad nie je pripojené.
+PC Bridge potrebuje bežiaci lokálny gateway, autorizáciu a potvrdenie vykonania.
+[Lokálna brána](../Local-Gateway/README.md) a
+[desktop](../Local-Desktop/README.md) obsahujú ich spúšťacie postupy.
+Existencia modulu ani HTTP 200 nie sú potvrdením externej akcie.

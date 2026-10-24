@@ -7,11 +7,27 @@ function base64UrlDecode(value){const normalized=value.replace(/-/g,'+').replace
 function randomToken(){return base64UrlEncode(crypto.getRandomValues(new Uint8Array(32)));}
 function adminEmails(env){return new Set((env.TRINITY_ADMIN_EMAILS||'').split(',').map(email=>email.trim().toLowerCase()).filter(Boolean));}
 export function isGoogleAdminEmail(env,email){return adminEmails(env).has(String(email||'').trim().toLowerCase());}
+
+export function resolveGoogleRedirectUri(request, env) {
+  if (request) {
+    try {
+      const u = new URL(request.url);
+      const host = u.hostname;
+      const proto = u.protocol;
+      const path = u.pathname.startsWith('/api/') ? '/api/auth/google/callback' : '/auth/google/callback';
+      if (host === 'auru.dev') return `https://auru.dev${path}`;
+      if (host === 'auru.space') return `https://auru.space${path}`;
+      if (host === 'localhost' || host === '127.0.0.1') return `${proto}//${u.host}${path}`;
+    } catch {}
+  }
+  return env?.GOOGLE_REDIRECT_URI || 'https://auru.space/auth/google/callback';
+}
+
 export function googleOAuthConfigured(env){
   if(!env.GOOGLE_CLIENT_ID||!env.GOOGLE_CLIENT_SECRET||!env.GOOGLE_REDIRECT_URI||adminEmails(env).size===0)return false;
   try{const url=new URL(env.GOOGLE_REDIRECT_URI);return url.protocol==='https:'||url.hostname==='localhost'||url.hostname==='127.0.0.1';}catch{return false;}
 }
-export const googleAuthRequired=env=>env.TRINITY_AUTH_MODE==='google';
+export const googleAuthRequired=env=>env.TRINITY_AUTH_MODE==='google'||env.GOOGLE_REQUIRED==='true';
 
 async function signingKeys(force=false){
   if(!force&&cachedJwks&&cachedJwksUntil>Date.now())return cachedJwks;
@@ -37,16 +53,17 @@ export async function verifyGoogleIdToken(token,{clientId,nonce},getKeys=signing
 }
 
 function redirect(path,cookies=[]){const response=new Response(null,{status:303,headers:{Location:path,'Cache-Control':'no-store'}});for(const cookie of cookies)response.headers.append('Set-Cookie',cookie);return response;}
-const clearStateCookie='trinity_google_state=; Path=/api/auth/google/callback; HttpOnly; Secure; SameSite=Lax; Max-Age=0';
+const clearStateCookie='trinity_google_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0';
 
-export async function beginGoogleLogin(env){
+export async function beginGoogleLogin(env, request=null){
   if(!googleOAuthConfigured(env))throw new HttpError(503,'Google OAuth ešte nie je nakonfigurované.');
   const state=randomToken(),nonce=randomToken(),verifier=randomToken(),challenge=base64UrlEncode(new Uint8Array(await crypto.subtle.digest('SHA-256',textEncoder.encode(verifier))));
   const now=Date.now();await env.DB.prepare('DELETE FROM ops_oauth_states WHERE expires_at<=?').bind(now).run();
   await env.DB.prepare('INSERT INTO ops_oauth_states(state_hash,nonce,code_verifier,expires_at) VALUES(?,?,?,?)').bind(await hash(state),nonce,verifier,now+10*60_000).run();
+  const redirectUri=resolveGoogleRedirectUri(request,env);
   const target=new URL('https://accounts.google.com/o/oauth2/v2/auth');
-  for(const [key,value] of Object.entries({client_id:env.GOOGLE_CLIENT_ID,redirect_uri:env.GOOGLE_REDIRECT_URI,response_type:'code',scope:'openid email profile',state,nonce,code_challenge:challenge,code_challenge_method:'S256',prompt:'select_account'}))target.searchParams.set(key,value);
-  return redirect(target.toString(),[`trinity_google_state=${state}; Path=/api/auth/google/callback; HttpOnly; Secure; SameSite=Lax; Max-Age=600`]);
+  for(const [key,value] of Object.entries({client_id:env.GOOGLE_CLIENT_ID,redirect_uri:redirectUri,response_type:'code',scope:'openid email profile',state,nonce,code_challenge:challenge,code_challenge_method:'S256',prompt:'select_account'}))target.searchParams.set(key,value);
+  return redirect(target.toString(),[`trinity_google_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`]);
 }
 
 export async function finishGoogleLogin(request,env){
@@ -57,16 +74,17 @@ export async function finishGoogleLogin(request,env){
   if(!cookieState||!await equal(state,cookieState))throw new HttpError(401,'Google prihlasovacia relácia sa nezhoduje. Skús to znovu.');
   const transaction=await env.DB.prepare('DELETE FROM ops_oauth_states WHERE state_hash=? AND expires_at>? RETURNING nonce,code_verifier').bind(await hash(state),Date.now()).first();
   if(!transaction)throw new HttpError(401,'Google prihlasovacia relácia vypršala alebo už bola použitá.');
-  const form=new URLSearchParams({code,client_id:env.GOOGLE_CLIENT_ID,client_secret:env.GOOGLE_CLIENT_SECRET,redirect_uri:env.GOOGLE_REDIRECT_URI,grant_type:'authorization_code',code_verifier:transaction.code_verifier});
+  const redirectUri=resolveGoogleRedirectUri(request,env);
+  const form=new URLSearchParams({code,client_id:env.GOOGLE_CLIENT_ID,client_secret:env.GOOGLE_CLIENT_SECRET,redirect_uri:redirectUri,grant_type:'authorization_code',code_verifier:transaction.code_verifier});
   const tokenResponse=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:form,signal:AbortSignal.timeout(15000)});
   if(!tokenResponse.ok)throw new HttpError(401,'Google prihlasovací kód sa nepodarilo overiť.');
   const tokens=await tokenResponse.json();const identity=await verifyGoogleIdToken(tokens.id_token,{clientId:env.GOOGLE_CLIENT_ID,nonce:transaction.nonce});
-  const isOwner=isOwnerEmail(env,identity.email),isAdmin=isOwner||isGoogleAdminEmail(env,identity.email),role=isOwner?'owner':isAdmin?'admin':'user',now=Date.now();
+  const isOwner=isOwnerEmail(env,identity.email),isAdmin=isOwner||isGoogleAdminEmail(env,identity.email),dbRole=isAdmin?'admin':'user',now=Date.now();
   await env.DB.prepare(`INSERT INTO ops_users(email,google_sub,display_name,role,status) VALUES(?,?,?,?,?)
     ON CONFLICT(email) DO UPDATE SET google_sub=excluded.google_sub,display_name=excluded.display_name,
     role=excluded.role,
     status=CASE WHEN excluded.role IN ('owner','admin') THEN 'active' ELSE ops_users.status END,updated_at=datetime('now')`)
-    .bind(identity.email,identity.sub,identity.name,role,isAdmin?'active':'pending').run();
+    .bind(identity.email,identity.sub,identity.name,dbRole,isAdmin?'active':'pending').run();
   const user=await env.DB.prepare('SELECT role,status FROM ops_users WHERE email=?').bind(identity.email).first();
   if(!user||user.status!=='active')return redirect(user?.status==='pending'?'/?auth=pending':'/?auth=denied',[clearStateCookie]);
   const session=await issueSession(env,undefined,identity.email,request),sessionCookie=session.headers.get('Set-Cookie');

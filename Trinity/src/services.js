@@ -57,6 +57,8 @@ export async function readiness(env) {
       const result=await env.DB.prepare("PRAGMA table_info('conversations')").all();
       schema=Array.isArray(result.results)&&result.results.some(column=>column.name==='message_count');
     } else schema=names.has('ops_jobs');
+    const tickets=await env.DB.prepare("PRAGMA table_info('ops_login_tickets')").all();
+    schema=schema&&Array.isArray(tickets.results)&&tickets.results.some(column=>column.name==='email');
   } catch {}
   if(!schema)missing.push('DB.schema');
   return {ready:missing.length===0,status:missing.length===0?'ready':'degraded',checks:{bindings:criticalBindings.every(binding=>!!env[binding]),schema,cache:!!env.Mastermind},missing};
@@ -93,7 +95,13 @@ export function extractGeminiInteractionText(result){
   const blocks=(result?.steps||[]).flatMap(step=>Array.isArray(step?.content)?step.content:Array.isArray(step?.output)?step.output:[]);
   return blocks.filter(block=>block?.type==='text'||typeof block?.text==='string').map(block=>block.text||'').join('\n').trim();
 }
-export async function callModel(env, provider, messages, maxTokens = 1200) {
+export function usableModelText(text) {
+  const compact = text.replace(/\s/g, '');
+  if (!compact) return false;
+  const repeated = compact.match(/(.)\1{79,}/gu) || [];
+  return repeated.reduce((size, run) => size + run.length, 0) < compact.length * 0.8;
+}
+export async function callModel(env, provider, messages, maxTokens = 1200, customModel = null) {
   if(provider==='local'){
     if(!env.TRINITY_GATEWAY_KEY)throw new Error('Lokálna brána nie je nakonfigurovaná.');
     const recent=messages.filter(message=>message.role!=='system').slice(-6).map(message=>({role:message.role,content:message.content.slice(0,5000)}));
@@ -176,13 +184,119 @@ export async function callModel(env, provider, messages, maxTokens = 1200) {
     if(!text.trim())throw new Error('OpenAI vrátilo prázdnu odpoveď.');
     return {text,model:data.model||model,provider,usage:{input:data.usage?.prompt_tokens||data.usage?.input_tokens||0,output:data.usage?.completion_tokens||data.usage?.output_tokens||0}};
   }
-  if(provider!=='workers-ai') throw new Error('Unknown provider');
-  const model=env.AI_MODEL || '@cf/openai/gpt-oss-120b';
-  let timer,result;
-  try {result=await Promise.race([env.AI.run(model,{messages,max_tokens:maxTokens,temperature:0.25}),
-    new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Workers AI timeout')),65000);})]);}
-  finally {clearTimeout(timer);}
-  const text=extractModelText(result);
-  if(!text.trim()) throw new Error('Workers AI vrátilo prázdnu odpoveď.');
-  return {text,model,provider,usage:result.usage||null};
+
+  if(provider==='groq'){
+    let {apiKey,model}=await getConfiguredAIProvider(env,'groq').catch(()=>({}));
+    if(!apiKey)apiKey=env.GROQ_API_KEY;
+    if(!apiKey)throw new Error('Groq API nie je nakonfigurované.');
+    if(!model)model=env.GROQ_MODEL||'llama-3.3-70b-versatile';
+    const chatMessages=messages.map(m=>({role:m.role==='system'?'system':m.role,content:String(m.content).slice(0,40000)}));
+    const response=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},
+      body:JSON.stringify({model,messages:chatMessages,max_tokens:Math.min(maxTokens,4096),temperature:0.3}),
+      signal:AbortSignal.timeout(65000),redirect:'manual'
+    });
+    const data=JSON.parse(await boundedText(response,250000));
+    if(!response.ok)throw new Error(`Groq HTTP ${response.status}: ${data.error?.message||'požiadavka zlyhala'}`);
+    const text=extractModelText(data);
+    if(!text.trim())throw new Error('Groq vrátil prázdnu odpoveď.');
+    return {text,model:data.model||model,provider,usage:{input:data.usage?.prompt_tokens||0,output:data.usage?.completion_tokens||0}};
+  }
+  if(provider==='deepseek'){
+    let {apiKey,model}=await getConfiguredAIProvider(env,'deepseek').catch(()=>({}));
+    if(!apiKey)apiKey=env.DEEPSEEK_API_KEY;
+    if(!apiKey)throw new Error('DeepSeek API nie je nakonfigurované.');
+    if(!model)model=env.DEEPSEEK_MODEL||'deepseek-chat';
+    const chatMessages=messages.map(m=>({role:m.role==='system'?'system':m.role,content:String(m.content).slice(0,40000)}));
+    const response=await fetch('https://api.deepseek.com/chat/completions',{
+      method:'POST',headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},
+      body:JSON.stringify({model,messages:chatMessages,max_tokens:Math.min(maxTokens,4096),temperature:0.3}),
+      signal:AbortSignal.timeout(65000),redirect:'manual'
+    });
+    const data=JSON.parse(await boundedText(response,250000));
+    if(!response.ok)throw new Error(`DeepSeek HTTP ${response.status}: ${data.error?.message||'požiadavka zlyhala'}`);
+    const text=extractModelText(data);
+    if(!text.trim())throw new Error('DeepSeek vrátil prázdnu odpoveď.');
+    return {text,model:data.model||model,provider,usage:{input:data.usage?.prompt_tokens||0,output:data.usage?.completion_tokens||0}};
+  }
+  if(provider==='anthropic'){
+    let {apiKey,model}=await getConfiguredAIProvider(env,'anthropic').catch(()=>({}));
+    if(!apiKey)apiKey=env.ANTHROPIC_API_KEY;
+    if(!apiKey)throw new Error('Anthropic Claude API nie je nakonfigurované.');
+    if(!model)model=env.ANTHROPIC_MODEL||'claude-3-5-sonnet-20241022';
+    const system=messages.filter(m=>m.role==='system').map(m=>m.content).join('\n\n').slice(0,40000);
+    const chatMessages=messages.filter(m=>m.role!=='system').map(m=>({role:m.role==='assistant'?'assistant':'user',content:String(m.content).slice(0,40000)}));
+    const response=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'x-api-key':apiKey,'anthropic-version':'2023-06-01','Content-Type':'application/json'},
+      body:JSON.stringify({model,messages:chatMessages,system:system||undefined,max_tokens:Math.min(maxTokens,4096),temperature:0.3}),
+      signal:AbortSignal.timeout(65000),redirect:'manual'
+    });
+    const data=JSON.parse(await boundedText(response,250000));
+    if(!response.ok)throw new Error(`Anthropic HTTP ${response.status}: ${data.error?.message||'požiadavka zlyhala'}`);
+    const text=data.content?.[0]?.text||'';
+    if(!text.trim())throw new Error('Anthropic Claude vrátil prázdnu odpoveď.');
+    return {text,model:data.model||model,provider,usage:{input:data.usage?.input_tokens||0,output:data.usage?.output_tokens||0}};
+  }
+  if(provider==='mistral'){
+    let {apiKey,model}=await getConfiguredAIProvider(env,'mistral').catch(()=>({}));
+    if(!apiKey)apiKey=env.MISTRAL_API_KEY;
+    if(!apiKey)throw new Error('Mistral AI API nie je nakonfigurované.');
+    if(!model)model=env.MISTRAL_MODEL||'mistral-large-latest';
+    const chatMessages=messages.map(m=>({role:m.role==='system'?'system':m.role,content:String(m.content).slice(0,40000)}));
+    const response=await fetch('https://api.mistral.ai/v1/chat/completions',{
+      method:'POST',headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},
+      body:JSON.stringify({model,messages:chatMessages,max_tokens:Math.min(maxTokens,4096),temperature:0.3}),
+      signal:AbortSignal.timeout(65000),redirect:'manual'
+    });
+    const data=JSON.parse(await boundedText(response,250000));
+    if(!response.ok)throw new Error(`Mistral HTTP ${response.status}: ${data.error?.message||'požiadavka zlyhala'}`);
+    const text=extractModelText(data);
+    if(!text.trim())throw new Error('Mistral AI vrátil prázdnu odpoveď.');
+    return {text,model:data.model||model,provider,usage:{input:data.usage?.prompt_tokens||0,output:data.usage?.completion_tokens||0}};
+  }
+  if(provider==='openrouter'){
+    let {apiKey,model}=await getConfiguredAIProvider(env,'openrouter').catch(()=>({}));
+    if(!apiKey)apiKey=env.OPENROUTER_API_KEY;
+    if(!apiKey)throw new Error('OpenRouter API nie je nakonfigurované.');
+    if(!model)model=env.OPENROUTER_MODEL||'deepseek/deepseek-r1:free';
+    const chatMessages=messages.map(m=>({role:m.role==='system'?'system':m.role,content:String(m.content).slice(0,40000)}));
+    const response=await fetch('https://openrouter.ai/api/v1/chat/completions',{
+      method:'POST',headers:{Authorization:`Bearer ${apiKey}`,'HTTP-Referer':'https://auru.space','X-Title':'Trinity AI','Content-Type':'application/json'},
+      body:JSON.stringify({model,messages:chatMessages,max_tokens:Math.min(maxTokens,4096),temperature:0.3}),
+      signal:AbortSignal.timeout(65000),redirect:'manual'
+    });
+    const data=JSON.parse(await boundedText(response,250000));
+    if(!response.ok)throw new Error(`OpenRouter HTTP ${response.status}: ${data.error?.message||'požiadavka zlyhala'}`);
+    const text=extractModelText(data);
+    if(!text.trim())throw new Error('OpenRouter vrátil prázdnu odpoveď.');
+    return {text,model:data.model||model,provider,usage:{input:data.usage?.prompt_tokens||0,output:data.usage?.completion_tokens||0}};
+  }
+
+  if(['deepseek-r1','llama','qwen','workers-ai','fast','cloud'].includes(provider)){
+    const defaultModel=provider==='deepseek-r1'?'@cf/deepseek-ai/deepseek-r1-distill-qwen-32b'
+      :provider==='llama'?'@cf/meta/llama-3.3-70b-instruct'
+      :provider==='qwen'?'@cf/qwen/qwen2.5-72b-instruct'
+      :provider==='fast'?(env.AI_FAST_MODEL||'@cf/meta/llama-3.1-8b-instruct')
+      :(env.AI_MODEL || '@cf/openai/gpt-oss-120b');
+    const model=customModel || defaultModel;
+    const invoke = async selectedModel => {
+      let timer;
+      try { return await Promise.race([env.AI.run(selectedModel,{messages,max_tokens:Math.min(maxTokens,2048),temperature:0.2}),
+        new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Workers AI timeout')),65000);})]); }
+      finally {clearTimeout(timer);}
+    };
+    const result = await invoke(model);
+    const text = extractModelText(result);
+    if (usableModelText(text)) return {text,model,provider:'workers-ai',usage:result.usage||null};
+    // A successful HTTP response can still contain a broken generation (e.g. thousands of "!").
+    // Retry once on a different bound model; never persist that output as a completed answer.
+    const fallbackModel = env.AI_FALLBACK_MODEL || '@cf/meta/llama-3.3-70b-instruct';
+    if (model === fallbackModel) throw new Error('Záložný model nevrátil použiteľnú odpoveď. Skús iný model.');
+    const fallback = await invoke(fallbackModel);
+    const fallbackText = extractModelText(fallback);
+    if (!usableModelText(fallbackText)) throw new Error('Ani záložný model nevrátil použiteľnú odpoveď. Skús požiadavku znova.');
+    return {text:fallbackText,model:fallbackModel,provider:'workers-ai',usage:fallback.usage||null,
+      model_fallback:{from:model,to:fallbackModel,reason:'invalid-output'}};
+  }
+  throw new Error('Unknown provider');
 }

@@ -3,7 +3,8 @@ param(
     [switch]$Test = $false,
     [switch]$Deploy = $false,
     [switch]$Verbose = $false,
-    [switch]$Force = $false
+    [switch]$Force = $false,
+    [switch]$SkipSync = $false
 )
 
 $ErrorActionPreference = "Continue"
@@ -12,6 +13,40 @@ $ScriptPath = if ($MyInvocation.MyCommandPath) { Split-Path -Parent $MyInvocatio
 $Timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
 $LogFile = "$ScriptPath\logs\sync-build_$Timestamp.log"
 $ConfigFile = "$ScriptPath\stav-projektu.json"
+
+# PowerShell execution policies can prevent npm.ps1 from running even when Node
+# is installed correctly. Prefer the Windows command shim, which is not subject
+# to that policy; on other platforms keep the normal npm command.
+$NpmCommand = if ($env:OS -eq 'Windows_NT' -and (Get-Command 'npm.cmd' -ErrorAction SilentlyContinue)) {
+    'npm.cmd'
+}
+else {
+    'npm'
+}
+$LastNpmExitCode = 0
+
+function Invoke-Npm {
+    param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)
+
+    & $NpmCommand @Arguments
+    $script:LastNpmExitCode = $LASTEXITCODE
+}
+
+function Save-NpmFailure {
+    param(
+        [string]$ModuleName,
+        [object[]]$Output
+    )
+
+    $safeName = $ModuleName -replace '[^A-Za-z0-9_.-]', '_'
+    $diagnosticLog = Join-Path $ScriptPath "logs\npm_$safeName`_$Timestamp.log"
+    $Output | Out-File -FilePath $diagnosticLog -Encoding utf8
+    $summary = @($Output | Select-Object -Last 12 | ForEach-Object { $_.ToString().Trim() } | Where-Object { $_ })
+    if ($summary.Count -gt 0) {
+        Log "npm diagnostics for ${ModuleName}: $($summary -join ' | ')" "ERROR"
+    }
+    Log "Full npm diagnostics: $diagnosticLog" "ERROR"
+}
 
 if (-not (Test-Path "$ScriptPath\logs")) {
     New-Item -Path "$ScriptPath\logs" -ItemType Directory -Force | Out-Null
@@ -42,7 +77,7 @@ function Test-Prerequisites {
 
     $tools = @{
         "node" = "Node.js"
-        "npm"  = "NPM"
+        $NpmCommand = "NPM"
         "git"  = "Git"
     }
 
@@ -65,13 +100,14 @@ function Test-Prerequisites {
 
     try {
         $wranglerVer = & wrangler --version 2>&1
+        if ($LASTEXITCODE -ne 0) { throw "Wrangler returned exit code: $LASTEXITCODE" }
         Log "Wrangler found: $wranglerVer" "SUCCESS"
     }
     catch {
         Log "Wrangler not found (required before deploy)" "WARN"
     }
 
-    if ($missing.Count -gt 0 -and $missing -contains "node") {
+    if ($missing.Count -gt 0) {
         Log "Critical tools missing: $($missing -join ', '). Install them first." "ERROR"
         return $false
     }
@@ -84,10 +120,10 @@ function Sync-Repository {
 
     Push-Location $ScriptPath
     try {
-        & git status 2>&1 | Out-Null
-        if ($LASTEXITCODE -ne 0) { throw "Git repository not initialized" }
+        & node scripts/source-policy.mjs
+        if ($LASTEXITCODE -ne 0) { throw "Synchronization requires the clean canonical main checkout" }
 
-        & git fetch origin 2>&1 | Out-Null
+        & git fetch origin main 2>&1 | Out-Null
         if ($LASTEXITCODE -ne 0) { throw "Git fetch failed" }
         $branch = & git branch --show-current
         if ($branch -ne "main") { throw "Synchronization requires main; current branch: $branch" }
@@ -120,23 +156,19 @@ function Install-Dependencies {
 
     Push-Location $ModulePath
     try {
-        if ($Full -and (Test-Path "node_modules")) {
-            Log "Removing node_modules in $ModuleName..." "INFO"
-            Remove-Item -Path "node_modules" -Recurse -Force -ErrorAction SilentlyContinue
-        }
-
         if ($Full) {
-            & npm cache clean --force 2>&1 | Out-Null
+            Log "Refreshing dependencies with npm ci for $ModuleName." "INFO"
         }
 
-        & npm ci 2>&1 | Out-Null
-        if ($LASTEXITCODE -eq 0) {
+        $installOutput = @(Invoke-Npm ci 2>&1)
+        if ($LastNpmExitCode -eq 0) {
             Log "Dependencies installed for $ModuleName" "SUCCESS"
             Pop-Location
             return $true
         }
 
-        throw "npm ci returned exit code: $LASTEXITCODE"
+        Save-NpmFailure -ModuleName $ModuleName -Output $installOutput
+        throw "npm ci returned exit code: $LastNpmExitCode"
     }
     catch {
         Log "Dependency install failed for ${ModuleName}: $($_)" "ERROR"
@@ -152,11 +184,6 @@ function Build-Module {
         [string]$BuildCommand = "build"
     )
 
-    if (-not $BuildCommand) {
-        Log "No build command configured for $ModuleName; skipping." "INFO"
-        return $true
-    }
-
     Log "Building module: $ModuleName..." "INFO"
 
     if (-not (Test-Path $ModulePath)) {
@@ -168,16 +195,22 @@ function Build-Module {
         return $false
     }
 
+    if (-not $BuildCommand) {
+        Log "Dependencies ready; no build command configured for $ModuleName." "INFO"
+        return $true
+    }
+
     Push-Location $ModulePath
     try {
         $packageJson = Get-Content "package.json" | ConvertFrom-Json
 
         if ($packageJson.scripts.$BuildCommand) {
             Log "Running: npm run $BuildCommand..." "INFO"
-            & npm run $BuildCommand 2>&1 | Out-Null
+            $buildOutput = @(Invoke-Npm run $BuildCommand 2>&1)
 
-            if ($LASTEXITCODE -ne 0) {
-                throw "npm run $BuildCommand returned exit code: $LASTEXITCODE"
+            if ($LastNpmExitCode -ne 0) {
+                Save-NpmFailure -ModuleName $ModuleName -Output $buildOutput
+                throw "npm run $BuildCommand returned exit code: $LastNpmExitCode"
             }
         }
         else {
@@ -213,14 +246,14 @@ function Test-Module {
         if (Test-Path "package.json") {
             $packageJson = Get-Content "package.json" | ConvertFrom-Json
             if ($packageJson.scripts.test) {
-                & npm test 2>&1 | Out-Host
-                if ($LASTEXITCODE -eq 0) {
+                Invoke-Npm test 2>&1 | Out-Host
+                if ($LastNpmExitCode -eq 0) {
                     Log "Tests passed for $ModuleName" "SUCCESS"
                     Pop-Location
                     return $true
                 }
 
-                Log "Tests failed for $ModuleName (exit code: $LASTEXITCODE)" "ERROR"
+                Log "Tests failed for $ModuleName (exit code: $LastNpmExitCode)" "ERROR"
                 Pop-Location
                 return $false
             }
@@ -270,42 +303,6 @@ function Verify-Security {
     }
 }
 
-function Deploy-Module {
-    param(
-        [string]$ModulePath,
-        [string]$ModuleName
-    )
-
-    Log "Deploying module: $ModuleName..." "INFO"
-
-    Push-Location $ModulePath
-    try {
-        $packageJson = Get-Content "package.json" | ConvertFrom-Json
-
-        if ($packageJson.scripts.deploy) {
-            Log "Running deploy script..." "INFO"
-            & npm run deploy 2>&1 | Out-Host
-
-            if ($LASTEXITCODE -eq 0) {
-                Log "Deploy succeeded for $ModuleName" "SUCCESS"
-                Pop-Location
-                return $true
-            }
-
-            throw "npm run deploy returned exit code: $LASTEXITCODE"
-        }
-
-        Log "Deploy script not found in $ModuleName" "WARN"
-        Pop-Location
-        return $true
-    }
-    catch {
-        Log "Deploy failed for ${ModuleName}: $($_)" "ERROR"
-        Pop-Location
-        return $false
-    }
-}
-
 function Update-ProjectStatus {
     param(
         [hashtable]$Updates
@@ -335,9 +332,10 @@ function Update-ProjectStatus {
         catch {}
         $status | Add-Member -Name "updated_at" -Value (Get-Date -Format "yyyy-MM-ddTHH:mm:sszzz") -MemberType NoteProperty -Force
 
-        $status | ConvertTo-Json -Depth 10 | Set-Content -Path $ConfigFile -Encoding UTF8 -Force
+        $reportFile = Join-Path $ScriptPath 'logs/project-status.json'
+        $status | ConvertTo-Json -Depth 10 | Set-Content -Path $reportFile -Encoding UTF8 -Force
 
-        Log "Project status updated" "SUCCESS"
+        Log "Project status written to $reportFile" "SUCCESS"
         return $true
     }
     catch {
@@ -349,15 +347,18 @@ function Update-ProjectStatus {
 Log "==================================================" "HEADER"
 Log "Trinity Morhfeus - Sync & Build Pipeline START" "HEADER"
 Log "==================================================" "HEADER"
-Log "Parameters: Full=$Full, Test=$Test, Deploy=$Deploy, Verbose=$Verbose" "INFO"
+Log "Parameters: Full=$Full, Test=$Test, Deploy=$Deploy, Verbose=$Verbose, SkipSync=$SkipSync" "INFO"
 
 if (-not (Test-Prerequisites)) {
     Log "Required tools missing. Exiting." "ERROR"
     exit 1
 }
 
-if (-not (Sync-Repository)) {
-    Log "Git sync failed; stopping before build or deploy." "ERROR"
+if ($SkipSync) {
+    Log "Git sync skipped by request; building the current working tree." "WARN"
+}
+elseif (-not (Sync-Repository)) {
+    Log "Git sync failed; stopping before build or deploy. Use -SkipSync to validate the current working tree." "ERROR"
     exit 1
 }
 
@@ -411,11 +412,16 @@ if ($Deploy) {
     Log "DEPLOY PHASE" "HEADER"
     Log "==================================================" "HEADER"
 
-    foreach ($module in $modules) {
-        if ($buildResults[$module.Name]) {
-            $buildResults[$module.Name] = Deploy-Module -ModulePath $module.Path -ModuleName $module.Name
-        }
+    if (@($buildResults.Values | Where-Object { $_ -ne $true }).Count -gt 0) {
+        Log "Deployment stopped because a module failed validation." "ERROR"
+        exit 1
     }
+    Push-Location $ScriptPath
+    try {
+        Invoke-Npm run deploy 2>&1 | Out-Host
+        if ($LastNpmExitCode -ne 0) { exit $LastNpmExitCode }
+    }
+    finally { Pop-Location }
 }
 
 Log "==================================================" "HEADER"

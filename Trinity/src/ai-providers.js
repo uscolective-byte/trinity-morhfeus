@@ -4,7 +4,7 @@ import {getSecretMaterial,listSecrets} from './secret-vault.js';
 
 export const aiProviderInputSchema=z.object({
   secret_id:z.string().uuid(),
-  model:z.string().trim().regex(/^models\/gemini-[a-z0-9._-]+$/i).max(160),
+  model:z.string().trim().min(2).max(160),
   enabled:z.boolean().default(true),
   project_control:z.boolean().default(false)
 }).strict();
@@ -48,13 +48,13 @@ export async function listAIProviders(env,ownerId){
 }
 
 export async function configureAIProvider(env,ownerId,provider,input){
-  if(provider!=='gemini')throw new HttpError(404,'Neznámy AI poskytovateľ.');
+  if(!['gemini','openai','groq','deepseek','anthropic','mistral','openrouter'].includes(provider))throw new HttpError(404,'Neznámy AI poskytovateľ.');
   const data=aiProviderInputSchema.parse(input);
   const material=await getSecretMaterial(env,{ownerId,id:data.secret_id,provider});
   if(material.status!=='verified')throw new HttpError(409,'Najprv API kľúč úspešne over.');
   const verification=decodeVerification(material.verification_json);
   const allowed=verification?.models||[];
-  if(allowed.length&&!allowed.includes(data.model))throw new HttpError(400,'Vybraný model nebol nájdený pri overení Gemini kľúča.');
+  if(allowed.length&&!allowed.includes(data.model)&&provider==='gemini')throw new HttpError(400,'Vybraný model nebol nájdený pri overení Gemini kľúča.');
   const row=await env.DB.prepare(`INSERT INTO ops_ai_provider_settings(owner_id,provider,secret_id,model,enabled,project_control)
     VALUES(?,?,?,?,?,?) ON CONFLICT(owner_id,provider) DO UPDATE SET secret_id=excluded.secret_id,model=excluded.model,
     enabled=excluded.enabled,project_control=excluded.project_control,updated_at=datetime('now') RETURNING provider,secret_id,model,enabled,project_control,updated_at`)

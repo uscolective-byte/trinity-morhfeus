@@ -1,7 +1,8 @@
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
-import {readdirSync} from 'node:fs';
+import {readdirSync,existsSync} from 'node:fs';
+import {checkSource} from './source-policy.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url));
 const npm=process.platform==='win32'?'npm.cmd':'npm';
@@ -19,12 +20,16 @@ function run(command,args,cwd=root){
  if(result.status!==0)process.exit(result.status||1);
 }
 function script(project,name){run(npm,['run',name],resolve(root,project));}
+function sourceGuard(){checkSource(root);}
+function docs(){run(process.execPath,['scripts/sync-release-docs.mjs','--check']);}
 function build(){
+ docs();
  for(const project of workers)script(project,'build');
  script('Trinity','build:development');
  run(npm,['exec','--','wrangler','deploy','--config','wrangler.integrations.jsonc','--dry-run','--outdir','dist-integrations'],resolve(root,'Trinity'));
 }
 function test(){
+ docs();
  for(const project of projects.filter(p=>p!=='Integrations-Worker'))script(project,'test');
  script('Integrations-Worker','build');
  run(npm,['exec','--','wrangler','deploy','--config','wrangler.integrations.jsonc','--dry-run','--outdir','dist-integrations'],resolve(root,'Trinity'));
@@ -33,15 +38,17 @@ function test(){
  run(npm,['audit','--audit-level=high'],resolve(root,'Trinity'));
 }
 if(mode==='setup'){
- for(const project of [...workers,'Local-Gateway'])run(npm,['ci','--ignore-scripts'],resolve(root,project));
+ for(const project of [...workers,'Local-Gateway'])run(npm,['ci','--ignore-scripts','--no-audit','--no-fund'],resolve(root,project));
 }else if(mode==='build')build();
 else if(['test','check'].includes(mode))test();
 else if(mode==='sync'){
- // Never choose master/main implicitly or hide a failed fetch/merge.
- run('git',['diff','--exit-code']);run('git',['diff','--cached','--exit-code']);
- run('git',['fetch','origin']);run('git',['merge','--ff-only','@{upstream}']);test();
+ sourceGuard();
+ run('git',['fetch','origin','main']);run('git',['merge','--ff-only','origin/main']);test();
 }else if(mode==='deploy'){
+ sourceGuard();docs();
  // Existing guarded deployment requires Bash, Cloudflare auth and a private D1 backup.
- run('bash',[resolve(root,'scripts/trinity-environment.sh'),'deploy']);
+ const bash=process.platform==='win32'?resolve(process.env.ProgramFiles||'C:/Program Files','Git/bin/bash.exe'):'bash';
+ if(process.platform==='win32'&&!existsSync(bash)){console.error('Git Bash is required for the guarded deployment script.');process.exit(1);}
+ run(bash,[resolve(root,'scripts/trinity-environment.sh').replace(/\\/g,'/'),'deploy']);
 }else{console.error('Usage: node scripts/project-pipeline.mjs setup|build|test|check|sync|deploy');process.exit(2);}
 console.log(`[pipeline] ${mode} completed`);

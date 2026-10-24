@@ -482,7 +482,7 @@ function buildVideoScenes(prompt, title, style, scenesCount = 4, durationSec = 1
     { badge: 'SCÉNA 03 · HODNOTA & DOPAD', heading: 'Merateľné výsledky, dizajn a automatizácia', caption: sentences[2] || 'Prepojenie umelej inteligencie, cloudu a kreatívnej produkcie.' },
     { badge: 'SCÉNA 04 · FINÁLE & VÝZVA K AKCII', heading: 'Trinity Creative Studio · Budúcnosť je tu', caption: sentences[3] || 'Pripravené na okamžité nasadenie a zdieľanie.' },
     { badge: 'SCÉNA 05 · ROZŠÍRENÁ PERSPEKTÍVA', heading: 'Globálna škálovateľnosť na Cloudflare Edge', caption: sentences[4] || 'Rýchlosť, bezpečnosť a nekonečné možnosti tvorby.' },
-    { badge: 'SCÉNA 06 · ZÁVEREČNÁ SYNTÉZA', heading: title || 'Trinity 10.3 Motion Engine', caption: sentences[5] || cleanPrompt }
+    { badge: 'SCÉNA 06 · ZÁVEREČNÁ SYNTÉZA', heading: title || 'Trinity 11.0 Motion Engine', caption: sentences[5] || cleanPrompt }
   ];
 
   const scenes = [];

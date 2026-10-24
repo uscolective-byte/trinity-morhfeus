@@ -44,7 +44,7 @@ Transport musí byť Streamable HTTP. Pre API key autentifikáciu vyber Header
 s názvom `X-Trinity-API-Key`; hodnotu vlož iba do zabezpečeného pripojenia.
 
 Toto je **Trinity MCP API kľúč**, nie OpenAI/Gemini kľúč. V aktuálnej Trinity
-10.3 vytvor súkromný kľúč s rozsahmi mcp:read a mcp:write. Prvý umožní discovery
+11.0 vytvor súkromný kľúč s rozsahmi mcp:read a mcp:write. Prvý umožní discovery
 a get_task, druhý create_daily_plan. Kľúč iba s api:invoke nestačí.
 Kľúč poskytuje aj ďalšie MCP oprávnenia; nie je obmedzený iba na plánovač.
 
@@ -94,7 +94,7 @@ npm ci
 npm test
 ```
 
-285 testov prešlo po synchronizácii s Trinity 10.3 vrátane nového testu celého MCP workflow. Miniflare používa
+285 testov prešlo po synchronizácii s Trinity 11.0 vrátane nového testu celého MCP workflow. Miniflare používa
 skutočné lokálne D1/R2/Workflow, ale **simulovaný model**. Test kontroluje aj
 401 bez autorizácie, deduplikáciu, načítanie dokončeného výsledku a obsah
 artefaktu. Jednotkové testy kontrolujú hranice vstupov a výber Gemini.

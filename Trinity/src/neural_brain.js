@@ -1,8 +1,10 @@
 /**
- * Trinity Neural Brain v10.3
+ * Trinity Neural Brain v11.0
  * Neurálne pamäťové vrstvy (STM, LTM, CTM, ETM), dynamické prepínanie režimov myslenia
  * a integrovaný self-reflection cyklus pre Durable Object.
  */
+
+import { TRINITY_VERSION } from './version.js';
 
 export const BRAIN_MODES = {
   CREATIVITY: 'creativity',   // Prioritný profil: generovanie nečakaných nápadov, inovatívne riešenia
@@ -271,7 +273,7 @@ export class NeuralBrainAgent {
       return new Response("WebSocket initialized", { status: 200 });
     }
 
-    // REST rozhranie pre neurálny mozog Trinity 10.3
+    // REST rozhranie pre neurálny mozog Trinity 11.0
     if (url.pathname === "/mode") {
       if (request.method === "POST") {
         try {
@@ -301,7 +303,7 @@ export class NeuralBrainAgent {
 
     return Response.json({
       service: "Trinity Neural Brain DO",
-      version: "10.3.0",
+      version: TRINITY_VERSION,
       mode: this.brain.getMode(),
       directive: this.brain.getModeDirective(),
       memory_status: this.brain.memory.getMemorySnapshot()

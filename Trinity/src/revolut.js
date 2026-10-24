@@ -185,7 +185,20 @@ async function paypalCatalog(env){
 
 async function commerceAccounts(env){
  const stored=env.Mastermind?await env.Mastermind.get(COMMERCE_ACCOUNTS_KEY):null;
- if(!stored)return commerceAccountsSchema.parse({});
+ if(!stored){
+  if(env.TRINITY_OWNER_EMAIL||env.TRINITY_ENV){
+   return commerceAccountsSchema.parse({
+    business_name:'Ivan Sabo · Basterix',
+    account_type:'personal',
+    paypal_identifier:'saboivan2008@gmail.com',
+    paypal_url:'saboivan2008@gmail.com',
+    revolut_url:'https://revolut.me/isabo91',
+    default_currency:'EUR',
+    note:'Oficiálna platobná brána vlastníka systému Basterix (Ivan Sabo · RevTag: isabo91 · PayPal: saboivan2008@gmail.com).'
+   });
+  }
+  return commerceAccountsSchema.parse({});
+ }
  try{return commerceAccountsSchema.parse(JSON.parse(stored));}catch{return commerceAccountsSchema.parse({});}
 }
 
@@ -280,6 +293,25 @@ export async function configureCommerceAccounts(env,ownerId,input){
    existingMap.set(pkg.id,validated);
   }
   await configurePaypal(env,ownerId,{products:Array.from(existingMap.values()).slice(0,20)});
+ }
+ if(autoGen&&data.revolut_url){
+  const currentRev=await catalog(env);
+  const existingRevMap=new Map(currentRev.products.map(p=>[p.id,p]));
+  for(const pkg of DEFAULT_PAYPAL_PACKAGES){
+   const autoUrl=normalizeRevolutInput(data.revolut_url);
+   const validated=proProductSchema.parse({
+    id:pkg.id,
+    name:pkg.name,
+    description:pkg.description,
+    amount_cents:pkg.amount_cents,
+    currency:'EUR',
+    payment_url:autoUrl,
+    active:true,
+    expires_at:null
+   });
+   existingRevMap.set(pkg.id,validated);
+  }
+  await configureRevolutPro(env,ownerId,{products:Array.from(existingRevMap.values()).slice(0,20)});
  }
  return {...await commerceStatus(env),saved:true};
 }

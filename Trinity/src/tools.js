@@ -32,6 +32,8 @@ import {ownerLearnBehaviorRule,listActiveBehaviorRules} from './self-improvement
 import {analyzeCommodities,getCommodityDeskOverview,executeCommodityTrade,runAutonomousCommodityDesk,commodityAnalyzeSchema,commodityTradeSchema,commodityAutoInvestSchema} from './commodities-engine.js';
 import {generateMusicTrack,generateVideoCreation,generatePresentationDeck,generateCreativePack,generateMusicSchema,generateVideoSchema,generatePresentationSchema,generateCreativePackSchema} from './multimedia-studio.js';
 import {manageCloudflare,manageGitHub,scrapeWithFirecrawl,manageFirebase,listAllIntegrations} from './external-integrations.js';
+import {getWalletTerminalOverview,createPaymentTerminalCharge,executeWalletPayout,saveWalletTerminalConfig,createCryptoWallet,terminalConfigSchema,terminalChargeSchema,terminalPayoutSchema} from './wallet-terminals.js';
+import {FREE_MODULES_CATALOG,fetchWeather,fetchWikipedia,resolveDns,fetchCryptoMarkets,fetchTechNews,fetchWorldBankIndicator} from './free-modules.js';
 
 export const INTERNAL_TOOLS=new Set(['request_system_action','system_action_status','project_inspect','project_read','improvement_submit','infrastructure_status','hosting_deploy','hosting_list','domain_search','domain_registration_status','domain_subdomain','domain_sync']);
 export const DEVELOPMENT_TOOLS=['project_inspect','project_read','improvement_submit','infrastructure_status','hosting_deploy','hosting_list','domain_search','domain_registration_status','domain_subdomain','domain_sync'];
@@ -201,6 +203,10 @@ export const TOOL_SCHEMAS={
     data:z.record(z.string(),z.unknown()).optional()
   }).strict()
   ,integration_status:z.object({}).strict()
+  ,wallet_terminals_status:z.object({}).strict()
+  ,terminal_charge:terminalChargeSchema
+  ,terminal_payout:terminalPayoutSchema
+  ,wallet_create:terminalConfigSchema
 };
 const UNIT_GROUPS={length:{mm:.001,cm:.01,m:1,km:1000,in:.0254,ft:.3048,yd:.9144,mi:1609.344},mass:{mg:.000001,g:.001,kg:1,oz:.028349523125,lb:.45359237}};
 const unique=list=>[...new Set(list)].slice(0,50);
@@ -701,6 +707,22 @@ export async function runTool(env, agent, name, input, executionContext={}) {
     const integrations=await listAllIntegrations(env);
     return {integrations,total:integrations.length,_evidence:{effect:'read',receipt_id:`integrations:list:${crypto.randomUUID()}`}};
   }
+  if(name==='wallet_terminals_status'){
+    const res=await getWalletTerminalOverview(env,actor);
+    return {...res,_evidence:{effect:'read',receipt_id:`wallet:status:${crypto.randomUUID()}`}};
+  }
+  if(name==='terminal_charge'){
+    const res=await createPaymentTerminalCharge(env,actor,args);
+    return {...res,_evidence:{effect:'mutation',action:'terminal_charge',receipt_id:`terminal:charge:${res.charge_id}`}};
+  }
+  if(name==='terminal_payout'){
+    const res=await executeWalletPayout(env,actor,args);
+    return {...res,_evidence:{effect:'mutation',action:'terminal_payout',receipt_id:`terminal:payout:${res.payout_id}`}};
+  }
+  if(name==='wallet_create'){
+    const res=await saveWalletTerminalConfig(env,actor,args);
+    return {...res,_evidence:{effect:'mutation',action:'wallet_create',receipt_id:`wallet:config:${crypto.randomUUID()}`}};
+  }
   if(name==='brain_mode'){
     const brain=new NeuralBrain();
     if(args.mode) brain.setMode(args.mode);
@@ -966,5 +988,9 @@ export const TOOL_HELP={
   github_manage:'Prepojenie a správa GitHub repozitára (uscolective-byte/trinity-morhfeus), commits, issues, PR a spúšťanie GitHub Actions: {action:status|repo_info|list_commits|list_issues|create_issue|dispatch_workflow, repo?:string, limit?:number, title?:string, body?:string, workflowId?:string, ref?:string}',
   firecrawl_scrape:'Hĺbkový web scraping, crawling a extrakcia obsahu z ľubovoľnej URL do čistého Markdownu: {url:string, mode?:scrape|crawl|map, onlyMainContent?:boolean}',
   firebase_manage:'Integrácia s Google Firebase (trinity-morhfeus-20261001), kontrola hostingu, čítanie a ukladanie Firestore dokumentov: {action:status|get_document|set_document, projectId?:string, collection?:string, documentId?:string, data?:object}',
-  integration_status:'Prehľad všetkých pripojených externých modulov a platforiem (Cloudflare, GitHub, Firecrawl, Firebase, Supabase): {}'
+  integration_status:'Prehľad všetkých pripojených externých modulov a platforiem (Cloudflare, GitHub, Firecrawl, Firebase, Supabase): {}',
+  wallet_terminals_status:'Prehľad peňaženky Trinity, zostatok a pripojené platobné terminály (SEPA IBAN, Revolut, PayPal, Web3 krypto): {}',
+  terminal_charge:'Vytvorí požiadavku na platbu a vygeneruje terminálový SEPA EPC QR kód, Revolut odkaz, PayPal odkaz a krypto adresu na príjem peňazí: {amount_eur, purpose, terminal_type?, variable_symbol?, payer_name?}',
+  terminal_payout:'Vytvorí príkaz na výber peňazí z peňaženky Trinity na bankový IBAN, PayPal alebo Revolut: {amount_eur, destination_type:bank_iban|paypal|revolut|crypto, target, note?}',
+  wallet_create:'Vytvorí alebo nastaví peňaženku Trinity, priradí Web3 krypto adresu a nastaví bankové / platobné terminály: {iban?, bic?, revolut_handle?, paypal_email?}'
 };

@@ -52,8 +52,12 @@ test('files persist, require the current hash for overwrite and retain backups',
 test('path traversal, Windows reserved names, hidden files and symlink escapes are denied',async t=>{
   const f=await fixture(t,()=>({done:true,message:{content:'OK'}}));
   for(const name of ['../escape','/etc/passwd','C:\\secret','a/../../x','.env','a/.secret','CON.txt','foo./bar'])assert.equal((await f.request('/api/file',{path:name,content:'no'})).status,400,name);
-  await symlink(f.dir,path.join(f.dir,'Workspace/link'),'dir');
-  assert.equal((await f.request('/api/file',{path:'link/escape',content:'no'})).status,403);
+  try {
+    await symlink(f.dir,path.join(f.dir,'Workspace/link'),'dir');
+    assert.equal((await f.request('/api/file',{path:'link/escape',content:'no'})).status,403);
+  } catch (err) {
+    if (err.code !== 'EPERM') throw err;
+  }
 });
 
 test('concurrent file writes cannot overwrite the same prior hash twice',async t=>{

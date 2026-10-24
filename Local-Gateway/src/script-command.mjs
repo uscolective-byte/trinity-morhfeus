@@ -1,5 +1,6 @@
 import path from 'node:path';
 import {readFile,stat} from 'node:fs/promises';
+import {existsSync} from 'node:fs';
 import {resolveSafePath} from './policy.mjs';
 import {sha256} from './store.mjs';
 
@@ -8,7 +9,16 @@ export function scriptEnvironment(source=process.env){
   return {...Object.fromEntries(Object.entries(source).filter(([key])=>allowed.has(key.toLowerCase()))),CI:'1',NO_COLOR:'1',PYTHONNOUSERSITE:'1'};
 }
 
-export async function scriptCommand(root,payload,{platform=process.platform,python=process.env.TRINITY_PYTHON_PATH||'python',node=process.execPath}={}){
+function defaultPython() {
+  if (process.env.TRINITY_PYTHON_PATH) return process.env.TRINITY_PYTHON_PATH;
+  if (process.platform === 'win32' && process.env.LOCALAPPDATA) {
+    const cand = path.join(process.env.LOCALAPPDATA, 'Python', 'bin', 'python.exe');
+    if (existsSync(cand)) return cand;
+  }
+  return 'python';
+}
+
+export async function scriptCommand(root,payload,{platform=process.platform,python=defaultPython(),node=process.execPath}={}){
   const extensions={node:['.js','.mjs','.cjs'],python:['.py'],cmd:['.cmd','.bat']};
   if(!Object.hasOwn(extensions,payload.runtime))throw new Error('Nepovolený runtime.');
   const relative=payload.path;

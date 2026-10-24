@@ -1,6 +1,7 @@
 import {readFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {TRINITY_SOURCE} from '../src/version.js';
 
 export function verificationTarget(args){
  const [origin,selector,value,...extra]=args;
@@ -23,10 +24,11 @@ export async function verifyDeployment({origin,expectedTag,expectedVersionId,ver
    const readiness=await ready.json();
    const expectedEnvironment=origin==='https://auru.dev'?'development':'production';
    const matched=expectedVersionId?data.deployment?.id===expectedVersionId:data.deployment?.tag===expectedTag;
-   if(health.ok&&ready.ok&&matched&&data.version===version&&readiness.version===version&&data.environment===expectedEnvironment&&readiness.environment===expectedEnvironment&&readiness.ready===true){
-    return {verified:true,origin,version,environment:expectedEnvironment,...(expectedTag?{commit:expectedTag}:{}),deployment:data.deployment};
+   const sourceMatches=[data,readiness].every(result=>result.source?.repository===TRINITY_SOURCE.repository&&result.source?.branch===TRINITY_SOURCE.branch);
+   if(health.ok&&ready.ok&&matched&&sourceMatches&&data.version===version&&readiness.version===version&&data.environment===expectedEnvironment&&readiness.environment===expectedEnvironment&&readiness.ready===true){
+    return {verified:true,origin,version,environment:expectedEnvironment,source:data.source,...(expectedTag?{commit:expectedTag}:{}),deployment:data.deployment};
    }
-   last=`Expected ${version}/${expectedVersionId||expectedTag}; got ${data.version}/${data.deployment?.id}/${data.deployment?.tag}; ready HTTP ${ready.status}, ready=${readiness.ready}`;
+   last=`Expected ${version}/${expectedVersionId||expectedTag} from ${TRINITY_SOURCE.repository}@${TRINITY_SOURCE.branch}; got ${data.version}/${data.deployment?.id}/${data.deployment?.tag}; source=${JSON.stringify(data.source)}, readiness source=${JSON.stringify(readiness.source)}; ready HTTP ${ready.status}, ready=${readiness.ready}`;
   }catch(error){last=error.message;}
   if(attempt<attempts-1)await new Promise(resolve=>setTimeout(resolve,delayMs));
  }

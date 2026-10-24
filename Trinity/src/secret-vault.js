@@ -3,7 +3,7 @@ import {HttpError} from './security.js';
 
 export const secretInputSchema=z.object({
   provider:z.enum([
-    'github','cloudflare','gemini','openai','firecrawl','firebase','supabase','vercel','telegram','slack','discord','notion','dataverse','microsoft','powerplatform','custom'
+    'github','cloudflare','gemini','openai','firecrawl','firebase','supabase','vercel','telegram','slack','discord','notion','dataverse','microsoft','powerplatform','custom','groq','deepseek','anthropic','mistral','openrouter'
   ]),
   name:z.string().trim().min(2).max(80),
   secret:z.string().trim().min(8).max(4096)
@@ -50,6 +50,32 @@ async function verifyFirebase(secret){
   }
   return {connected:true,project_id:projectId,status:response.ok?'verified':'reachable'};
 }
+
+async function verifyOpenAICompatible(url,secret,provider){
+  try{
+    const response=await fetch(url,{headers:{Authorization:`Bearer ${secret}`},signal:AbortSignal.timeout(10000)});
+    if(response.status===401||response.status===403)throw new HttpError(401,`Neplatný ${provider.toUpperCase()} API kľúč.`);
+    const data=await response.json().catch(()=>({}));
+    const models=Array.isArray(data.data)?data.data.map(m=>m.id).slice(0,30):[];
+    return {connected:true,provider,models:models.length?models:undefined,status:'verified'};
+  }catch(e){
+    if(e instanceof HttpError)throw e;
+    return {connected:true,provider,status:'stored-untested'};
+  }
+}
+async function verifyAnthropic(secret){
+  try{
+    const response=await fetch('https://api.anthropic.com/v1/models',{headers:{'x-api-key':secret,'anthropic-version':'2023-06-01'},signal:AbortSignal.timeout(10000)});
+    if(response.status===401||response.status===403)throw new HttpError(401,'Neplatný Anthropic Claude API kľúč.');
+    const data=await response.json().catch(()=>({}));
+    const models=Array.isArray(data.data)?data.data.map(m=>m.id):[];
+    return {connected:true,provider:'anthropic',models,status:'verified'};
+  }catch(e){
+    if(e instanceof HttpError)throw e;
+    return {connected:true,provider:'anthropic',status:'stored-untested'};
+  }
+}
+
 async function verifyGenericProvider(provider,secret){
   if(provider==='vercel'){
     const r=await fetch('https://api.vercel.com/v2/user',{headers:{Authorization:`Bearer ${secret}`},signal:AbortSignal.timeout(12000)});
@@ -193,6 +219,11 @@ export async function verifySecret(env,ownerId,id){
       :row.provider==='firebase'?await verifyFirebase(secret)
       :(row.provider==='dataverse'||row.provider==='microsoft'||row.provider==='powerplatform')?await verifyDataverse(secret)
       :row.provider==='gemini'?await verifyGemini(secret)
+      :row.provider==='groq'?await verifyOpenAICompatible('https://api.groq.com/openai/v1/models',secret,'groq')
+      :row.provider==='deepseek'?await verifyOpenAICompatible('https://api.deepseek.com/models',secret,'deepseek')
+      :row.provider==='anthropic'?await verifyAnthropic(secret)
+      :row.provider==='mistral'?await verifyOpenAICompatible('https://api.mistral.ai/v1/models',secret,'mistral')
+      :row.provider==='openrouter'?await verifyOpenAICompatible('https://openrouter.ai/api/v1/models',secret,'openrouter')
       :await verifyGenericProvider(row.provider,secret);
     const changed=await env.DB.prepare("UPDATE ops_secret_vault SET status='verified',verification_json=?,last_verified_at=datetime('now'),updated_at=datetime('now') WHERE id=? RETURNING *").bind(JSON.stringify(verification),id).first();
     return present(changed);

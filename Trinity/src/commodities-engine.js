@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { HttpError } from './security.js';
 import { createPortfolio, listPortfolios, getPortfolio, recordTrade, setQuote } from './trading.js';
 import { recordStepDocument } from './trinity-documents.js';
+import { getMarketSeries, rsi, sma, macd, lastOf, atr } from './market-data.js';
 
 const DESK_STATE_KEY = 'commodity:desk:state:v1';
 const BANK_CONNECTIONS_KEY = 'commodity:bank:connections:v1';
@@ -1043,80 +1044,54 @@ export async function getCommodityChart(env, symbol = 'XAU-EUR', timeframe = '1D
   const normSymbol = String(symbol || 'XAU-EUR').trim().toUpperCase();
   const commodity = ALL_COMMODITIES.find(c => c.symbol === normSymbol) || ALL_COMMODITIES[0];
   
-  let currentPrice = commodity.base_price;
-  if (env.Mastermind?.get) {
-    try {
-      const q = await env.Mastermind.get(`quote:${normSymbol}`, 'json');
-      if (q && q.price_cents) currentPrice = q.price_cents / 100;
-    } catch (_) {}
+  const series = await getMarketSeries(env, normSymbol, timeframe);
+  if (!series || !series.available || !Array.isArray(series.candles) || !series.candles.length) {
+    return {
+      symbol: normSymbol,
+      name: commodity?.name || normSymbol,
+      sector: commodity?.sector || 'precious_metals',
+      unit: commodity?.unit || 'oz',
+      timeframe,
+      available: false,
+      reason: series?.reason || 'Reálne trhové dáta nie sú pre túto komoditu dostupné z verejného overeného zdroja.',
+      candles: [],
+      sparkline: []
+    };
   }
 
-  const periods = timeframe === '1D' ? 24 : timeframe === '1W' ? 28 : timeframe === '1M' ? 30 : 52;
-  const stepMs = timeframe === '1D' ? 3600 * 1000 : timeframe === '1W' ? 6 * 3600 * 1000 : timeframe === '1M' ? 24 * 3600 * 1000 : 7 * 24 * 3600 * 1000;
-  const now = Date.now();
-  
-  const candles = [];
-  const sparkline = [];
-  let prevClose = currentPrice * (1 - (commodity.change_24h_pct || 0) / 100);
-  const volPct = (commodity.volatility_atr_pct || 1.5) / 100;
-
-  for (let i = periods; i >= 0; i--) {
-    const time = new Date(now - i * stepMs).toISOString();
-    const drift = ((periods - i) / periods) * (currentPrice - prevClose);
-    const noise = (Math.sin(i * 1.7) * 0.4 + Math.cos(i * 0.9) * 0.3) * volPct * prevClose;
-    const open = Math.round((prevClose + drift + noise) * 100) / 100;
-    const delta = (Math.sin(i * 2.3) * 0.5) * volPct * open;
-    const close = i === 0 ? currentPrice : Math.round((open + delta) * 100) / 100;
-    const high = Math.round(Math.max(open, close) * (1 + Math.abs(Math.cos(i * 1.1)) * volPct * 0.7) * 100) / 100;
-    const low = Math.round(Math.min(open, close) * (1 - Math.abs(Math.sin(i * 1.3)) * volPct * 0.7) * 100) / 100;
-    const volume = Math.round((500 + Math.abs(Math.sin(i)) * 1200) * (currentPrice > 1000 ? 5 : 50));
-
-    candles.push({ time, open, high, low, close, volume });
-    sparkline.push(close);
-  }
-
-  // Generate realistic Order Book (depth)
-  const bids = [];
-  const asks = [];
-  let bidTotal = 0;
-  let askTotal = 0;
-  const spreadCents = Math.max(0.02, Math.round(currentPrice * 0.0004 * 100) / 100);
-
-  for (let level = 1; level <= 6; level++) {
-    const bidPrice = Math.round((currentPrice - spreadCents * level) * 100) / 100;
-    const bidQty = Math.round((5 + level * 3 + Math.sin(level) * 4) * 10) / 10;
-    bidTotal += Math.round(bidPrice * bidQty * 100) / 100;
-    bids.push({ level, price: bidPrice, qty: bidQty, total: Math.round(bidTotal * 100) / 100 });
-
-    const askPrice = Math.round((currentPrice + spreadCents * level) * 100) / 100;
-    const askQty = Math.round((4 + level * 3 + Math.cos(level) * 4) * 10) / 10;
-    askTotal += Math.round(askPrice * askQty * 100) / 100;
-    asks.push({ level, price: askPrice, qty: askQty, total: Math.round(askTotal * 100) / 100 });
-  }
+  const closes = series.candles.map(c => c.close);
+  const rsiArr = rsi(closes, 14);
+  const rsiVal = lastOf(rsiArr);
+  const macdObj = macd(closes, 12, 26, 9);
+  const macdVal = lastOf(macdObj.histogram);
+  const sma20 = lastOf(sma(closes, 20));
+  const sma50 = lastOf(sma(closes, 50));
+  const atrVal = lastOf(atr(series.candles, 14));
 
   return {
-    symbol: commodity.symbol,
-    name: commodity.name,
-    sector: commodity.sector,
-    unit: commodity.unit,
+    symbol: normSymbol,
+    name: commodity?.name || normSymbol,
+    sector: commodity?.sector || 'precious_metals',
+    unit: commodity?.unit || 'oz',
     timeframe,
-    current_price: currentPrice,
-    change_24h_pct: commodity.change_24h_pct,
-    high_24h: Math.max(...candles.map(c => c.high)),
-    low_24h: Math.min(...candles.map(c => c.low)),
-    candles,
-    sparkline,
-    order_book: {
-      spread: spreadCents * 2,
-      spread_pct: Math.round(((spreadCents * 2) / currentPrice) * 10000) / 100,
-      bids,
-      asks
-    },
+    available: true,
+    current_price: series.price,
+    native_currency: series.native_currency,
+    currency: series.currency,
+    fx: series.fx,
+    source: series.source,
+    quote_time: series.quote_time,
+    quote_age_minutes: series.quote_age_minutes,
+    high_24h: Math.max(...series.candles.map(c => c.high)),
+    low_24h: Math.min(...series.candles.map(c => c.low)),
+    candles: series.candles,
+    sparkline: closes,
     technical_indicators: {
-      rsi_14: commodity.rsi_14,
-      macd: commodity.macd_signal,
-      volatility_atr_pct: commodity.volatility_atr_pct,
-      trend: commodity.change_24h_pct > 0 ? 'BULLISH' : 'BEARISH'
+      rsi_14: rsiVal !== null ? Number(rsiVal.toFixed(1)) : null,
+      macd: macdVal !== null ? (macdVal >= 0 ? 'bullish' : 'bearish') : null,
+      sma_20: sma20 !== null ? Number(sma20.toFixed(2)) : null,
+      sma_50: sma50 !== null ? Number(sma50.toFixed(2)) : null,
+      atr_14: atrVal !== null ? Number(atrVal.toFixed(2)) : null
     }
   };
 }

@@ -1,4 +1,4 @@
-import {issueSession} from '../src/security.js';
+import {issueSession,hash} from '../src/security.js';
 import {PLUGINS} from '../src/plugins.js';
 import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
@@ -50,8 +50,47 @@ test('CI audit migrations preserve a pre-existing legacy audit table',async()=>{
   assert.ok(columns.results.some(column=>column.name==='repo'));
   assert.ok(columns.results.some(column=>column.name==='idempotency_key'));
 });
-test('public UI, liveness and readiness; private APIs',async()=>{assert.equal((await req('/',undefined,false)).status,200);const health=await(await req('/health',undefined,false)).json();assert.equal(health.agents,45);assert.equal(health.version,'10.3.0');assert.equal(health.deployment.id,'test-deployment');assert.equal(health.deployment.tag,'test-commit');const ready=await req('/ready',undefined,false);assert.equal(ready.status,200,await ready.clone().text());assert.equal((await ready.json()).checks.schema,true);assert.equal((await req('/api/ops/agents',undefined,false)).status,401);assert.equal((await req('/mcp',{},false)).status,401);});
+test('public UI, liveness and readiness; private APIs',async()=>{assert.equal((await req('/',undefined,false)).status,200);const health=await(await req('/health',undefined,false)).json();assert.equal(health.agents,45);assert.equal(health.version,'11.0.0');assert.equal(health.deployment.id,'test-deployment');assert.equal(health.deployment.tag,'test-commit');const ready=await req('/ready',undefined,false);assert.equal(ready.status,200,await ready.clone().text());assert.equal((await ready.json()).checks.schema,true);assert.equal((await req('/api/ops/agents',undefined,false)).status,401);assert.equal((await req('/mcp',{},false)).status,401);});
 test('login sets protected cookie and logout revokes it',async()=>{const r=await req('/api/ops/login',{key},false);assert.equal(r.status,200);const c=r.headers.get('set-cookie');assert.match(c,/HttpOnly/);assert.match(c,/Secure/);assert.match(c,/SameSite=Strict/);assert.equal((await req('/api/ops/status',undefined,false,{Cookie:c.split(';')[0]})).status,200);await req('/api/ops/logout',{},false,{Cookie:c.split(';')[0]});assert.equal((await req('/api/ops/status',undefined,false,{Cookie:c.split(';')[0]})).status,401);});
+
+test('redeem preserves the authenticated ticket issuer and rejects reuse and expiry',async()=>{
+ const email='ticket-owner@example.test';
+ const session=await issueSession({DB:db},undefined,email,new Request(url));
+ const created=await req('/api/ops/login-ticket',{email:'untrusted@example.test'},false,{Cookie:session.headers.get('set-cookie').split(';')[0]});
+ assert.equal(created.status,200);const {ticket}=await created.json();
+ const redeemed=await req('/api/ops/redeem',{ticket},false);
+ assert.equal(redeemed.status,200);
+ const cookie=redeemed.headers.get('set-cookie');assert.match(cookie,/HttpOnly/);assert.match(cookie,/SameSite=Strict/);
+ const token=cookie.match(/trinity_session=([^;]+)/)[1];
+ const stored=await db.prepare('SELECT email FROM ops_sessions WHERE token_hash=?').bind(await hash(token)).first();
+ assert.equal(stored.email,email);
+ assert.equal((await req('/api/ops/redeem',{ticket},false)).status,401);
+ const expired='b'.repeat(64);
+ await db.prepare('INSERT INTO ops_login_tickets(token_hash,expires_at,email) VALUES(?,?,?)').bind(await hash(expired),Date.now()-1000,email).run();
+ assert.equal((await req('/api/ops/redeem',{ticket:expired},false)).status,401);
+ assert.equal((await req('/api/ops/redeem',{ticket:'invalid'},false)).status,400);
+ assert.equal((await req('/api/ops/login-ticket',{},false)).status,401);
+});
+
+test('legacy identity-free tickets do not acquire owner identity',async()=>{
+ const ticket='c'.repeat(64);
+ await db.prepare('INSERT INTO ops_login_tickets(token_hash,expires_at) VALUES(?,?)').bind(await hash(ticket),Date.now()+60000).run();
+ const response=await req('/api/ops/redeem',{ticket},false);assert.equal(response.status,200);
+ const token=response.headers.get('set-cookie').match(/trinity_session=([^;]+)/)[1];
+ const stored=await db.prepare('SELECT email FROM ops_sessions WHERE token_hash=?').bind(await hash(token)).first();
+ assert.equal(stored.email,null);
+});
+
+test('both public interfaces load the same checked authentication bootstrap first',async()=>{
+ const helper=await req('/auth-bootstrap.js',undefined,false);
+ assert.equal(helper.status,200);assert.match(helper.headers.get('content-type'),/javascript/);
+ assert.match(await helper.text(),/TrinityAuth/);
+ for(const [path,script] of [['/','/chat.js'],['/ops','/app.js']]){
+  const response=await req(path,undefined,false);assert.equal(response.status,200);
+  const html=await response.text();const authIndex=html.indexOf('src="/auth-bootstrap.js"');
+  assert.ok(authIndex>=0&&authIndex<html.indexOf(`src="${script}`));
+ }
+});
 test('Google auth stays dormant and the authenticated owner is recognized',async()=>{const config=await(await req('/api/auth/config',undefined,false)).json();assert.deepEqual(config,{google_enabled:false,google_required:false});assert.equal((await req('/api/auth/google/start',undefined,false)).status,404);const pending=await req('/api/ops/users/pending');assert.equal(pending.status,200);assert.equal((await req('/api/ops/users/example%40gmail.com/approve',{})).status,404);});
 test('owner emergency stop pauses work and can resume it',async()=>{const before=await(await req('/api/ops/control')).json();assert.equal(before.emergency_stop,false);const stopped=await(await req('/api/ops/control',{emergency_stop:true,reason:'runtime test'})).json();assert.equal(stopped.emergency_stop,true);assert.equal((await req('/api/ops/jobs',{task:'blocked while stopped'})).status,503);const status=await(await req('/api/ops/status')).json();assert.equal(status.control.emergency_stop,true);const resumed=await(await req('/api/ops/control',{emergency_stop:false,reason:'runtime test complete'})).json();assert.equal(resumed.emergency_stop,false);});
 test('origin validation and unknown agent',async()=>{assert.equal((await req('/api/ops/jobs',{task:'hi'},true,{Origin:'https://evil.test'})).status,403);assert.equal((await req('/api/ops/jobs',{task:'hi',agent:'not-real'})).status,400);});
@@ -69,7 +108,7 @@ test('AI Studio creates, previews, revises, lists, and exports a versioned websi
 });
 test('required plugins are actually installed and enabled',async()=>{const plugins=await(await req('/api/ops/plugins')).json();assert.equal(plugins.length,PLUGINS.length);assert.ok(plugins.every(p=>p.installed&&p.enabled));assert.ok(plugins.some(p=>p.id==='truth'&&p.required));assert.ok(plugins.some(p=>p.id==='clock'&&p.tools.includes('current_time')));assert.ok(plugins.some(p=>p.id==='skills'&&p.tools.includes('list_skills')));assert.ok(plugins.some(p=>p.id==='connectors'&&p.tools.includes('list_connectors')));assert.ok(plugins.some(p=>p.id==='images'&&p.tools.includes('generate_image')));assert.ok(plugins.some(p=>p.id==='trading'&&p.tools.includes('portfolio_summary')));assert.ok(plugins.some(p=>p.id==='statistics'&&p.tools.includes('statistics')));assert.ok(plugins.some(p=>p.id==='data-redactor'&&p.tools.includes('redact_sensitive')));assert.ok(plugins.some(p=>p.id==='computer-control'&&p.required&&p.tools.includes('pc_app_control')));assert.ok(plugins.some(p=>p.id==='workspace-files'&&p.required&&p.tools.includes('pc_file_write')));assert.ok(plugins.some(p=>p.id==='internet-operator'&&p.required&&p.tools.includes('pc_web_fetch')));assert.ok(plugins.some(p=>p.id==='developer-operator'&&p.required&&p.tools.includes('pc_run')));});
 test('trusted plugin install restores a built-in module and rejects unknown code',async()=>{await req('/api/ops/plugins/skills',{enabled:false});const installed=await req('/api/ops/plugins/skills/install',{});assert.equal(installed.status,201);assert.equal((await installed.json()).enabled,true);assert.equal((await req('/api/ops/plugins/untrusted/install',{})).status,404);});
-test('settings can toggle optional modules but protect required security modules',async()=>{const settings=await(await req('/api/assistant/settings')).json();assert.equal(settings.version,'10.3.0');assert.equal(settings.plugins.length,PLUGINS.length);assert.equal(settings.permissions.manage_api_keys,true);assert.equal(settings.permissions.manage_secrets,true);assert.equal(settings.permissions.manage_trading,true);assert.equal((await req('/api/assistant/settings/plugins/truth',{enabled:false})).status,400);assert.equal((await req('/api/assistant/settings/plugins/computer-control',{enabled:false})).status,400);let changed=await(await req('/api/assistant/settings/plugins/clock',{enabled:false})).json();assert.equal(changed.enabled,false);changed=await(await req('/api/assistant/settings/plugins/clock',{enabled:true})).json();assert.equal(changed.enabled,true);});
+test('settings can toggle optional modules but protect required security modules',async()=>{const settings=await(await req('/api/assistant/settings')).json();assert.equal(settings.version,'11.0.0');assert.equal(settings.plugins.length,PLUGINS.length);assert.equal(settings.permissions.manage_api_keys,true);assert.equal(settings.permissions.manage_secrets,true);assert.equal(settings.permissions.manage_trading,true);assert.equal((await req('/api/assistant/settings/plugins/truth',{enabled:false})).status,400);assert.equal((await req('/api/assistant/settings/plugins/computer-control',{enabled:false})).status,400);let changed=await(await req('/api/assistant/settings/plugins/clock',{enabled:false})).json();assert.equal(changed.enabled,false);changed=await(await req('/api/assistant/settings/plugins/clock',{enabled:true})).json();assert.equal(changed.enabled,true);});
 test('declarative API builder creates and invokes an authenticated JSON API',async()=>{const createdResponse=await req('/api/assistant/apis',{name:'Test status',slug:'test-status',method:'GET',response:{ok:true,service:'Trinity'},status:'active'});assert.equal(createdResponse.status,201,await createdResponse.clone().text());const created=(await createdResponse.json()).api;const invoked=await req('/api/assistant/apis/'+created.id+'/invoke');assert.equal(invoked.status,200);assert.deepEqual(await invoked.json(),{ok:true,service:'Trinity'});});
 test('Trinity API keys expose the secret once, invoke scoped APIs, and revoke cleanly',async()=>{const createdResponse=await req('/api/assistant/api-keys',{name:'Runtime client',scopes:['api:invoke'],rate_limit_per_minute:30,expires_at:null});assert.equal(createdResponse.status,201,await createdResponse.clone().text());const created=(await createdResponse.json()).key;assert.match(created.secret,/^trn_live_[A-Za-z0-9_-]{43}$/);assert.equal(created.secret_visible_once,true);const listed=await(await req('/api/assistant/api-keys')).json();const item=listed.items.find(row=>row.id===created.id);assert.ok(item);assert.equal(item.secret,undefined);assert.equal(item.key_hash,undefined);const invoked=await mf.dispatchFetch(url+'/api/v1/generated/test-status',{headers:{Authorization:'Bearer '+created.secret}});assert.equal(invoked.status,200,await invoked.clone().text());assert.deepEqual(await invoked.json(),{ok:true,service:'Trinity'});const rejected=await mf.dispatchFetch(url+'/api/v1/generated/test-status',{headers:{Authorization:'Bearer trn_live_'+'x'.repeat(43)}});assert.equal(rejected.status,401);const revoked=await req('/api/assistant/api-keys/'+created.id+'/revoke',{});assert.equal(revoked.status,200,await revoked.clone().text());const after=await mf.dispatchFetch(url+'/api/v1/generated/test-status',{headers:{Authorization:'Bearer '+created.secret}});assert.equal(after.status,401);});
 test('scoped MCP keys separate read access from project-changing tools',async()=>{const headers={Accept:'application/json, text/event-stream','Content-Type':'application/json'};const readKey=(await(await req('/api/assistant/api-keys',{name:'Gemini MCP read',scopes:['mcp:read'],rate_limit_per_minute:30,expires_at:null})).json()).key;let response=await mf.dispatchFetch(url+'/mcp',{method:'POST',headers:{...headers,Authorization:'Bearer '+readKey.secret},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-03-26',capabilities:{},clientInfo:{name:'gemini-test',version:'1'}}})});assert.equal(response.status,200,await response.clone().text());response=await mf.dispatchFetch(url+'/mcp',{method:'POST',headers:{...headers,Authorization:'Bearer '+readKey.secret},body:JSON.stringify({jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'pc_run_command',arguments:{command:'npm test',rationale:'runtime permission test'}}})});assert.equal(response.status,403,await response.clone().text());const writeKey=(await(await req('/api/assistant/api-keys',{name:'Gemini MCP write',scopes:['mcp:read','mcp:write'],rate_limit_per_minute:30,expires_at:null})).json()).key;response=await mf.dispatchFetch(url+'/mcp',{method:'POST',headers:{...headers,Authorization:'Bearer '+writeKey.secret},body:JSON.stringify({jsonrpc:'2.0',id:3,method:'tools/call',params:{name:'request_project_action',arguments:{action:'open_app',payload:{app:'notepad'},rationale:'runtime project access test'}}})});assert.equal(response.status,200,await response.clone().text());assert.match(await response.text(),/approval_required/);});
@@ -142,7 +181,7 @@ test('Trinity OS: /api/os/status a /api/os/processes vracia stav jadra a zoznam 
   assert.equal(statusRes.status,200);
   const statusData=await statusRes.json();
   assert.equal(statusData.os_name,'Trinity Cognitive Cloud OS');
-  assert.equal(statusData.kernel_version,'10.3.0-cloud-kernel');
+  assert.equal(statusData.kernel_version,'11.0.0-cloud-kernel');
   assert.ok(statusData.telemetry);
   assert.ok(statusData.storage);
   assert.ok(statusData.processes);
