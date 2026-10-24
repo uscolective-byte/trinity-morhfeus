@@ -390,6 +390,47 @@ header {
   border-color: rgba(38, 163, 224, .48) !important;
 }
 
+.admin-action-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  margin-top: 12px !important;
+}
+
+.admin-action-grid button,
+.admin-action-grid a {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+  min-height: 68px !important;
+  padding: 12px !important;
+  text-align: left !important;
+}
+
+.admin-action-grid button > i,
+.admin-action-grid a > i {
+  flex: 0 0 32px !important;
+}
+
+.admin-action-grid button > span,
+.admin-action-grid a > span {
+  display: grid !important;
+  gap: 4px !important;
+  min-width: 0 !important;
+  line-height: 1.35 !important;
+}
+
+.admin-action-grid button b,
+.admin-action-grid button small,
+.admin-action-grid a b,
+.admin-action-grid a small {
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+
+
 .activity-item {
   min-height: 54px !important;
   padding: 9px 11px !important;
