@@ -66,6 +66,15 @@ test('CI audit migrations preserve a pre-existing legacy audit table',async()=>{
 });
 test('public UI, liveness and readiness; private APIs',async()=>{assert.equal((await req('/',undefined,false)).status,200);const health=await(await req('/health',undefined,false)).json();assert.equal(health.agents,45);assert.equal(health.version,'11.0.0');assert.equal(health.deployment.id,'test-deployment');assert.equal(health.deployment.tag,'test-commit');const ready=await req('/ready',undefined,false);assert.equal(ready.status,200,await ready.clone().text());assert.equal((await ready.json()).checks.schema,true);assert.equal((await req('/api/ops/agents',undefined,false)).status,401);assert.equal((await req('/mcp',{},false)).status,401);});
 test('Concept 3 is self-contained, and its stylesheet and Trinity core artwork are served as typed assets',async()=>{const page=await(await req('/',undefined,false)).text();assert.match(page,/concept3\.css/);assert.doesNotMatch(page,/material-symbols-rounded/);assert.doesNotMatch(page,/chat_bubble|account_balance_wallet/);const css=await req('/concept3.css',undefined,false);assert.equal(css.status,200);assert.match(await css.text(),/\.sidebar-status-card/);const image=await req('/trinity-core.png',undefined,false);assert.equal(image.status,200);assert.match(image.headers.get('content-type'),/image\/png/);assert.deepEqual([...new Uint8Array(await image.arrayBuffer()).slice(0,4)],[137,80,78,71]);});
+test('new chat loads its publicly served stylesheet after inherited themes',async()=>{
+  const page=await(await req('/',undefined,false)).text();
+  assert.ok(page.indexOf('/street-chat.css')>page.indexOf('/theme.css'));
+  const response=await req('/street-chat.css',undefined,false);
+  assert.equal(response.status,200);
+  assert.match(response.headers.get('content-type'),/text\/css/);
+  assert.match(response.headers.get('cache-control'),/no-store|no-cache/);
+  assert.ok((await response.text()).length>0);
+});
 test('login sets protected cookie and logout revokes it',async()=>{const r=await req('/api/ops/login',{key},false);assert.equal(r.status,200);const c=r.headers.get('set-cookie');assert.match(c,/HttpOnly/);assert.match(c,/Secure/);assert.match(c,/SameSite=Strict/);assert.equal((await req('/api/ops/status',undefined,false,{Cookie:c.split(';')[0]})).status,200);await req('/api/ops/logout',{},false,{Cookie:c.split(';')[0]});assert.equal((await req('/api/ops/status',undefined,false,{Cookie:c.split(';')[0]})).status,401);});
 
 test('redeem preserves the authenticated ticket issuer and rejects reuse and expiry',async()=>{
