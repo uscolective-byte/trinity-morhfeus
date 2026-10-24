@@ -503,7 +503,7 @@ export async function saveTelegramConfig(env, input) {
 }
 
 export async function sendTelegramAlert(env, messageText) {
-  let botToken = env.TELEGRAM_BOT_TOKEN || '8842409933:AAGuFVQhGrfRwhXpd8P-8wnAHhfhP_zJQxI';
+  let botToken = env.TELEGRAM_BOT_TOKEN;
   let chatId = env.TELEGRAM_CHAT_ID;
 
   if (env.DB) {
