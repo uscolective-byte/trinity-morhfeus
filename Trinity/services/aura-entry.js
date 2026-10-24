@@ -8,9 +8,11 @@ import optimizer from './legacy-workers/aura_optimizer.js';
 import planner from './legacy-workers/aura_planner.js';
 import sentinel from './legacy-workers/aura_sentinel.js';
 import tester from './legacy-workers/aura_tester.js';
-import {skillRegistry} from '../src/skillRegistry.js';
+import {listAuraSafeSkills,executeAuraSafeSkill} from './legacy-workers/aura-safe-skills.js';
+import {AURA_SERVICE_VERSION} from './legacy-workers/aura_helpers.js';
 
-const VERSION='2.0.0';
+const VERSION=AURA_SERVICE_VERSION;
+const WRITE_ACTIONS=new Set(['analyze.code','architect.design','architect.edge.add','architect.node.add','codegen.generate','codegen.refactor','codegen.scaffold','evolve.propose','memory.synthesize','memory.consolidate','plan.task','plan.project','plan.create','plan.goals','sentinel.alert','sentinel.scan','test.validate','deploy.stage','deploy.complete','deploy.rollback']);
 const COMMON_AURA_SKILLS=['aura.skills','aura.execute_skill'];
 const roles={
   aura_analyzer:{worker:analyzer,actions:['analyze.code','analyze.data','analyze.system','aura.status',...COMMON_AURA_SKILLS],idempotent:['analyze.code']},
@@ -30,14 +32,23 @@ const json=(data,status=200)=>secure(Response.json(data,{status}));
 async function readJSON(request,limit=64000){
   if(!request.headers.get('Content-Type')?.includes('application/json'))throw Object.assign(new Error('Vyžaduje sa JSON.'),{status:415});
   if(Number(request.headers.get('Content-Length')||0)>limit)throw Object.assign(new Error('Požiadavka je príliš veľká.'),{status:413});
-  const text=await request.text();if(text.length>limit)throw Object.assign(new Error('Požiadavka je príliš veľká.'),{status:413});
+  const text=await request.text();if(new TextEncoder().encode(text).byteLength>limit)throw Object.assign(new Error('Požiadavka je príliš veľká.'),{status:413});
   try{return JSON.parse(text);}catch{throw Object.assign(new Error('Neplatný JSON.'),{status:400});}
 }
 function approved(call){return call.approval?.approved===true&&['owner','admin'].includes(call.approval.actor_role)&&/^[0-9a-f-]{36}$/i.test(call.approval.request_id||'');}
+async function validServiceToken(request,env){
+  const supplied=request.headers.get('X-Aura-Service-Token')||'';
+  if(typeof env.AURA_SERVICE_TOKEN!=='string'||env.AURA_SERVICE_TOKEN.length<32||supplied.length<32||supplied.length>512)return false;
+  const encode=new TextEncoder();
+  const [wanted,actual]=await Promise.all([crypto.subtle.digest('SHA-256',encode.encode(env.AURA_SERVICE_TOKEN)),crypto.subtle.digest('SHA-256',encode.encode(supplied))]);
+  const a=new Uint8Array(wanted),b=new Uint8Array(actual);
+  let difference=0;for(let i=0;i<a.length;i++)difference|=a[i]^b[i];
+  return difference===0;
+}
 function validateEndpoint(call){
   if(call.action!=='test.endpoint')return;
   let url;try{url=new URL(call.data?.url);}catch{throw Object.assign(new Error('Neplatná testovacia URL.'),{status:400});}
-  const allowed=url.protocol==='https:'&&(url.hostname==='auru.dev'||url.hostname==='auru.space'||url.hostname.endsWith('.saboivan2008.workers.dev'));
+  const allowed=url.protocol==='https:'&&!url.username&&!url.password&&!url.port&&!url.search&&!url.hash&&['/health','/ready'].includes(url.pathname)&&['auru.dev','auru.space'].includes(url.hostname);
   if(!allowed)throw Object.assign(new Error('Tester môže volať iba schválené Trinity HTTPS adresy.'),{status:403});
 }
 async function audit(env,ctx,event){
@@ -63,13 +74,16 @@ export default {
       if(!call||typeof call!=='object'||Array.isArray(call)||!role.actions.includes(call.action)||!call.data||typeof call.data!=='object'||Array.isArray(call.data))
         throw Object.assign(new Error('Neplatná alebo nepovolená Aura akcia.'),{status:400});
       validateEndpoint(call);
-      if(role.approval?.includes(call.action)&&!approved(call))throw Object.assign(new Error('Táto akcia vyžaduje potvrdenie vlastníka alebo administrátora.'),{status:403});
-      const mutating=role.idempotent?.includes(call.action);
+      const mutating=WRITE_ACTIONS.has(call.action)||role.idempotent?.includes(call.action);
+      if(mutating||role.approval?.includes(call.action)){
+        if(!approved(call)||!await validServiceToken(request,env))throw Object.assign(new Error('Táto akcia vyžaduje overený interný token a schválenie.'),{status:403});
+        if(!env.IDEMPOTENCY)throw Object.assign(new Error('Idempotency store is required for mutations'),{status:503});
+      }
       const key=call.idempotency_key;
       if(mutating&&(!key||!/^[0-9a-f-]{36}$/i.test(key)))throw Object.assign(new Error('Mutujúca akcia vyžaduje UUID idempotency_key.'),{status:400});
       if(mutating&&env.IDEMPOTENCY){const stored=await env.IDEMPOTENCY.get(`aura:${env.WORKER_ROLE}:${key}`,'json');if(stored)return json({...stored,reused:true},stored.ok===false?500:200);}
       if(call.action==='aura.skills'){
-        const list=skillRegistry.list();
+        const list=listAuraSafeSkills();
         const result={ok:true,role:env.WORKER_ROLE,skills_count:list.length,skills:list,traceId,service_version:VERSION};
         await audit(env,ctx,{role:env.WORKER_ROLE,action:call.action,traceId,status:'completed'});
         return json(result,200);
@@ -77,12 +91,9 @@ export default {
       if(call.action==='aura.execute_skill'){
         const skillName=call.data?.skill;
         if(!skillName||typeof skillName!=='string')throw Object.assign(new Error('Chýba názov skillu.'),{status:400});
-        const skillArgs = Array.isArray(call.data?.args)
-          ? call.data.args
-          : call.data?.params !== undefined
-            ? [call.data.params]
-            : [];
-        const skillResult=await skillRegistry.execute(skillName,...skillArgs,env);
+        if(Array.isArray(call.data?.args)&&call.data.args.length>1)throw Object.assign(new Error('Only one argument is supported'),{status:400});
+        const input=Array.isArray(call.data?.args)?call.data.args[0]:call.data?.params;
+        const skillResult=await executeAuraSafeSkill(skillName,input,env);
         const result={ok:true,role:env.WORKER_ROLE,skill:skillName,result:skillResult,traceId,service_version:VERSION};
         if(mutating&&env.IDEMPOTENCY)await env.IDEMPOTENCY.put(`aura:${env.WORKER_ROLE}:${key}`,JSON.stringify(result),{expirationTtl:86400});
         await audit(env,ctx,{role:env.WORKER_ROLE,action:call.action,traceId,status:'completed'});

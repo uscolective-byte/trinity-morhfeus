@@ -1,4 +1,5 @@
-// AURA Workers Helpers — zdieľaná logika pre inteligentné modely a robustný JSON parsing
+// Shared Aura Worker helpers. Service protocol version is distinct from Trinity app release.
+export const AURA_SERVICE_VERSION='2.1.0';
 
 export function getAiModel(env, preferred) {
   if (preferred && env[preferred]) return env[preferred];
@@ -64,4 +65,12 @@ export async function safeDbRun(promise) {
     // Tichý fallback ak tabuľka chýba alebo má odlišnú schému v D1
     return null;
   }
+}
+
+
+// Mutations must surface D1 failures instead of fabricating a successful write.
+export async function safeDbWrite(promise) {
+  const result=await promise;
+  if(!result||result.success!==true)throw new Error('D1 write did not succeed');
+  return result;
 }
