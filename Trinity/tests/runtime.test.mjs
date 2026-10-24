@@ -75,6 +75,24 @@ test('new chat loads its publicly served stylesheet after inherited themes',asyn
   assert.match(response.headers.get('cache-control'),/no-store|no-cache/);
   assert.ok((await response.text()).length>0);
 });
+test('Streetline UI is served after the Workshop stylesheet without replacing interactive chat controls',async()=>{
+  const page=await(await req('/',undefined,false)).text();
+  assert.ok(page.indexOf('/streetline.css')>page.indexOf('/street-chat.css'));
+  assert.match(page,/streetline-wayfinding/);
+  for(const id of ['chat-form','message','send','new-chat','sessions','theme','language','app-views']) {
+    assert.match(page,new RegExp('id="'+id+'"'));
+  }
+  const response=await req('/streetline.css',undefined,false);
+  assert.equal(response.status,200);
+  assert.match(response.headers.get('content-type'),/text\/css/);
+  assert.match(response.headers.get('cache-control'),/no-store|no-cache/);
+  const css=await response.text();
+  assert.match(css,/TRINITY \/ STREETLINE/);
+  assert.match(css,/prefers-reduced-motion/);
+  assert.match(css,/max-width:760px/);
+  assert.match(css,/data-theme="light"/);
+});
+
 test('login sets protected cookie and logout revokes it',async()=>{const r=await req('/api/ops/login',{key},false);assert.equal(r.status,200);const c=r.headers.get('set-cookie');assert.match(c,/HttpOnly/);assert.match(c,/Secure/);assert.match(c,/SameSite=Strict/);assert.equal((await req('/api/ops/status',undefined,false,{Cookie:c.split(';')[0]})).status,200);await req('/api/ops/logout',{},false,{Cookie:c.split(';')[0]});assert.equal((await req('/api/ops/status',undefined,false,{Cookie:c.split(';')[0]})).status,401);});
 
 test('redeem preserves the authenticated ticket issuer and rejects reuse and expiry',async()=>{
