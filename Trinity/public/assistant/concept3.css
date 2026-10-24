@@ -294,6 +294,30 @@ header {
   box-shadow: 0 8px 28px rgba(20, 217, 210, .2) !important;
 }
 
+.admin-shield {
+  display: grid !important;
+  grid-template-columns: 24px minmax(0, 1fr) !important;
+  grid-template-rows: auto auto !important;
+  align-items: center !important;
+  column-gap: 8px !important;
+  row-gap: 3px !important;
+  text-align: left !important;
+}
+
+.admin-shield > span {
+  grid-column: 1 !important;
+  grid-row: 1 / span 2 !important;
+}
+
+.admin-shield > b,
+.admin-shield > small {
+  grid-column: 2 !important;
+  white-space: nowrap !important;
+}
+
+.admin-shield > b { font-size: 10px !important; letter-spacing: .06em !important; }
+.admin-shield > small { color: #9aaec8 !important; line-height: 1.4 !important; }
+
 .living-core {
   width: 245px !important;
   min-width: 245px !important;
