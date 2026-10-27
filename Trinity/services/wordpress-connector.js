@@ -25,6 +25,7 @@ function approvedOrigins(env) {
 }
 
 export function validateSiteUrl(input) {
+  if(typeof input !== 'string' || input.includes('%')) throw new WordPressConnectorError('invalid_url','Kódované alebo neplatné URL nie sú povolené.');
   let url;
   try { url = new URL(input); }
   catch { throw new WordPressConnectorError('invalid_url','Neplatná URL WordPress stránky.'); }
