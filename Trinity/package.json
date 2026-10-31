@@ -22,7 +22,7 @@
   "dependencies": {
     "@cloudflare/puppeteer": "^1.4.0",
     "@modelcontextprotocol/ext-apps": "2.0.3",
-    "@modelcontextprotocol/server": "2.3.1",
+    "@modelcontextprotocol/server": "2.4.0",
     "@noble/curves": "2.4.0",
     "@noble/hashes": "2.4.0",
     "agents": "0.28.1",
