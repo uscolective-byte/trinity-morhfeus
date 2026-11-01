@@ -1,4 +1,4 @@
-name: CodeQL Security
+Wename: CodeQL Security
 
 on:
   push:
