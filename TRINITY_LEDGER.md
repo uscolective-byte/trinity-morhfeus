@@ -27,3 +27,20 @@
 | **Worker #26 (`jericho123`)** | `services/jericho123/src/index.js` & `jericho123/wrangler.toml` | Multi-source median consensus (Binance + Coinbase) with sliding-window KV history (`ORACLE_SLIDING_WINDOW_HISTORY`) and `>15%` price manipulation circuit breaker (`detectPriceManipulation`, `ERR_ORACLE_DEVIATION_HALT`). |
 | **Hermetic D1 Migrations** | `Trinity/migrations/0059_tetrakis_treasury_vaults_and_payments.sql` & `services/trinity-treasury/migrations/0001_tetrakis_treasury.sql` | Defines `ttk_vaults`, `ttk_transactions`, and `crypto_payments` with indexes. Applied first to staging `trinity-development` (`aura.dev`) and promoted to production `trinity-v03` (`aura.space`) via `.github/workflows/self-deploy.yml`. |
 | **Tetrakis Lore, Whitepaper & Logo** | `docs/TETRAKIS-WHITEPAPER.md`, `packages/crypto-core/lore/manifesto.json`, `public/assets/tetrakis-logo.png` | Official Logo (`1024x572` RGBA PNG, SHA-256 `b22b0981bdcd1e50442dc98932c43ef5f0f35a6662a275975b4565bf7bb31496`), Slogan *„Tetrakis ($TTK) – Fuel of the Autonomous Edge.“*, 4 Tetrahedron Pillars, Architect's Oath, and 5 X/Telegram Lore Drops. |
+
+---
+
+## 3. LIVE CLOUDFLARE DEPLOYMENT RECEIPTS (Run 42384219384)
+
+- **Commit (`main`)**: `3ab9adb` (`Trinity-antigravity`) / `c791b93` (`trinity-morhfeus`)
+- **Status**: `completed / success` (Exit Code 0)
+
+| Worker Target | Environment / Domain | Migrations Applied | Cloudflare Version ID |
+|---|---|---|---|
+| **`trinity-treasury` (Worker #24)** | Production (`BASE_CHAIN_ID=8453`) | `0001_tetrakis_treasury.sql` ✅ (`trinity-v03`) | `7a2764a1-0722-47a7-90c4-e814b43dce02` |
+| **`trinity-treasury-staging` (Worker #24)** | Staging (`BASE_CHAIN_ID=84532`) | `0001_tetrakis_treasury.sql` ✅ (`trinity-development`) | `d1fe97a8-f4ab-4f71-985f-967cb76b5a0d` |
+| **`trinity` (Root Gateway)** | Production (`https://auru.space`) | `0059_tetrakis_treasury_vaults_and_payments.sql` ✅ (`trinity-v03`) | `4ac66c4c-1dc6-4911-a7a2-3fd26e287b47` |
+| **`trinity-staging` (Staging Gateway)** | Staging (`https://auru.dev`) | `0059_tetrakis_treasury_vaults_and_payments.sql` ✅ (`trinity-development`) | `9bac21ca-0dc8-48ab-b7a1-d8029461f5bb` |
+| **`trinity-profile-staging` (Worker #47)** | Staging (`trinity-development`) | `0001_user_profiles.sql` ✅ (`trinity-development`) | `7d3b29b3-c251-486f-9f7c-6589940b50ad` |
+| **`jericho123` (Worker #26)** | Production (`preview_urls = false`) | Multi-source consensus + >15% manipulation guard | `ecbcc523-087e-4cb3-a6ea-0239705f4959` |
+
