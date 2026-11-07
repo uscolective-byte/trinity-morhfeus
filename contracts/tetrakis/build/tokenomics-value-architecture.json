@@ -1,0 +1,57 @@
+{
+  "generated_at": "2026-11-06T19:13:32.224Z",
+  "network": "Base Mainnet (ChainId 8453)",
+  "dex": "Uniswap v3 / Aerodrome",
+  "tokenomics": {
+    "token": "Tetrakis",
+    "symbol": "TTK",
+    "totalSupply": 1000000000,
+    "allocations": {
+      "communityAndLiquidity": {
+        "percentage": "40%",
+        "amount": 400000000,
+        "purpose": "Uniswap v3 & Aerodrome DEX Liquidity Pools, market stability"
+      },
+      "trinityAiEcosystem": {
+        "percentage": "30%",
+        "amount": 300000000,
+        "purpose": "Agent Compute Staking, autonomous execution rewards, mining"
+      },
+      "treasuryReserve": {
+        "percentage": "20%",
+        "amount": 200000000,
+        "purpose": "Sovereign Treasury reserve for buyback & liquidity backing"
+      },
+      "founderAndCoreDev": {
+        "percentage": "10%",
+        "amount": 100000000,
+        "purpose": "Basterix (Root Architect) founder allocation"
+      }
+    },
+    "utilityModel": [
+      {
+        "name": "Agent Execution Gas",
+        "description": "Platidlo za autonómne výpočtové úlohy 46 špecializovaných agentov v ekosystéme Trinity."
+      },
+      {
+        "name": "Sovereign Staking Tiers",
+        "description": "Držanie a staking TTK odomyká neobmedzený prístup k Azure AI Foundry GPT-4o, PC Bridge a privátnym API."
+      },
+      {
+        "name": "Revenue Share & Buyback",
+        "description": "Zisk z komerčných API a doménových služieb auru.space automaticky vykupuje TTK z Uniswap poolu a spaľuje ich (Deflačný model)."
+      }
+    ]
+  },
+  "liquidity_simulation": {
+    "initialEthLiquidity": 0.05,
+    "initialTtkLiquidity": 10000000,
+    "poolValueUsd": 265,
+    "initialTtkPriceUsd": 0.00001325,
+    "initialTtkPriceEur": 0.00001219,
+    "initialMarketCapUsd": 13250,
+    "pair": "TTK / WETH",
+    "recommendedDex": "Aerodrome Finance / Uniswap v3 (Base L2)",
+    "poolFeeTier": "0.3% (3000)"
+  }
+}

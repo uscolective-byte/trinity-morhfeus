@@ -265,7 +265,7 @@ test('Telegram handles /status, /pc, /crypto, /fleet and /clear commands', async
     await handleTelegramWebhook(t.createRequest(statusUpdate), t.env, ctxStatus.ctx);
     await ctxStatus.done();
     assert.match(t.sent[t.sent.length - 1].text, /Trinity Telegram: nakonfigurované/);
-    assert.match(t.sent[t.sent.length - 1].text, /TRINITY 11\.0 SOVEREIGN ECOSYSTEM/);
+    assert.match(t.sent[t.sent.length - 1].text, /TRINITY 11\.[0-9] SOVEREIGN ECOSYSTEM/);
 
     // 5. /clear
     const clearUpdate = t.message('/clear', 12345);

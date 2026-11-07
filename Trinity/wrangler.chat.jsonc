@@ -12,6 +12,31 @@
   "version_metadata": {
     "binding": "CF_VERSION_METADATA"
   },
+  "secrets_store_secrets": [
+    {
+      "binding": "poster",
+      "store_id": "5ba06ba934c343fa8c0dc5454ce67038",
+      "secret_name": "trinity_api"
+    },
+    {
+      "binding": "Tetris",
+      "store_id": "5ba06ba934c343fa8c0dc5454ce67038",
+      "secret_name": "Secret"
+    }
+  ],
+  "worker_loaders": [
+    {
+      "binding": "posterre"
+    }
+  ],
+  "services": [
+    {
+      "binding": "Tetrisw",
+      "service": "trinity",
+      "environment": "production",
+      "entrypoint": "default"
+    }
+  ],
   "observability": {
     "enabled": true,
     "logs": {
@@ -20,6 +45,7 @@
     }
   },
   "vars": {
+    "AI_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
     "AI_FAST_MODEL": "@cf/meta/llama-3.1-8b-instruct-fp8-fast",
     "AI_FALLBACK_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
     "AI_FAST_FALLBACK_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast"

@@ -1,0 +1,22 @@
+{
+  "date": "2026-11-03",
+  "trinity_tests": {
+    "passed": 819,
+    "failed": 0,
+    "command": "npm --prefix Trinity test"
+  },
+  "other_js_test_executions": 217,
+  "total_js_test_executions": 1036,
+  "python_tests": 14,
+  "worker_build_configs": 32,
+  "worker_build_failed": 0,
+  "staging_dry_run": "PASS",
+  "metadata_secrets_doctor": "PASS; no secret values accessed; remote scopes not verified",
+  "storage_isolation_config": "PASS",
+  "release_docs_check": "PASS",
+  "vercel_config_schema": "PASS against https://openapi.vercel.sh/vercel.json",
+  "hosted_ci": "BLOCKED: GitHub billing lock; job not started; 0 steps",
+  "production_deploy": false,
+  "test_scope": "All project suites passed in the full gate; the changed Trinity suite was rerun after final engine/formatter integration. Counts are test executions, including the Guardian contract repeated in its package gate.",
+  "vercel_previews": "4 project statuses SUCCESS at 740e3e39b117cfe2bdacb8b2e9920bf33d1fc19e"
+}

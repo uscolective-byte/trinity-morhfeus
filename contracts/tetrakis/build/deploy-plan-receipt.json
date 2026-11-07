@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-24T07:25:23.836Z",
+  "timestamp": "2026-11-06T19:03:11.248Z",
   "network": "Base Sepolia Testnet",
   "chainId": 84532,
   "contract": "TetrakisToken",
@@ -9,5 +9,6 @@
   "status": "PLAN_GENERATED_AWAITING_TESTNET_GAS",
   "treasuryBalanceWei": "0",
   "estimatedDeploymentCostWei": "7531271000000",
-  "bytecodeSha256": "0xfb9db665171c88a8b085a7825e25616573760776079f612cacd6f398d0edf004"
+  "bytecodeSha256": "0xfb9db665171c88a8b085a7825e25616573760776079f612cacd6f398d0edf004",
+  "runtimeKeccak256": "0x5db6aa4e0b155cc4eb54b45ce1ecde5ec0feb55c12e4fc75153b1615c5c9652c"
 }

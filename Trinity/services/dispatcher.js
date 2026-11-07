@@ -1,5 +1,5 @@
 // Trinity Dispatcher Worker (services/dispatcher.js)
-const VERSION = '2.0.0';
+const VERSION = '2.1.0';
 
 export default {
   async fetch(request, env) {
@@ -48,6 +48,28 @@ export default {
             .catch(() => {});
         }
         return Response.json({ ok: true, result: { id, status: "pending" }, traceId, from: "dispatcher" });
+      }
+
+      if (call.action === "task.get") {
+        if (!env.DB) return Response.json({ ok: false, error: "DB binding not configured", traceId, from: "dispatcher" }, { status: 503 });
+        const taskId = d.id;
+        if (!taskId) return Response.json({ ok: false, error: "Task id required", traceId, from: "dispatcher" }, { status: 400 });
+        const row = await env.DB.prepare("SELECT * FROM tasks WHERE id = ?").bind(taskId).first().catch(() => null);
+        return row
+          ? Response.json({ ok: true, result: row, traceId, from: "dispatcher" })
+          : Response.json({ ok: false, error: "Task not found", traceId, from: "dispatcher" }, { status: 404 });
+      }
+
+      if (call.action === "task.update") {
+        if (!env.DB) return Response.json({ ok: false, error: "DB binding not configured", traceId, from: "dispatcher" }, { status: 503 });
+        const taskId = d.id;
+        const allowedStatuses = new Set(["pending", "in_progress", "completed", "failed", "cancelled"]);
+        const status = d.status || "in_progress";
+        if (typeof taskId !== "string" || !taskId.trim()) return Response.json({ ok: false, error: "Task id required", traceId, from: "dispatcher" }, { status: 400 });
+        if (typeof status !== "string" || !allowedStatuses.has(status)) return Response.json({ ok: false, error: "Invalid task status", traceId, from: "dispatcher" }, { status: 400 });
+        const result = await env.DB.prepare("UPDATE tasks SET status = ?, updated_at = datetime('now') WHERE id = ?").bind(status, taskId).run();
+        if (!result.meta?.changes) return Response.json({ ok: false, error: "Task not found", traceId, from: "dispatcher" }, { status: 404 });
+        return Response.json({ ok: true, result: { id: taskId, status }, traceId, from: "dispatcher" });
       }
 
       if (call.action === "task.list") {

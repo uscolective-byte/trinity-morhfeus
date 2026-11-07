@@ -29,8 +29,8 @@ Neblokujúce poznámky (na tvoje rozhodnutie):
 | Krok | Výsledok |
 |---|---|
 | Worktree na presný commit | `C:\Users\saboi\trinity-core-67bc89b` (detached HEAD = `67bc89b19a65e4fc625669f31819757e4c004a0d`, čistý strom, `npm ci` hotové) |
-| Migrácia 0052 | Aplikovaná na D1 **trinity-development** (`1cce5249-e044-4c93-868c-0df534a778b5`) cez `wrangler d1 execute DB --remote --env staging --file migrations/0052_core_agent_runtime.sql` → `success: true` |
-| Deploy | `wrangler deploy --config workers/trinity/trinity-core.jsonc --env staging --tag 67bc89b19a65` → **trinity-core-staging**, Version ID `62b9dba6-1e55-452b-a732-2e06c0c38c22` |
+| Migrácia 0052 | Aplikovaná na D1 **trinity-development** (`1cce5249-e044-4c93-868c-0df534a778b5`) cez `wrangler d1 execute DB --remote -- staging --file migrations/0052_core_agent_runtime.sql` → `success: true` |
+| Deploy | `wrangler deploy --config workers/trinity/trinity-core.jsonc -- staging --tag 67bc89b19a65` → **trinity-core-staging**, Version ID `62b9dba6-1e55-452b-a732-2e06c0c38c22` |
 | Bindings | `DB` = trinity-development, `KNOWLEDGE_SERVICE` = trinity-knowledge, `AI` |
 
 Dôležité upozornenia k stavu:
@@ -48,12 +48,12 @@ Chýba dôkaz:
 
 Možnosti (vyber jednu, žiadnu som nespustil):
 - A. Dočasný tester worker na stagingu so service bindingom `CORE_STAGING → trinity-core-staging`, ktorý zavolá `fetch` s `{action:'core.run', ...}` a po overení ho zmazať.
-- B. `wrangler dev --remote --env staging` (beží lokálny kód s reálnymi staging bindingmi, nie nasadený worker — slabší dôkaz).
-- C. Dočasne povoliť `workers_dev` len pre staging env (mení konfig oproti commitu; po teste vrátiť).
+- B. `wrangler dev --remote -- staging` (beží lokálny kód s reálnymi staging bindingmi, nie nasadený worker — slabší dôkaz).
+- C. Dočasne povoliť `workers_dev` len pre staging  (mení konfig oproti commitu; po teste vrátiť).
 
 Overenie v D1 po teste:
 ```
-npx wrangler d1 execute DB --remote --config workers/trinity/trinity-core.jsonc --env staging --command "SELECT id,status,model FROM core_agent_runs ORDER BY created_at DESC LIMIT 3; SELECT run_id,tool,status,receipt_id FROM core_tool_receipts ORDER BY created_at DESC LIMIT 5;"
+npx wrangler d1 execute DB --remote --config workers/trinity/trinity-core.jsonc -- staging --command "SELECT id,status,model FROM core_agent_runs ORDER BY created_at DESC LIMIT 3; SELECT run_id,tool,status,receipt_id FROM core_tool_receipts ORDER BY created_at DESC LIMIT 5;"
 ```
 
 ## 4. Ďalší krok pre Codex
@@ -86,11 +86,11 @@ Volanie cez dočasný probe worker so service bindingom na `trinity-core-staging
 - D1 `trinity-development` (overené priamym dotazom): `core_agent_runs.status=completed`, **presne 1 riadok** v `core_tool_receipts` pre run (`knowledge_search:completed:7760ec0d-…`).
 
 ### 5.4 Poznámky
-- `KNOWLEDGE_SERVICE` na stagingu je produkčný `trinity-knowledge` (vrátený dokument má `Environment: production`) — read-only search, ale staging nie je izolovaný.
+- `KNOWLEDGE_SERVICE` na stagingu je produkčný `trinity-knowledge` (vrátený dokument má `ironment: production`) — read-only search, ale staging nie je izolovaný.
 - `AI_MODEL` na `trinity-core` produkcii (keep_vars) môže byť nastavená na `@cf/openai/gpt-oss-120b`, ktorý vracia `output[]` (Responses API formát) a `modelText` ho **nespracuje**. Pred produkčným deployom over vars na `trinity-core`, alebo pridaj podporu `output[].content[].text`.
 - Staging DB: 0052 aplikovaná ručne (nie je v `d1_migrations`); 0047–0051 stále pending; tabuľka `system_prompts` na stagingu neexistuje (core padá na fallback prompt, OK).
 - Dočasný probe worker `trinity-core-staging-probe` bol **zmazaný**. V Access neboli urobené žiadne zmeny.
-- Owner vytvoril `C:\Users\saboi\.env` (git-ignored, mimo repa) s Cloudflare údajmi; hodnoty som nikdy nevypísal. Access Service Token v ňom nebol platný (Client ID bez `.access`, token nie je v účte) — na test nebol potrebný.
+- Owner vytvoril `C:\Users\saboi\.` (git-ignored, mimo repa) s Cloudflare údajmi; hodnoty som nikdy nevypísal. Access Service Token v ňom nebol platný (Client ID bez `.access`, token nie je v účte) — na test nebol potrebný.
 
 ### 5.5 Ďalší krok pre Codex
 1. Rozhodnúť: pushnúť/cherry-pickovať `c2e87f377eb8` do `codex/tool-runtime-latest-20261027` (ja som nepushol).
@@ -109,7 +109,7 @@ Volanie cez dočasný probe worker so service bindingom na `trinity-core-staging
 2. **Nasadenie produkčného Workeru `trinity-core`**:
    - Nasadený kód s opraveným `modelText` (commit `c2e87f377eb8`).
    - Version ID: `07c487de-22b6-4803-8c62-6a51da4e3621`.
-   - Bindings: `env.DB` (trinity-v03), `env.KNOWLEDGE_SERVICE` (trinity-knowledge), `env.AI`.
+   - Bindings: `.DB` (trinity-v03), `.KNOWLEDGE_SERVICE` (trinity-knowledge), `.AI`.
 3. **Kanonický repozitár (`main`)**:
    - Commity `67bc89b` a `c2e87f3` zaradené do `main` (`0c4beab`, `3a5db0f`).
    - Testy v `Trinity/`: **6/6 PASS**.

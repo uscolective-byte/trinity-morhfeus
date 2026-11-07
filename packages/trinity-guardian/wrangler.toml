@@ -1,0 +1,30 @@
+﻿name = "trinity-guardian"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+
+[triggers]
+crons = ["*/10 * * * *"]
+
+[ai]
+binding = "AI"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "trinity-v03"
+database_id = "ca8ea24e-f7db-431e-b8bf-97f713ae4533"
+
+[[kv_namespaces]]
+binding = "TRINITY_KV"
+id = "c2c3bd8e6dc844d2b1d40ac0f505ff20"
+
+[[r2_buckets]]
+binding = "QUARANTINE_BUCKET"
+bucket_name = "trinity-quarantine"
+
+[vars]
+ORCHESTRATOR_URL = "https://auru.space"
+APPS_URL = "https://auru.dev"
+LOCAL_GATEWAY_URL = "http://127.0.0.1:8791"
+DATAVERSE_URL = "https://org35ccf923.crm17.dynamics.com"
+TRUTH_THRESHOLD = "85"
+ALERT_PHONE = "+421949009722"

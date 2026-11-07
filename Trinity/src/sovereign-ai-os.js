@@ -250,7 +250,7 @@ export const sovereignSkills = {
   'architecture.compare': async (params = {}, env) => {
     return {
       status: 'compared',
-      source: params.source || 'Trinity 11.0',
+      source: params.source || 'Trinity 11.1',
       target: params.target || 'Trinity 12.0 Sovereign AI OS',
       improvements: [
         'Separated capability registry from agent definitions',

@@ -1,0 +1,14 @@
+{
+  "name": "@trinity/contracts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": { "types": "./src/tap.d.ts", "default": "./src/tap.js" } },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "schema": "node scripts/schema.mjs",
+    "schema:check": "node scripts/schema.mjs --check"
+  },
+  "dependencies": { "zod": "4.6.7" },
+  "engines": { "node": ">=22" }
+}

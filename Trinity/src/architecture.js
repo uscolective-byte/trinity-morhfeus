@@ -10,9 +10,10 @@ export const VERIFIED_ARCHITECTURE_CONTEXT = `
 ZDROJ PRAVDY ARCHITEKTÚRY TRINITY — používaj iba tieto údaje:
 
 OVERENÉ V ZDROJI A TESTOCH:
-- Ostrý zjednotený verejný backend je jeden Cloudflare Worker „trinity“, verzia zdrojového vydania ${TRINITY_VERSION} (živú verziu vždy over cez /health), ktorý obsluhuje obe domény auru.space aj auru.dev.
-- Obe domény auru.space a auru.dev zdieľajú rovnaký Worker „trinity“, rovnakú D1 databázu trinity-v03, KV Mastermind, R2 bucket trinity-artifacts a Workflow trinity-operations (oddelená inštancia trinity-development bola zlúčená do jedného jadra trinity).
-- Lokálny vývoj beží iba na localhost a v rozhraní sa prostredie zobrazuje ako PRODUKCIA alebo LOCAL.
+- Tvrdý produkčný backend je Cloudflare Worker „trinity“, verzia zdrojového vydania ${TRINITY_VERSION} (živú verziu vždy over cez /health), ktorý obsluhuje výhradne produkčnú doménu auru.space (TRINITY_ENV = "production").
+- Vývojová a experimentálna doména auru.dev je prísne oddelená a obsluhovaná samostatným Cloudflare Workerom „trinity-staging“ (TRINITY_ENV = "staging", režim omni-dev) s izolovanou vývojovou D1 databázou trinity-development, samostatnými KV namespaces a R2 bucketom trinity-development-artifacts.
+- Produkčná doména auru.space používa D1 databázu trinity-v03, KV Mastermind, R2 bucket trinity-artifacts a Workflow trinity-operations.
+- Lokálny vývoj beží na localhost a v rozhraní sa prostredie zobrazuje ako PRODUKCIA (auru.space), VÝVOJ (auru.dev) alebo LOCAL.
 - Primárny AI provider je Cloudflare Workers AI s modelom @cf/meta/llama-3.3-70b-instruct-fp8-fast (rýchly chat model @cf/meta/llama-3.1-8b-instruct-fp8-fast).
 - Stavové a aplikačné dáta používa Cloudflare D1 databáza trinity-v03.
 - Výstupné objekty a médiá používa Cloudflare R2 bucket trinity-artifacts.

@@ -5,6 +5,7 @@
  * @license Sovereign Irrevocable Covenant
  * @description Modul server.mjs (Local-Gateway/src/server.mjs) v ekosystéme TRINITY OMNI-CORE.
  */
+import './trinity123/environment.mjs';
 import http from 'node:http';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -16,6 +17,7 @@ import {startCloudLink} from './cloud-link.mjs';
 import {startBridgeHeartbeat} from './bridge-heartbeat.mjs';
 import {DEVELOPER_TOOLS} from './developer-tools.mjs';
 import {inspectWindowsSession,executePrivileged,ROOT_REGISTRY} from './trinity-auth-core.mjs';
+import {createTrinity123Routes} from './trinity123/gateway-route.mjs';
 
 const here=path.dirname(fileURLToPath(import.meta.url));
 const gatewayRoot=path.resolve(here,'..');
@@ -24,6 +26,7 @@ const dataDir=path.resolve(process.env.TRINITY_GATEWAY_DATA||path.join(gatewayRo
 const token=process.env.TRINITY_LOCAL_TOKEN || '';
 const store=new ProposalStore(dataDir);await store.init();
 const recoveredInterrupted=await store.recoverInterrupted();
+const trinity123Routes=createTrinity123Routes({dataDir});
 let cloudState={status:process.env.TRINITY_GATEWAY_KEY?'connecting':'not-configured'};
 let pcBridgeState={status:process.env.TRINITY_PC_BRIDGE_KEY?'connecting':'not-configured'};
 
@@ -41,6 +44,7 @@ const server=http.createServer(async(request,response)=>{
     const url=new URL(request.url,'http://127.0.0.1');
     if(request.method==='GET'&&url.pathname==='/health')return send(response,200,{service:'Trinity Local Gateway',version:'1.3.0',status:'ready',synchronization:cloudState.status==='connected'&&pcBridgeState.status==='connected'?'connected':'degraded',binding:'127.0.0.1',local_auth:token?'required':'misconfigured',cloud:cloudState.status,cloud_last_success_at:cloudState.last_success_at||null,pc_bridge:pcBridgeState.status,pc_bridge_last_success_at:pcBridgeState.last_success_at||null,desktop_control:'approval-required',local_model:'qwen3:4b-instruct',recovered_interrupted:recoveredInterrupted.length});
     if(!authorized(request))return send(response,401,{error:'Neplatné lokálne oprávnenie.'});
+    if(await trinity123Routes(request,response,url,body))return;
     if(request.method==='GET'&&url.pathname==='/api/auth/status'){
       const currentSession=inspectWindowsSession();
       return send(response,200,{

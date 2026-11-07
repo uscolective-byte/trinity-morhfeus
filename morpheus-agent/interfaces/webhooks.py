@@ -15,12 +15,13 @@ from infrastructure.database import get_db
 from domain.models import SocialInteractionRecord
 from application.scheduler import autopilot_engine
 from core.logging import logger
+from core.webhook_security import signature_for, valid_signature
 
 router = APIRouter(prefix="/api/v1/webhooks", tags=["Social Webhooks Engine"])
 
-META_VERIFY_TOKEN = os.getenv("META_WEBHOOK_VERIFY_TOKEN", "trinity_meta_secret_verify_token")
+META_VERIFY_TOKEN = os.getenv("META_WEBHOOK_VERIFY_TOKEN", "")
 META_APP_SECRET = os.getenv("META_APP_SECRET", "")
-X_CONSUMER_SECRET = os.getenv("X_CLIENT_SECRET", "")
+X_CONSUMER_SECRET = os.getenv("X_CONSUMER_SECRET", "")
 
 
 @router.get("/meta")
@@ -29,7 +30,9 @@ async def meta_webhook_verification(
     hub_challenge: Optional[str] = Query(None, alias="hub.challenge"),
     hub_verify_token: Optional[str] = Query(None, alias="hub.verify_token")
 ):
-    if hub_mode == "subscribe" and hub_verify_token == META_VERIFY_TOKEN:
+    if not META_VERIFY_TOKEN:
+        raise HTTPException(status_code=503, detail="Meta verification is not configured")
+    if hub_mode == "subscribe" and hub_challenge and hub_verify_token and hmac.compare_digest(hub_verify_token.encode(), META_VERIFY_TOKEN.encode()):
         return Response(content=hub_challenge, media_type="text/plain")
     raise HTTPException(status_code=403, detail="Verification token mismatch")
 
@@ -43,10 +46,10 @@ async def meta_webhook_event(
     body_bytes = await request.body()
     signature = request.headers.get("X-Hub-Signature-256")
 
-    if META_APP_SECRET and signature:
-        expected = "sha256=" + hmac.new(META_APP_SECRET.encode(), body_bytes, hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(expected, signature):
-            raise HTTPException(status_code=401, detail="Invalid Meta signature")
+    if not META_APP_SECRET:
+        raise HTTPException(status_code=503, detail="Meta webhook is not configured")
+    if not valid_signature(META_APP_SECRET, body_bytes, signature):
+        raise HTTPException(status_code=401, detail="Invalid Meta signature")
 
     payload = json.loads(body_bytes.decode("utf-8"))
     entries = payload.get("entry", [])
@@ -81,12 +84,9 @@ async def x_crc_challenge(crc_token: Optional[str] = None):
     if not crc_token:
         raise HTTPException(status_code=400, detail="Missing crc_token")
 
-    sha256_hash = hmac.new(
-        X_CONSUMER_SECRET.encode("utf-8"),
-        msg=crc_token.encode("utf-8"),
-        digestmod=hashlib.sha256
-    ).digest()
-    response_token = "sha256=" + hashlib.sha256(sha256_hash).hexdigest()
+    if not X_CONSUMER_SECRET:
+        raise HTTPException(status_code=503, detail="X webhook is not configured")
+    response_token = signature_for(X_CONSUMER_SECRET, crc_token.encode("utf-8"), encoding="base64")
     return {"response_token": response_token}
 
 
@@ -96,7 +96,12 @@ async def x_webhook_events(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
-    payload = await request.json()
+    if not X_CONSUMER_SECRET:
+        raise HTTPException(status_code=503, detail="X webhook is not configured")
+    body_bytes = await request.body()
+    if not valid_signature(X_CONSUMER_SECRET, body_bytes, request.headers.get("x-twitter-webhooks-signature"), encoding="base64"):
+        raise HTTPException(status_code=401, detail="Invalid X signature")
+    payload = json.loads(body_bytes)
     dm_events = payload.get("direct_message_events", [])
     for dm in dm_events:
         msg_data = dm.get("message_create", {})

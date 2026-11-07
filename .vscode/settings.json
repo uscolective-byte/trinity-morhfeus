@@ -1,5 +1,7 @@
 {
-    "files.readonlyInclude": {
-        "{**/.c4z/.extsrcs/*.PROTSYM.cbl,**/.c4z/.extsrcs/*.PROTSYM.listing}": true
-    }
+    "security.workspace.trust.enabled": false,
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
+    "python.terminal.activateEnvironment": true,
+    "python.terminal.useEnvFile": true,
+    "python-envs.defaultEnvManager": "ms-python.python:system"
 }

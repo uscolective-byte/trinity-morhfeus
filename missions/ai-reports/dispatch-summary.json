@@ -1,0 +1,70 @@
+[
+    {
+        "Provider":  "OpenAI",
+        "Status":  "VERIFIED",
+        "Report":  "C:\\Users\\saboi\\Trinity\\Trinity-antigravity\\missions\\ai-reports\\OpenAI.txt",
+        "Time":  "2026-11-04T15:21:53.7744756+01:00"
+    },
+    {
+        "Provider":  "Gemini",
+        "Status":  "NOT_CONFIGURED",
+        "Report":  "C:\\Users\\saboi\\Trinity\\Trinity-antigravity\\missions\\ai-reports\\Gemini.txt",
+        "Time":  "2026-11-04T15:21:53.7957451+01:00"
+    },
+    {
+        "Provider":  "Claude",
+        "Status":  "NOT_CONFIGURED",
+        "Report":  "C:\\Users\\saboi\\Trinity\\Trinity-antigravity\\missions\\ai-reports\\Claude.txt",
+        "Time":  "2026-11-04T15:21:53.7957451+01:00"
+    },
+    {
+        "Provider":  "Ollama",
+        "Status":  "NOT_CONFIGURED",
+        "Report":  "C:\\Users\\saboi\\Trinity\\Trinity-antigravity\\missions\\ai-reports\\Ollama.txt",
+        "Time":  "2026-11-04T15:21:53.8014904+01:00"
+    },
+    {
+        "Provider":  "Antigravity",
+        "Status":  "VERIFIED",
+        "Report":  "C:\\Users\\saboi\\Trinity\\Trinity-antigravity\\missions\\ai-reports\\Antigravity.txt",
+        "Time":  "2026-11-04T15:21:53.8054551+01:00"
+    },
+    {
+        "Provider":  "Copilot",
+        "Status":  "NOT_CONFIGURED",
+        "Report":  "C:\\Users\\saboi\\Trinity\\Trinity-antigravity\\missions\\ai-reports\\Copilot.txt",
+        "Time":  "2026-11-04T15:21:53.8079204+01:00"
+    },
+    {
+        "Provider":  "Codex",
+        "Status":  "NOT_CONFIGURED",
+        "Report":  "C:\\Users\\saboi\\Trinity\\Trinity-antigravity\\missions\\ai-reports\\Codex.txt",
+        "Time":  "2026-11-04T15:21:53.8103084+01:00"
+    },
+    {
+        "Provider":  "DeepSeek",
+        "Status":  "NOT_CONFIGURED",
+        "Report":  "C:\\Users\\saboi\\Trinity\\Trinity-antigravity\\missions\\ai-reports\\DeepSeek.txt",
+        "Time":  "2026-11-04T15:21:53.8132683+01:00"
+    },
+    {
+        "Provider":  "Grok",
+        "Status":  "NOT_CONFIGURED",
+        "Report":  "C:\\Users\\saboi\\Trinity\\Trinity-antigravity\\missions\\ai-reports\\Grok.txt",
+        "Time":  "2026-11-04T15:21:53.8170981+01:00"
+    },
+    {
+        "Provider":  "CloudflareWorkersAI",
+        "Status":  "NOT_CONFIGURED",
+        "Report":  "C:\\Users\\saboi\\Trinity\\Trinity-antigravity\\missions\\ai-reports\\CloudflareWorkersAI.txt",
+        "Time":  "2026-11-04T15:21:53.8187732+01:00"
+    },
+    {
+        "Provider":  "LocalServer",
+        "Status":  "ADDRESS_REVIEW_REQUIRED",
+        "Report":  "C:\\Users\\saboi\\Trinity\\Trinity-antigravity\\missions\\ai-reports\\LocalServer.txt",
+        "Time":  "2026-11-04T15:21:53.8245855+01:00"
+    }
+]
+
+

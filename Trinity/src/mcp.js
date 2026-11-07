@@ -18,7 +18,8 @@ import {createMcpHandler} from 'agents/mcp/server';
 import {z} from 'zod';
 import {AGENTS} from './registry.js';
 import {createJob,getJob,listJobs} from './jobs.js';
-import {searchMemory} from './tools.js';
+import {runTool, searchMemory} from './tools.js';
+import {runTapMcpDiagnostic,tapDiagnosticInput} from './tap-mcp-adapter.js';
 import {callModel,serviceStatus,readiness} from './services.js';
 import {skillRegistry} from './skillRegistry.js';
 import {listPlugins} from './plugins.js';
@@ -30,6 +31,7 @@ import {runBrainCycle} from './brain.js';
 import {runEvolutionCycle} from './evolution.js';
 import {sharedNotesInput,syncSharedNotes} from './shared-notes.js';
 import {recordLedgerEntry,queryLedger} from './os-registry.js';
+import {getAzureFoundryAgentStatus,invokeAzureFoundryAgent} from './azure-foundry-agent.js';
 
 const result=data=>({content:[{type:'text',text:JSON.stringify(data,null,2)}]});
 
@@ -37,6 +39,11 @@ export function handleMcp(request,env,ctx,access={}){
   return createMcpHandler(()=>{
   const server=new McpServer({name:'trinity',version:TRINITY_VERSION});
     const requireProjectAccess=()=>{if(access.projectControl!==true)throw new Error('Tento MCP klient nemá projektové oprávnenie.');};
+    server.registerTool('diagnostic_ping',{description:'Vykoná bezpečný diagnostický ping pre overenie prepojenia Tool Registry, Agent Runtime a Tool Executor.',inputSchema:tapDiagnosticInput.shape},async(args)=>{
+      if(env.TRINITY_TAP_ENABLED!=='true')return result(await runTool(env,null,'diagnostic_ping',{message:args.message}));
+      const outcome=await runTapMcpDiagnostic(env,args,access);
+      return {...result(outcome.data),...(outcome.isError?{isError:true}:{})};
+    });
     server.registerTool('infrastructure_status',{description:'Stav konfigurácie domén, hostingu a vývoja Trinity.',inputSchema:{}},async()=>result(infrastructureStatus(env)));
     server.registerTool('project_inspect',{description:'Nájde relevantné zdrojové súbory a presný commit Trinity.',inputSchema:{query:z.string().max(2000).default('')}},async({query})=>{requireProjectAccess();return result(await inspectProject(env,query));});
     server.registerTool('project_read',{description:'Číta zdroj z GitHubu bez zapnutého PC.',inputSchema:{path:z.string().max(500),ref:z.string().regex(/^[a-f0-9]{40}$/).optional()}},async({path,ref})=>{requireProjectAccess();return result(await readProjectSource(env,path,ref));});
@@ -241,6 +248,19 @@ export function handleMcp(request,env,ctx,access={}){
         return result({connected:false,error:'PC Bridge neodpovedal.'});
       });
 
+    server.registerTool('pc_open_url',{description:'Otvorí URL odkaz v predvolenom webovom prehliadači na PC.',
+      inputSchema:{url:z.string().min(1).max(2048)}},
+      async({url})=>{
+        const action=await createSystemAction(env,{action:'open_url',payload:{url},rationale:'MCP: Otvorenie odkazu: ' + url.slice(0,100)},'admin:mcp:trinity',{adminAuthorized:true});
+        for(let i=0;i<15;i++){
+          await new Promise(r=>setTimeout(r,500));
+          const cur=await getSystemAction(env,action.id);
+          if(cur?.status==='completed')return result({opened:true,url,...cur.receipt});
+          if(cur?.status==='failed')return result({opened:false,error:cur.error});
+        }
+        return result({opened:true,id:action.id,note:'Požiadavka na otvorenie odkazu bola odoslaná lokálnej bráne.'});
+      });
+
     server.registerTool('pc_run_command',{description:'Spustí príkaz na lokálnom PC (vyžaduje schválenie).',
       inputSchema:{command:z.string().min(1).max(2000),cwd:z.string().max(500).optional(),rationale:z.string().min(5).max(300)}},
       async({command,cwd,rationale})=>{
@@ -278,6 +298,13 @@ export function handleMcp(request,env,ctx,access={}){
 
     server.registerTool('trigger_evolution_cycle',{description:'Spustí evolučný cyklus analýzy chýb a seba-zdokonaľovania.',inputSchema:{}},
       async()=>result(await runEvolutionCycle(env)));
+
+    server.registerTool('azure_foundry_agent_status',{description:'Zistí stav a konfiguráciu integrácie Microsoft Azure AI Foundry agenta Trinity.',inputSchema:{}},
+      async()=>result(getAzureFoundryAgentStatus(env)));
+
+    server.registerTool('azure_foundry_agent_invoke',{description:'Odošle požiadavku agentovi Trinity na Microsoft Azure AI Foundry.',
+      inputSchema:{message:z.string().min(1).max(12000),agent:z.string().optional(),conversation_id:z.string().optional()}},
+      async({message,agent,conversation_id})=>result(await invokeAzureFoundryAgent(env,{message,agentName:agent,conversationId:conversation_id})));
 
     return server;
   },{route:'/mcp'})(request,env,ctx);

@@ -5,7 +5,7 @@
  * @license Sovereign Irrevocable Covenant
  * @description Modul version.js (Trinity/src/version.js) v ekosystéme TRINITY OMNI-CORE.
  */
-export const TRINITY_VERSION='11.0.0';
+export const TRINITY_VERSION='11.1.0';
 
 export const TRINITY_SOURCE={repository:'uscolective-byte/Trinity-antigravity',branch:'main'};
 

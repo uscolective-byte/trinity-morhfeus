@@ -1,0 +1,25 @@
+{
+  "generated_at": "2026-11-07T04:14:26Z",
+  "command": "wrangler deploy --dry-run --config <worker wrangler config> --env \"\" --outdir <temporary directory>",
+  "wrangler_version": "4.158.0",
+  "mode": "local bundle dry-run; no Cloudflare deployment or D1 migration",
+  "summary": {
+    "target_count": 46,
+    "passed": 46,
+    "failed": 0,
+    "exit_code": 0
+  },
+  "workers": [
+    "aura_analyzer", "aura_architect", "aura_codegen", "aura_deployer", "aura_evolver",
+    "aura_memory", "aura_optimizer", "aura_planner", "aura_sentinel", "aura_tester",
+    "chanfana-openapi-template", "jericho123", "muddy-wind-42e2", "my-react-app",
+    "noisy-hat-011e", "react-router-starter-templates", "saas-admin-template", "small-pine-596d",
+    "snowy-fire-3605", "trinity", "trinity-agent-researcher", "trinity-audit", "trinity-builder",
+    "trinity-capacity", "trinity-chat-inference", "trinity-chat-maintainer", "trinity-connectors",
+    "trinity-core", "trinity-deployer", "trinity-dispatcher", "trinity-gemini", "trinity-guardian",
+    "trinity-integrations", "trinity-knowledge", "trinity-memory", "trinity-morhfeus", "trinity-ops",
+    "trinity-pc-bridge", "trinity-pc-bridge-v2", "trinity-seeder", "trinity-sentinel", "trinity-skills",
+    "trinity-staging", "trinityguardiantruthverifierworker", "vite-react-template", "vite-react-templates"
+  ],
+  "scope_note": "A successful Wrangler dry-run proves the selected config bundles locally. It does not prove runtime health, authorization correctness, live service compatibility, migration safety, or deployment readiness."
+}

@@ -21,6 +21,8 @@ export const SYSTEM_CAPABILITIES=Object.freeze([
   // ── NextGen PC akcie ──
   {id:'screenshot', approval:false, risk:'read'},
   {id:'open_app',   approval:true,  risk:'change'},
+  {id:'open_url',   approval:false, risk:'read'},
+  {id:'open_file',  approval:false, risk:'read'},
   {id:'notify',     approval:false, risk:'read'},
   {id:'system_info',approval:false, risk:'read'},
   {id:'scrape',     approval:false, risk:'read'},
@@ -125,7 +127,7 @@ export function actionEvidence(action){
   const claims={
     read:['verify'],write:['change','create_file'],edit:['change'],selfwrite:['change'],
     run:['execute'],deploy:['deploy'],share:['send','publish'],upload:['publish'],upgrade:['install','change'],
-    screenshot:['verify'],open_app:['execute'],notify:['send'],system_info:['verify'],
+    screenshot:['verify'],open_app:['execute'],open_url:['verify'],open_file:['verify'],notify:['send'],system_info:['verify'],
     scrape:['verify'],web_fetch:['verify'],download:['change','create_file'],git_commit:['change','publish'],git_pr:['change','publish'],
   };
   return claims[action]||[];

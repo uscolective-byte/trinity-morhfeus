@@ -229,6 +229,26 @@ export const BUILTIN_COPILOT_PLUGINS = [
     category: 'science',
     enabled: true,
     required: false
+  },
+  {
+    id: 'azure-foundry-agent',
+    name: 'Azure AI Foundry Agent & Knowledge Bridge',
+    version: '1.0.0',
+    description: 'Prepojenie Trinity s Microsoft Azure AI Foundry Agent Service (DA-RG-australiacentral) a Knowledge Indexom.',
+    skills: ['azureFoundryAgentSync', 'azureKnowledgeSearch', 'azureIndexAudit'],
+    category: 'integration',
+    enabled: true,
+    required: false
+  },
+  {
+    id: 'antigravity-suite',
+    name: 'Google Antigravity Agentic Tool Suite',
+    version: '1.0.0',
+    description: 'Kompletná sada agentických nástrojov Antigravity (read_file, write_file, edit_file, run_command, manage_task, search_marketplace).',
+    skills: ['antigravityReadFile', 'antigravityWriteFile', 'antigravityEditFile', 'antigravityRunCommand', 'antigravityManageTask', 'antigravitySearchMarketplace'],
+    category: 'engineering',
+    enabled: true,
+    required: false
   }
 ];
 

@@ -1,48 +1,44 @@
-# AGENTS.md — Trinity-antigravity
+# AGENTS.md — Trinity Active Development Hub
 
-Pred každou úlohou povinne prečítaj [TEAM-HANDOFF.md](TEAM-HANDOFF.md).
-Pred každým príkazom skontroluj jeho aktuálnosť; pred zmenou zapíš CLAIM,
-over vlastníctvo súborov, po zmene UPDATE a pri odovzdaní HANDOFF/ACK.
-Tento postup platí pre všetkých agentov v tomto repozitári. Zachovaj cudzie
-zmeny; konflikt zastavuje dotknuté úpravy. Aktuálne úlohy hľadaj v TEAM-HANDOFF.md,
-nie iba v historickom handoffe uvedenom nižšie.
+**Vlastník projektu:** Basterix (Sabo Ivan)  
+**Režim vývoja:** AKTÍVNY VÝVOJ // RAPID EVOLUTION  
+**Pravidlo majiteľa:** Všetky reštriktívne čakania na koordinátora a povinné CLAIM ceremónie sú počas vývoja zrušené. Trinity vyvíjame priamo, agilne a bez zbytočných blokád. Pravidlá pre finálnu prevádzku sa nastavia, až keď bude Trinity hotová.
 
-## Cloudflare Secrets Store — záväzný skill pre všetkých agentov
+---
 
-Pri akejkoľvek zmene Cloudflare tajomstiev, bindingov, modelov alebo
-nasadení si najprv načítaj
-[cloudflare-secrets-store skill](.agents/skills/cloudflare-secrets-store/SKILL.md).
-Pred deployom spusti čisto metadátový test:
-`node Trinity/scripts/secrets-store-doctor.mjs`.
-Cloudflare account Secrets Store používa `await env.BINDING.get()`,
-nie čítanie textu z konfigurácie. Rozsah `workers` a oprávnenia
-nasadzujúceho účtu sa musia overiť osobitne.
+## 1. Zásady práce pre agentov (Antigravity, Copilot, Codex, Gemini, Azure AI Foundry)
 
-Cloudflare v `Trinity/wrangler.jsonc` používa `--env staging`,
-nie historický názov `--env development`.
-Súbor `C:\Users\saboi\.env` je len existujúca lokálna
-vývojová konfigurácia mimo repozitára; **nie je zdrojom cloudových
-Secrets Store hodnôt**. Skutočné produkčné hodnoty nikdy nekopíruj do
-súborov, logov, komentárov, modelových promptov ani Gitu. Kľúč
-zverejnený v chate sa nesmie použiť; okamžite ho zrušiť.
-Antigravity používajúci tento skill musí mať skutočne dostupné PC
-a autorizovanú Cloudflare reláciu. Samotný commit neznamená inštaláciu
-na lokálny PC ani nasadenie.
+1. **Priamy vývoj bez byrokracie:** Žiadne čakanie na syntetických koordinátorov ani povinné zapisovanie CLAIM pred každou úpravou. Spolupracuj s Basterixom, kóduj, opravuj a vylepšuj priamo.
+2. **Kvalita a overenie:** Každá zmena musí byť overená testami (`npm test`). Dodržuj Truth Policy 2.1 (`NO RECEIPT = NO SUCCESS, NO EVIDENCE = NO FACT`).
+3. **Komunikácia:** S majiteľom (Basterix / Sabo Ivan) komunikuj vždy po slovensky.
+4. **Bezpečnosť tajomstiev:** Nikdy nevypisuj, neloguj a necommituj API kľúče, `.env`, `.dev.vars`, DPAPI poverenia ani tokeny.
 
-Pokyny pre agentov (Codex, Antigravity). S majiteľom (Sabo Ivan / Basterix) komunikuj po slovensky.
+---
 
-1. Najprv prečítaj [CODEX-ANTIGRAVITY-PROTOCOL.md](CODEX-ANTIGRAVITY-PROTOCOL.md) a posledný HANDOFF (aktuálne `CODEX-HANDOFF-FROM-ANTIGRAVITY-CORE-TOOLS-20261027.md`).
-2. **Kľúče a tajomstvá:** spoločný súbor je `C:\Users\saboi\.env` (mimo repa). Postup, zákazy a inventár sú v protokole, sekcia 7.
-   - Prítomnosť over: `powershell -NoProfile -File scripts/shared-env.ps1 -Check` (hodnoty sa nevypisujú).
-   - Hodnoty nikdy nevypisuj, nelogovaj ani necommituj. Chýbajúci kľúč pridá majiteľ, nežiadaj ho do chatu.
-3. Pred deployom testy, deploy s `--tag <git-sha>`, overenie `node Trinity/scripts/verify-deployment.mjs`. Produkčný merge/deploy len po staging dôkaze a rozhodnutí majiteľa.
+## 2. Cloudflare Secrets Store
 
-## Zjednotené oprávnenia a vývoj
+Pri práci s Cloudflare tajomstvami, bindingmi alebo modelmi si naštuduj zručnosť:
+[.agents/skills/cloudflare-secrets-store/SKILL.md](.agents/skills/cloudflare-secrets-store/SKILL.md).
+- Cloudflare používa `await env.BINDING.get()`.
+- Produkčné hodnoty patria do Secrets Store, nie do Gitu.
+- Pred deployom over funkčnosť cez `node Trinity/scripts/secrets-store-doctor.mjs`.
 
-Kanonický repozitár: `uscolective-byte/Trinity-antigravity@main`.
-Pre Codex, ChatGPT, Antigravity, Gemini, Copilot Studio a Ollama platí
-[AGENT_ACCESS_AND_AUTONOMY.md](Trinity/docs/AGENT_ACCESS_AND_AUTONOMY.md).
-Pri autorizovanom vlastníkovi automatizuj bezpečné úpravy, build, testy,
-commity a PR. Model nie je samostatná identita ani poverenie.
-Merge, zmeny infraštruktúry a produkcie vykonaj iba po skutočnej kontrole
-scope, výsledkov CI a aktuálnom HANDOFF; nikdy nevymýšľaj receipt.
+---
+
+## 3. Ekosystém Trinity
+
+- **Kanonický repozitár:** `uscolective-byte/Trinity-antigravity@main`.
+- **Produkčný Cloudflare Worker:** `Trinity/` na doménach `https://auru.space` a `https://auru.dev`.
+- **Lokálny Desktop:** `Local-Desktop/` (port 7788/7789) s pripojením na PC Workspace.
+- **Lokálna Brána:** `Local-Gateway/` pre bezpečné overenie systémových akcií.
+- **Azure AI Foundry:** Austrália Central tenant `ad443c2d-5bac-46b3-ad16-187e4ca37962`, Knowledge Index `trinity-omni-knowledge`.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

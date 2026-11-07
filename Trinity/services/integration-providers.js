@@ -15,7 +15,7 @@ async function boundedJSON(response,limit=200000){
 export async function scrape(env,input,fetcher=fetch){
  if(!env.FIRECRAWL_API_KEY)throw new IntegrationError(503,'Firecrawl API key is not configured');
  const url=allowedSource(input?.url,env.FIRECRAWL_ALLOWED_ORIGINS);
- const response=await fetcher('https://api.firecrawl.dev/v2/scrape',{method:'POST',redirect:'error',signal:AbortSignal.timeout(45000),headers:{Authorization:'Bearer '+env.FIRECRAWL_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({url,formats:['markdown'],onlyMainContent:true})});
+ const response=await fetcher('https://api.firecrawl.dev/v2/scrape',{method:'POST',redirect:'manual',signal:AbortSignal.timeout(45000),headers:{Authorization:'Bearer '+env.FIRECRAWL_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({url,formats:['markdown'],onlyMainContent:true})});
  if(!response.ok)throw new IntegrationError(response.status===429?429:502,'Firecrawl request failed');
  const data=await boundedJSON(response);
  if(data.success!==true||typeof data.data?.markdown!=='string'||!data.data.markdown.trim())throw new IntegrationError(502,'Firecrawl returned no content');
@@ -35,7 +35,7 @@ async function firebaseToken(env,fetcher){
  const bytes=Uint8Array.from(atob(pem),c=>c.charCodeAt(0));
  const key=await crypto.subtle.importKey('pkcs8',bytes,{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
  const sig=await crypto.subtle.sign('RSASSA-PKCS1-v1_5',key,new TextEncoder().encode(message));
- const response=await fetcher('https://oauth2.googleapis.com/token',{method:'POST',redirect:'error',signal:AbortSignal.timeout(15000),headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'urn:ietf:params:oauth:grant-type:jwt-bearer',assertion:message+'.'+base64url(new Uint8Array(sig))})});
+ const response=await fetcher('https://oauth2.googleapis.com/token',{method:'POST',redirect:'manual',signal:AbortSignal.timeout(15000),headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'urn:ietf:params:oauth:grant-type:jwt-bearer',assertion:message+'.'+base64url(new Uint8Array(sig))})});
  if(!response.ok)throw new IntegrationError(502,'Firebase authentication failed');
  const result=await boundedJSON(response,20000);if(typeof result.access_token!=='string')throw new IntegrationError(502,'Firebase authentication failed');return result.access_token;
 }
@@ -44,7 +44,7 @@ export async function publishFirebase(env,health,fetcher=fetch){
  const token=await firebaseToken(env,fetcher);
  const fields={service:{stringValue:'Trinity'},version:{stringValue:String(health.version||'unknown')},status:{stringValue:String(health.status||'unknown')},updated_at:{timestampValue:new Date().toISOString()}};
  const url='https://firestore.googleapis.com/v1/projects/'+env.FIREBASE_PROJECT_ID+'/databases/(default)/documents/trinity_status/current';
- const response=await fetcher(url,{method:'PATCH',redirect:'error',signal:AbortSignal.timeout(15000),headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({fields})});
+ const response=await fetcher(url,{method:'PATCH',redirect:'manual',signal:AbortSignal.timeout(15000),headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({fields})});
  if(!response.ok)throw new IntegrationError(502,'Firestore publication failed; check database and permissions');
  await response.body?.cancel();return {published:true,project:env.FIREBASE_PROJECT_ID,document:'trinity_status/current'};
 }

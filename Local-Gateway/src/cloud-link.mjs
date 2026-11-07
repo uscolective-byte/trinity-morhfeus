@@ -8,7 +8,10 @@
 import {executeProposal} from './executor.mjs';
 
 async function request(url,key,options={}){
-  const response=await fetch(url,{...options,headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json',...(options.headers||{})},signal:AbortSignal.timeout(25_000)});
+  const cfHeaders={};
+  if(process.env.CLOUDFLARE_ACCESS_CLIENT_ID)cfHeaders['CF-Access-Client-Id']=process.env.CLOUDFLARE_ACCESS_CLIENT_ID;
+  if(process.env.CLOUDFLARE_ACCESS_CLIENT_SECRET)cfHeaders['CF-Access-Client-Secret']=process.env.CLOUDFLARE_ACCESS_CLIENT_SECRET;
+  const response=await fetch(url,{...options,headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json',...cfHeaders,...(options.headers||{})},signal:AbortSignal.timeout(25_000)});
   const text=await response.text();let data={};try{data=text?JSON.parse(text):{};}catch{}
   if(!response.ok)throw new Error(data.error||`Cloud HTTP ${response.status}`);return data;
 }

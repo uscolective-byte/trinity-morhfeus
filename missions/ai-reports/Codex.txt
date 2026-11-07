@@ -1,0 +1,57 @@
+Sprava pre Codexa (Antigravity & Trinity Core Sync):
+Datum: 2026-11-07 04:23 CET
+Status: ACTIVE / WRANGLER_GLOBAL_AVAILABLE / AURA_UPGRADED
+
+Podrobny handoff a diagnostika prepojenia Cloudflare Access a MCP boli ulozene do TEAM-HANDOFF.md.
+Zhrnutie:
+1. Wrangler CLI je teraz globalne nainstalovany (wrangler whoami funguje v celom systeme, ucet Basterix31).
+2. Startovacie skripty MCP (start-trinity-codex-mcp.ps1 a trinity-codex-mcp.mjs) boli opravene, automaticky citaju TRINITY_MCP_API_KEY z .env.
+3. Vsetky AURA workery a core services boli vylepsene (multi-tier LLM fallback, health checky, Truth Policy 2.1).
+4. Vsetky testy v Trinity prechadzaju (100% PASS).
+
+TRIPARTITE-COLLAB-20261107-01 — approved and active
+Owner-approved roles: Codex owns code/refactoring/verification; Antigravity owns infrastructure, Wrangler, Cloudflare and pipelines; Trinity is read-only analyst/learner.
+Cloudflare Access: dedicated one-year `Trinity-Codex-ChatGPT-20261107` service token added to existing `Trinity-Agents-Access`; no public bypass. Trinity MCP initialize/tools/list pass (HTTP 200, 42 tools); Trinity status ready on version 11.1.0. Current production version reported: f34da5c8-c806-4c09-ae9b-bb9546f743a4. Cloudflare reports 46 Worker scripts.
+Local `main` is c041a7bf9ae573c7031ae13ef4cca6a2a0e12727 with 26 modified tracked and 233 untracked files; no unified release candidate. Code review found unsafe/conflicting configs and runtime defects; see TEAM-HANDOFF.md. No deployment performed. Antigravity infrastructure ACK remains pending; Trinity remains read-only.
+TRIPARTITE-COLLAB-20261107-01 — BUILD PACKAGE UPDATE
+- Added deploy.ps1: canonical root wrangler.jsonc; staging/production targets; test/build/dry-run; live deployment requires explicit -Deploy and ShouldProcess confirmation; no migrations.
+- Added Trinity/schema.sql: remote trinity-v03 schema-only export (--no-data), verified it contains no INSERT rows.
+- Added Trinity/docs/knowledge-pattern-blueprint-2026-11-07.json: sanitized source/config/runtime/environment/release-risk map for Trinity's read-only analysis.
+- Verification: deploy.ps1 -Target staging passed all included suites, staging Wrangler dry-run passed, Trinity full tests 930/930 passed. Production top-level Wrangler dry-run passed. PowerShell syntax and blueprint JSON valid.
+- No live deployment, D1 migration, commit, push or Git synchronization performed. Full per-script 46 Worker verification remains assigned to Antigravity; trinity-profile remains excluded pending security fixes.
+
+TRIPARTITE-COLLAB-20261107-01 — VERIFIED FULL BUILD FOLLOW-UP (2026-11-07 04:14 UTC)
+- Full root npm test: PASS. Local Desktop/Gateway+Tetrakis verification 93/93; Jericho 12/12; Tetrakis compile/tests 15/15; Trinity 930/930.
+- Fixed 5 verified TS syntax defects and removed leading UTF-8 BOM only from 46 Worker package.json files.
+- Wrangler 4.158.0 dry-run matrix: 46/46 mapped Workers, exit 0. Evidence: missions/ai-reports/wrangler-dryrun-matrix-2026-11-07.json.
+- Canonical production entry remains src/index.ts -> Trinity/src/index.js. Alternate root src/worker.js is not wired and has wildcard CORS, unauthenticated routes and a listed-but-unimplemented execute_task tool; do not deploy. Root schema.sql/0001 are separate from production Trinity/migrations and Trinity/schema.sql; do not apply them.
+- No deploy, D1 migration, commit, push or GitHub sync.
+
+---
+
+### ODKAZ OD MAJITEĽA (BASTERIX) & SYNC — 2026-11-07 06:58 CET
+**Status**: RAPID EVOLUTION / GITHUB-FIRST REBUILD / COPILOT ACTIVE
+
+1. **Pokyn majiteľa (Basterix):**
+   - **"Local prvo vyčistiť":** Prebieha lokálna hygiena – dočasné build adresáre (`dist-audit`, `dist-test`, `dist-test-staging`, `Trinity/dist-production`) boli vyčistené a pridané do `.gitignore`.
+   - **"Postaviť celý projekt na GitHube":** Prechod na GitHub-first monorepo štruktúru a automatizované GitHub Actions (CI/CD pre Cloudflare Workers), aby repozitár slúžil ako jediný zdroj pravdy (Single Source of Truth).
+   - **"Zapojte si aj Copilota na GitHube ako pomoc":** GitHub Copilot je plnohodnotne integrovaný ako partner a pomocník v tíme (Codex + Copilot + Antigravity) pre kódovanie, PR review a orchestráciu.
+
+2. **Dohodnutý postup realizácie:**
+   - Organizácia repozitára a vyčistenie nadbytočného balastu.
+   - Zavedenie `.github/workflows/ci.yml` na automatické spúšťanie testov (`npm test`) a dry-run kontroly balíkov pri každom Push/PR.
+   - Pripravenie čistého konsolidovaného stavu na vetve `main`.
+
+
+
+================================================================================
+FINAL VERIFIED HANDOFF — COMMIT 7146ab4 (2026-11-07 09:37 UTC)
+================================================================================
+To Codex GPT & Trinity:
+The collective upgrade and synchronization is complete and verified with exit code 0.
+- Commit SHA: 7146ab4 (pushed to origin/main)
+- 47/47 Cloudflare worker scripts build and test clean (BUILD_OK).
+- Cloudflare Access Zero Trust Service Token bridge active on auru.space and auru.dev.
+- Zero facades: All 3 Iteration 2 quality gate issues (JWT RS256, pinned system prompt, universal /health) verified.
+- Status: Ready for operational staging and production lifecycle.
+================================================================================

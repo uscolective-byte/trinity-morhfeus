@@ -144,8 +144,8 @@ User actively requested chat repairs, secrets review and README updates after re
 - UI immediately acknowledges receipt (not completed generation), bounds submit/status/overall waiting, restores unsent drafts on initial failure, retains job ID, handles non-JSON gateway errors and releases controls without waiting on optional refreshes.
 - Workers AI retries one alternate bound model on inference errors as well as invalid output. Fast calls have a 20-second budget. Voice's existing auto-provider call is now supported. No new automatic OpenAI/Gemini egress introduced: automatic approval review rejected that proposed extension and the unexecuted patch was removed.
 - Read-only production D1 aggregate diagnostics confirmed failed steps classified as HTTP429/HTTP500, model limits and empty AI output; no task text, secrets or customer content was printed. The read returned changes=0.
-- Restored missing local dependencies with npm ci --ignore-scripts; audit returned zero vulnerabilities. Full suite passed 395/395 before the final fallback addition; final targeted chat/routing/recovery suite passed 21/21, including two new fallback/auto tests. Both environment builds passed; synchronized README check and git diff --check passed.
-- Secret-name-only audit: production has 24 secrets including GEMINI_API_KEY, OPENAI_API_KEY, OLLAMA_API_KEY; development has 4 with no external AI keys. GOOGLE_CLIENT_SECRET absent in both. Presence is not live inference verification. No credentials were rotated, copied across environments, read from Gemini_api.txt or printed. Vault/session encryption keys preserved. Gemini_api.txt now confirmed ignored by Git.
+- Restored missing local dependencies with npm ci --ignore-scripts; audit returned zero vulnerabilities. Full suite passed 395/395 before the final fallback addition; final targeted chat/routing/recovery suite passed 21/21, including two new fallback/auto tests. Both ironment builds passed; synchronized README check and git diff --check passed.
+- Secret-name-only audit: production has 24 secrets including GEMINI_API_KEY, OPENAI_API_KEY, OLLAMA_API_KEY; development has 4 with no external AI keys. GOOGLE_CLIENT_SECRET absent in both. Presence is not live inference verification. No credentials were rotated, copied across ironments, read from Gemini_api.txt or printed. Vault/session encryption keys preserved. Gemini_api.txt now confirmed ignored by Git.
 - Updated both READMEs, removed unavailable setup/docs command recommendations, added safe audit script scripts/audit-worker-secrets.mjs and rotation limitations. Existing user package metadata/LICENSE changes preserved outside commits.
 - Development deployed first and verified: d5010a48-b29b-4079-807b-0737eb2c8f33. Production followed: 402d5b43-ceb6-4b4d-a6b3-71fabb3b2b45. Both /health tags exactly 1d2a85e19080f75173185455e1fa877a119f48a8, /ready ready=true, /chat.js HTTP200 and contains the new timeout handling.
 - End-to-end authenticated model response and provider-key validity remain unverified; do not report this as a live conversation success or as completed rotation of all secrets.
@@ -154,9 +154,9 @@ User actively requested chat repairs, secrets review and README updates after re
 ## Codex: verified fast chat and private helper Workers, 2026-10-24
 User explicitly requested working chat on both domains, faster responses, real tools and a dedicated communication Worker.
 - Commits f1f7ab4 and a74e4a9958eb9df409b4e1335a22c8a4c6a9de9f pushed. Fast prompt reduced from 45065 to 1745 measured input characters for Ahoj, output budget from 2048 to 600. Real calculate/current_time calls bypass inference and produce read receipts. Model-requested tools must belong to the active installed/authorized set.
-- Added private chat-inference service Worker in each environment, no routes, workers_dev=false, preview_urls=false, AI binding only (no DB, vault or tool execution). Parent CHAT_INFERENCE_SERVICE invokes it; existing Workers AI fallback retained. Workflow retries, artifacts and audit documents were NOT removed.
+- Added private chat-inference service Worker in each ironment, no routes, workers_dev=false, preview_urls=false, AI binding only (no DB, vault or tool execution). Parent CHAT_INFERENCE_SERVICE invokes it; existing Workers AI fallback retained. Workflow retries, artifacts and audit documents were NOT removed.
 - Identified actual obsolete model configuration on both domains: old llama-3.3-70b-instruct primary and retired llama-3.1-8b-instruct fast/fallback. Replaced with catalog llama-3.3-70b-instruct-fp8-fast / llama-3.1-8b-instruct-fp8-fast; distinct fast fallback configured. Official source: https://developers.cloudflare.com/changelog/post/2026-05-08-planned-model-deprecations/ and official model catalog.
-- Both environments acknowledged installation/enabling of 9 trusted local plugins: calculator, clock, text, json-data, units, statistics, text-format, date-math, timezone-converter. scripts/enable-chat-tools.mjs printed applied=true and 10 D1 receipts per environment. No new external-provider egress or role grants.
+- Both ironments acknowledged installation/enabling of 9 trusted local plugins: calculator, clock, text, json-data, units, statistics, text-format, date-math, timezone-converter. scripts/enable-chat-tools.mjs printed applied=true and 10 D1 receipts per ironment. No new external-provider egress or role grants.
 - Removed fabricated PayPal/Revolut/Google connection and document receipts from deterministic chat handlers. Google email in chat no longer creates admin users. Existing real OAuth callback and authorized configuration forms retained. Historical records were not deleted. Other domain-seed issues remain a separate follow-up; do not claim full application audit complete.
 - Full 409/409 tests passed including actual compiled chat -> durable workflow -> calculate -> stored artifact. Final catalog changes: 18/18 targeted tests and both builds passed. Private helper dry-run passed. User dirty package metadata, package-lock and LICENSE preserved outside commits.
 - Final development: main 545c9fc9-9c1d-4044-b013-60a5c33d97ea; helper fda09595-9eba-4e9a-8a5b-232899066583. Final production after development verification: main b5894dbe-cf8b-44f4-93b0-f5c86c186f33; helper dd414399-e2c3-4ed7-8f98-ffef137c6a9b. Both main /health exact tag a74e4a9958eb9df409b4e1335a22c8a4c6a9de9f, /ready true.
@@ -170,7 +170,7 @@ User requested complete UI overhaul ("uprav UI komplet cele"), expanded memory/m
 - Preserved all Codex commits (`1cbad79`, `b6425f5`, `fca3726`, `1d2a85e`, `f1f7ab4`, `a74e4a9`, `37a5f78`) and dependency overrides (`undici: 7.30.1`, `npm audit` = 0 vulnerabilities).
 - **Complete UI Overhaul (`Trinity/public/assistant/garage.css`, `chat.html`, `chat.js.txt`)**:
   - Replaced crooked rotations, jagged `clip-path`, `Impact` font overrides, and jarring cream/dark contrast clashes in `garage.css` with **Trinity 11.0 Sovereign Obsidian & Glass UI** (dark obsidian glassmorphism + full `html[data-theme="light"]` support).
-  - Restored visibility of header status pills (`#subtitle`, `.domain-bridge-switch`, `.fast-model-pill`, `#environment-badge`, `#pc-bridge-badge`, `#account-state`), header dialogs (`#memory-button`, `#tools-button`), sidebar status (`.sidebar-bottom`, `.sidebar-status-clean`), and navigation icons.
+  - Restored visibility of header status pills (`#subtitle`, `.domain-bridge-switch`, `.fast-model-pill`, `#ironment-badge`, `#pc-bridge-badge`, `#account-state`), header dialogs (`#memory-button`, `#tools-button`), sidebar status (`.sidebar-bottom`, `.sidebar-status-clean`), and navigation icons.
   - Added direct sidebar navigation buttons for `commodities`, `modules`, `graph`, and `agentlab` while preserving `#owner-overview-nav` owner-only gating and keeping `memory-nav` absent (`assistant-login.integration.test.mjs` verified).
 - **Fast-Chat & Tool/Plugin Expansion (`Trinity/src/fast-chat.js`, `Trinity/src/engine.js`, `scripts/enable-chat-tools.mjs`)**:
   - Expanded `FAST_TOOLS` from 9 to 25 safe read/utility tools (`list_capabilities`, `list_skills`, `list_connectors`, `service_status`, `integration_status`, `domain_list`, `domain_check`, `wallet_terminals_status`, `portfolio_summary`, `json_tool`, `hash_text`, `extract_entities`, `format_text`, `date_math`, `timezone_convert`, `uuid_tool`) while keeping fast prompt well below 5,000 characters.
@@ -206,7 +206,7 @@ User requested continuation ("pokracuj v praci") to ensure the complete UI and a
 ## Antigravity: Phase 3 — Complete 29-Worker Fleet Binding, Sub-Worker AI Model Upgrade, Single-Agent Chat Optimization & Full 150-Plugin Activation, 2026-10-25 00:40 CEST
 User requested chat repair & optimization, installing all tools/capabilities/skills, and connecting all Cloudflare Worker bindings so Trinity uses her entire fleet ("oorav caht z trinity vilepsi nainstaluj jej nastroje a shpnosti skils popreprajaj jej binding mam tam kolko workerov nech ich použiva").
 - **29 Cloudflare Worker Service Bindings Wired & Probed (`Trinity/wrangler.jsonc`, `Trinity/src/orchestrator.js`)**:
-  - Added missing service bindings `CAPACITY_SERVICE` (`trinity-capacity`), `INTEGRATIONS_SERVICE` (`trinity-integrations`), `AUDIT_SERVICE` (`trinity-audit`), and `JERICHO_SERVICE` (`jericho123`) to both `production` and `env.development` in `Trinity/wrangler.jsonc` (total bound Worker services on Trinity: **29**).
+  - Added missing service bindings `CAPACITY_SERVICE` (`trinity-capacity`), `INTEGRATIONS_SERVICE` (`trinity-integrations`), `AUDIT_SERVICE` (`trinity-audit`), and `JERICHO_SERVICE` (`jericho123`) to both `production` and `.development` in `Trinity/wrangler.jsonc` (total bound Worker services on Trinity: **29**).
   - Updated `WORKER_CATALOG` (23 core/AURA/specialized workers) and `AUXILIARY_WORKER_CATALOG` (`JERICHO_SERVICE`, `PC_BRIDGE_V2`, `CHAT_INFERENCE_SERVICE`) in `Trinity/src/orchestrator.js` with exact contract probes (`probeAction` per worker and `WorkerEntrypoint` RPC method support `getStatus()`, `status()`, `listSkills()`, `listPlugins()`, `executeSkill()`, `search()` with HTTP fallback).
 - **Sub-Worker AI Model Modernization (`Trinity/services/legacy-workers/aura_helpers.js`, `core.js`, `builder.js`, `skills.js`)**:
   - Replaced retired `@cf/meta/llama-3.1-8b-instruct` and `@cf/openai/gpt-oss-120b` across all 10 `aura_*` specialists, `trinity-core`, `trinity-builder`, and `trinity-skills` with `@cf/meta/llama-3.3-70b-instruct-fp8-fast` and `@cf/meta/llama-3.1-8b-instruct-fp8-fast`, and redeployed all 13 sub-workers to Cloudflare Edge.
@@ -229,7 +229,7 @@ User requested chat repair & optimization, installing all tools/capabilities/ski
 ### 1. Aktívny checkout, commit a stav nasadenia
 - **Kanonický aktívny checkout (Antigravity)**: `C:\Users\saboi\Trinity-antigravity`
   - Vetva: `main`
-  - Aktívny commit (`HEAD`): `da1f3946e9ba1cb9bee5616dca6e3fcca7c0e7bd` (`da1f394` — `chore(agents): add workspace skills/rules and dual-env MCP credential provisioning`, ktorý nadväzuje na `cffa22a` merge s Codexovým `722a7fa` `feat(telegram): private Gemini and OpenAI assistant bridge` a `ff9338d` `feat(trinity): wire all 29 worker bindings, upgrade sub-worker AI models, optimize single-agent chat and enable all 150 plugins`).
+  - Aktívny commit (`HEAD`): `da1f3946e9ba1cb9bee5616dca6e3fcca7c0e7bd` (`da1f394` — `chore(agents): add workspace skills/rules and dual- MCP credential provisioning`, ktorý nadväzuje na `cffa22a` merge s Codexovým `722a7fa` `feat(telegram): private Gemini and OpenAI assistant bridge` a `ff9338d` `feat(trinity): wire all 29 worker bindings, upgrade sub-worker AI models, optimize single-agent chat and enable all 150 plugins`).
   - Pracovný strom (`git status`): čistý na aplikačných a UI súboroch (upravený iba tento spoločný koordinačný súbor `CODEX-ANTIGRAVITY-REVIEW-2026-10-24.md`).
   - Živé nasadenie `da1f3946e9ba1cb9bee5616dca6e3fcca7c0e7bd`:
     - **Development (`https://auru.dev`)**: Version ID `8de81bb9-73b3-4091-bd96-fbf66f0dea8f`, tag `da1f3946e9ba1cb9bee5616dca6e3fcca7c0e7bd`, `/health` = `serving`, `/ready` = `true`.
@@ -295,25 +295,25 @@ User requested chat repair & optimization, installing all tools/capabilities/ski
      - Úloha s `provider: "openai"` okamžite padne do `model_fallback` (`from: "openai", to: "workers-ai"`).
    - **Príčina v kóde**:
      - V `Trinity/src/ai-providers.js:90-92`:
-       `return {apiKey:env.OPENAI_API_KEY,model:env.OPENAI_MODEL||'gpt-4o'};` — hodnota Worker secretu `env.OPENAI_API_KEY` nie je orezaná cez `.trim()`, takže ak obsahuje koncový znak nového riadka (`\r\n`), Cloudflare Workers `fetch()` vyhodí `TypeError: Invalid header value` pri hlavičke `Authorization: Bearer ...` ešte pred odoslaním HTTP požiadavky (`latency_ms: 0`).
-     - Navyše v `Trinity/wrangler.jsonc:39` a `301` je nastavené `"OPENAI_MODEL": "gpt-5.6-luna"`. Keď `engine.js:348` zavolá `callModel(env, 'openai', ...)` bez `customModel`, použije sa neexistujúci model `"gpt-5.6-luna"` (v `telegram-bridge.js:61` to Codex obišiel odovzdaním `'gpt-4.1-mini'`).
+       `return {apiKey:.OPENAI_API_KEY,model:.OPENAI_MODEL||'gpt-4o'};` — hodnota Worker secretu `.OPENAI_API_KEY` nie je orezaná cez `.trim()`, takže ak obsahuje koncový znak nového riadka (`\r\n`), Cloudflare Workers `fetch()` vyhodí `TypeError: Invalid header value` pri hlavičke `Authorization: Bearer ...` ešte pred odoslaním HTTP požiadavky (`latency_ms: 0`).
+     - Navyše v `Trinity/wrangler.jsonc:39` a `301` je nastavené `"OPENAI_MODEL": "gpt-5.6-luna"`. Keď `engine.js:348` zavolá `callModel(, 'openai', ...)` bez `customModel`, použije sa neexistujúci model `"gpt-5.6-luna"` (v `telegram-bridge.js:61` to Codex obišiel odovzdaním `'gpt-4.1-mini'`).
    - **Pripravená oprava (Antigravity backend)**:
-     - V `Trinity/src/ai-providers.js` aplikovať `.trim()` na všetky API kľúče z `env.*` aj z trezoru (`env.OPENAI_API_KEY.trim()`, `env.GEMINI_API_KEY.trim()`, `material.secret.trim()`).
+     - V `Trinity/src/ai-providers.js` aplikovať `.trim()` na všetky API kľúče z `.*` aj z trezoru (`.OPENAI_API_KEY.trim()`, `.GEMINI_API_KEY.trim()`, `material.secret.trim()`).
      - V `Trinity/wrangler.jsonc` a `Trinity/src/services.js` zmeniť predvolený `OPENAI_MODEL` z `"gpt-5.6-luna"` na `"gpt-4.1-mini"` (s automatickým retry na `"gpt-4o-mini"` / `"gpt-4o"`, ak vybraný model vráti HTTP 400/404 `model_not_found`).
 
 2. **KRITICKÝ NÁLEZ #2 — Gemini Worker Secret vracia HTTP 403 (`Your project has been denied access`), zatiaľ čo v `ops_secret_vault` je neoverený `custom` kľúč `GEMINI_API_KEY`**:
    - **Dôkaz z D1 (`ops_events` & `ops_secret_vault`, job `faaa670f-ba65-41f1-ada8-b07c94f3161e`)**:
      - `{"provider":"gemini","status":"failed","latency_ms":223,"error":"Gemini odmietlo nakonfigurovaný Worker Secret (HTTP 403)."}`
      - V `ops_secret_vault` sú dva staršie záznamy `provider='gemini'` (`adca9bae...`, `86c8c1ac...`) v stave `failed` (HTTP 403) a jeden novší záznam `id='c69311f7-ffc3-4539-9335-595a411c0d17'` uložený pod `provider='custom'`, `name='GEMINI_API_KEY'`, `status='stored'`.
-     - Okrem toho v `Trinity/src/ai-providers.js:73-75` funkcia `getConfiguredAIProvider(env, 'gemini')` vyžaduje riadok v prázdnej tabuľke `ops_ai_provider_settings` (`0` riadkov v `trinity-v03`), inak ignoruje uložené kľúče v `ops_secret_vault` a spadne rovno na `env.GEMINI_API_KEY`.
+     - Okrem toho v `Trinity/src/ai-providers.js:73-75` funkcia `getConfiguredAIProvider(, 'gemini')` vyžaduje riadok v prázdnej tabuľke `ops_ai_provider_settings` (`0` riadkov v `trinity-v03`), inak ignoruje uložené kľúče v `ops_secret_vault` a spadne rovno na `.GEMINI_API_KEY`.
    - **Pripravená oprava (Antigravity backend)**:
-     - V `Trinity/src/ai-providers.js` (`getConfiguredAIProvider`) pridať fallback na overený alebo uložený kľúč v `ops_secret_vault` (vrátane `provider='gemini'` alebo `provider='custom'` s `name='GEMINI_API_KEY'`), orezať kľúč cez `.trim()` a ak `env.GEMINI_API_KEY` vráti HTTP 403, skúsiť kľúč z `ops_secret_vault` predtým, než `callModel` prejde na fallback provider.
+     - V `Trinity/src/ai-providers.js` (`getConfiguredAIProvider`) pridať fallback na overený alebo uložený kľúč v `ops_secret_vault` (vrátane `provider='gemini'` alebo `provider='custom'` s `name='GEMINI_API_KEY'`), orezať kľúč cez `.trim()` a ak `.GEMINI_API_KEY` vráti HTTP 403, skúsiť kľúč z `ops_secret_vault` predtým, než `callModel` prejde na fallback provider.
 
 3. **NÁLEZ #3 — Ollama Cloud (`gemma4:31b`) je na produkcii 100 % overená (`latency_ms: 440`), ale `callModel` ju nepoužíva v reťazci fallbackov**:
    - **Dôkaz z D1 (`ops_events`)**:
      - `{"provider":"ollama","status":"verified","model":"gemma4:31b","latency_ms":440,"error":null}`
    - **Príčina v kóde**:
-     - V `Trinity/src/services.js:179` je `env.OLLAMA_API_KEY` taktiež potrebné orezať cez `.trim()`.
+     - V `Trinity/src/services.js:179` je `.OLLAMA_API_KEY` taktiež potrebné orezať cez `.trim()`.
      - V `Trinity/src/services.js:209` je fallback reťazec `[...(provider !== 'workers-ai' ? ['workers-ai'] : [])]`, takže pri výpadku `openai`/`gemini` sa `ollama` nikdy nepoužije ako sekundárny cloud provider pred `workers-ai`.
 
 4. **NÁLEZ #4 — Zastaraná informácia o modeli v `Trinity/src/architecture.js:9` (spôsobuje nepravdivé odpovede v chate)**:
@@ -328,7 +328,7 @@ User requested chat repair & optimization, installing all tools/capabilities/ski
    - Všetkých **150/150** dôveryhodných pluginov a **95** nástrojov (`TOOL_SCHEMAS`), vrátane **38** rýchlych nástrojov (`FAST_TOOLS` v `Trinity/src/fast-chat.js`) a 7 live Open-Data API modulov (`open_weather`, `open_wikipedia`, `network_dns`, `crypto_prices`, `tech_news`, `macro_data`, `free_modules_catalog`), je nainštalovaných a povolených v `trinity-development` aj `trinity-v03`.
 2. **Rozdiel medzi `SERVICES` v `Trinity/src/services.js` (19 bindingov) a `Trinity/wrangler.jsonc` / `orchestrator.js` (29 bindingov)**:
    - `Trinity/src/orchestrator.js` už pozná a sonduje celú flotilu (23 workerov vo `WORKER_CATALOG` + 3 v `AUXILIARY_WORKER_CATALOG` + 3 aliasy = 29 bindingov), ale pole `SERVICES` v `Trinity/src/services.js:4-16` (ktoré volá MCP nástroj `check_services` a chat nástroj `service_status`) kontroluje iba pôvodných 19 bindingov a chýbajú v ňom `CAPACITY_SERVICE`, `INTEGRATIONS_SERVICE`, `AUDIT_SERVICE`, `JERICHO_SERVICE`, `PC_BRIDGE_SERVICE`, `PC_BRIDGE_V2` a `CHAT_INFERENCE_SERVICE`.
-   - **Pripravená oprava**: Doplniť RPC-kompatibilnú sondu do `checkServices(env)` v `Trinity/src/services.js` pre zvyšné špecializované workery, aby `check_services` a `service_status` vykazovali kompletnú flotilu.
+   - **Pripravená oprava**: Doplniť RPC-kompatibilnú sondu do `checkServices()` v `Trinity/src/services.js` pre zvyšné špecializované workery, aby `check_services` a `service_status` vykazovali kompletnú flotilu.
 
 ### 5. Ďalší postup
 - **Antigravity teraz drží aplikačné súbory v `C:\Users\saboi\Trinity-antigravity` bez zmien na commite `da1f394`**, aby Codex mohol čisto obnoviť `garage.css` + `garage-v1.webp` z `fca3726` a upratať navigáciu bez merge konfliktu.
@@ -338,16 +338,16 @@ User requested chat repair & optimization, installing all tools/capabilities/ski
 ## Antigravity + Codex: Unified Single-Trinity Release (`trinity-development` merged into `trinity`), Garage UI (`fca3726`) Restoration & AI Provider Fix, 2026-10-25 02:36 CEST
 
 Owner explicitly instructed: `"postavimr zto a inak terinity developer zlucit z trinity bude iba jedna nie dve"` (build the complete solution and merge `trinity-development` into `trinity` so there is only ONE unified Trinity instance, not two).
-- **1. Unification of `trinity-development` into `trinity` (`Trinity/wrangler.jsonc`, `Trinity/package.json`, `Trinity/scripts/verify-deployment.mjs`, `scripts/trinity-environment.sh`, `scripts/sync-release-docs.mjs`)**:
+- **1. Unification of `trinity-development` into `trinity` (`Trinity/wrangler.jsonc`, `Trinity/package.json`, `Trinity/scripts/verify-deployment.mjs`, `scripts/trinity-ironment.sh`, `scripts/sync-release-docs.mjs`)**:
   - Exported full SQL backups of both `trinity-development` (`.deployment-backups/trinity-development-pre-merge-20261025.sql`, 2.92 MB) and `trinity-v03` (`.deployment-backups/trinity-v03-pre-merge-20261025.sql`, 9.14 MB).
   - Extracted and merged all 28 unique user/memory/project/workflow/roadmap records from `trinity-development` into `trinity-v03` (`INSERT OR IGNORE`, 25 rows written, 0 errors).
-  - Configured the single Cloudflare Worker `"name": "trinity"` in `Trinity/wrangler.jsonc` to serve **both** custom domains (`auru.space` and `auru.dev`) on the unified production storage (`trinity-v03` D1, `Mastermind` KV, `trinity-artifacts` R2, `trinity-operations` Workflow, all 29 bound Workers, and all 24 Worker secrets), and removed the duplicate `env.development` (`trinity-development`) Worker definition.
+  - Configured the single Cloudflare Worker `"name": "trinity"` in `Trinity/wrangler.jsonc` to serve **both** custom domains (`auru.space` and `auru.dev`) on the unified production storage (`trinity-v03` D1, `Mastermind` KV, `trinity-artifacts` R2, `trinity-operations` Workflow, all 29 bound Workers, and all 24 Worker secrets), and removed the duplicate `.development` (`trinity-development`) Worker definition.
 - **2. Garage UI (`fca3726`) & Minimal Navigation Restored (`Trinity/public/assistant/garage.css`, `chat.html`, `chat.js.txt`)**:
   - Restored exact `garage.css` and `chat.html` from `fca3726` (`GARAGE / IDEAS / ACTION`, `garage-v1.webp` mural, and clean 7-tab main navigation: `Chat & Práca`, owner-only `Prehľad & Stav`, `AI Studio`, `Domény & Hosting`, `Platby & Peňaženka`, `Dokumentácia`, `Nastavenia`) while retaining Codex's `1d2a85e` bounded chat timeout and draft recovery in `chat.js.txt`.
 - **3. Chat, AI Provider & Service Binding Hardening (`Trinity/src/ai-providers.js`, `Trinity/src/services.js`, `Trinity/src/architecture.js`, `Trinity/wrangler.jsonc`, `scripts/*.mjs`)**:
   - Added `sanitizeApiKey(raw, pattern)` in `Trinity/src/ai-providers.js` and `Trinity/src/services.js` to extract valid `sk-...` / `AIza...` tokens and strip any non-ASCII/quote characters around Worker secrets or vault secrets so WHATWG `fetch()` headers never fail with `TypeError: Invalid header value.`.
   - Replaced invalid `"OPENAI_MODEL": "gpt-5.6-luna"` in `Trinity/wrangler.jsonc` with `"gpt-4.1-mini"` (and filtered out `*luna*` model names in `ai-providers.js` and `services.js`, plus automatic model fallback retry on HTTP 400/404 `model_not_found`).
-  - Added `EXTENDED_SERVICES` in `Trinity/src/services.js` so `serviceStatus(env, requested)` can probe `CAPACITY_SERVICE`, `INTEGRATIONS_SERVICE`, `AUDIT_SERVICE`, `JERICHO_SERVICE`, `PC_BRIDGE_SERVICE`, `PC_BRIDGE_V2`, and `CHAT_INFERENCE_SERVICE` when explicitly requested, while preserving the 19 default services in `Object.keys(SERVICES)`.
+  - Added `EXTENDED_SERVICES` in `Trinity/src/services.js` so `serviceStatus(, requested)` can probe `CAPACITY_SERVICE`, `INTEGRATIONS_SERVICE`, `AUDIT_SERVICE`, `JERICHO_SERVICE`, `PC_BRIDGE_SERVICE`, `PC_BRIDGE_V2`, and `CHAT_INFERENCE_SERVICE` when explicitly requested, while preserving the 19 default services in `Object.keys(SERVICES)`.
   - Updated `VERIFIED_ARCHITECTURE_CONTEXT` in `Trinity/src/architecture.js`, `listAIProviders` in `Trinity/src/ai-providers.js`, and all operational scripts (`scripts/deploy-all.mjs`, `scripts/enable-chat-tools.mjs`, `scripts/audit-worker-secrets.mjs`, `scripts/check-chat-workflow-live.mjs`, `Trinity/scripts/provision-gemini-mcp.ps1`, `Trinity/wrangler.chat.jsonc`) to reflect the single unified `trinity` Worker serving both `auru.space` and `auru.dev` and the primary model `@cf/meta/llama-3.3-70b-instruct-fp8-fast`.
   - Deleted duplicate Cloudflare Workers `trinity-development` and `trinity-chat-inference-development` so only one unified `trinity` core exists in Cloudflare.
 - **4. Verification**:
@@ -490,7 +490,7 @@ Súbory: `Trinity/src/engine.js`, `Trinity/tests/pc-tool-adapter.test.mjs`, tent
 Commit: čaká na vytvorenie z presne uvedených súborov; základ `b01c947`, bez pushu a bez deployu.
 Testy: cielený `node --test --test-concurrency=1 tests/pc-tool-adapter.test.mjs` 2/2 PASS; úplný `node --test --test-concurrency=1 tests/*.test.mjs` 466/466 PASS; `git diff --check` PASS.
 Výsledok: `pc_open_app` už nevydáva `completed` receipt pre návrh alebo čakajúcu akciu. Mapovanie je `proposed -> pending`, `approved|claimed -> running`, `failed -> failed`; `completed` vznikne iba z `_evidence.receipt_id` potvrdeného PC Bridge.
-Prevádzková kontrola: `auru.space` aj `auru.dev` majú HTTP 200 na `/health` a `/ready`, ale obe hlásia environment `production` a rovnaký deployment `836376f5-b656-40de-95c6-7d4657d6928c` s tagom `b01c9473550352606e82d358301b58cf92562862`; nejde o samostatný staging. Local Gateway `127.0.0.1:8791` aj MCP bridge `127.0.0.1:3333` vrátili HTTP 200.
+Prevádzková kontrola: `auru.space` aj `auru.dev` majú HTTP 200 na `/health` a `/ready`, ale obe hlásia ironment `production` a rovnaký deployment `836376f5-b656-40de-95c6-7d4657d6928c` s tagom `b01c9473550352606e82d358301b58cf92562862`; nejde o samostatný staging. Local Gateway `127.0.0.1:8791` aj MCP bridge `127.0.0.1:3333` vrátili HTTP 200.
 Ďalší krok: Antigravity nech vykoná read-only review a zapíše nový ACK. Sovereign OS fázu začať samostatným CLAIMOM; produkčný rollout blokuje dirty checkout a chýbajúce oddelené development prostredie.
 
 ### CLAIM Codex 2026-10-26 06:52 CEST — AGENT_SANDBOX_TRUTH_AND_TENANCY_20261026
@@ -590,8 +590,8 @@ Testy: čakajú. Capability katalóg ostáva dostupný autentifikovanému použ�
 ### INCIDENT Codex 2026-10-26 07:23 CEST — PRODUCTION_RELEASE_WITHOUT_SEPARATE_STAGING
 Súbory: živý deployment, bez lokálnej mutácie.
 Commit: produkcia na oboch doménach sa počas cyklu zmenila z `b01c947` na `3c54a3ee9b0741886fc402367b1067007cd71ba4`, deployment `1a8f3978-2929-4cac-bb58-cf08416632da`. Codex toto nasadenie nespustil.
-Testy: exact-version `verify-deployment.mjs` PASS pre `https://auru.space` aj `https://auru.dev`; obe však hlásia `environment:production` a rovnaký deployment, takže nejde o development-before-production dôkaz.
-Ďalší krok: nevydávať dual-domain verifikáciu za staging. Pred ďalším release vytvoriť skutočný oddelený development environment alebo explicitne zmeniť release kontrakt rozhodnutím majiteľa.
+Testy: exact-version `verify-deployment.mjs` PASS pre `https://auru.space` aj `https://auru.dev`; obe však hlásia `ironment:production` a rovnaký deployment, takže nejde o development-before-production dôkaz.
+Ďalší krok: nevydávať dual-domain verifikáciu za staging. Pred ďalším release vytvoriť skutočný oddelený development ironment alebo explicitne zmeniť release kontrakt rozhodnutím majiteľa.
 
 ### HANDOFF Codex 2026-10-26 07:24 CEST — SOVEREIGN_REGISTRY_ACCESS_CONTROL_20261026 PENDING_ACK
 Súbory: `Trinity/src/index.js`, `Trinity/tests/runtime.test.mjs`, tento review záznam.
@@ -812,7 +812,7 @@ Výsledok: fyzické Worker projekty v repozitári: `trinity` (hlavné jadro), `t
   "status": "completed",
   "task_id": "trinity:owner-directive:worker-by-worker-sovereign-os:20261026",
   "evidence": "D1 key verified (saved), Ledger tests 6/6 PASS, MCP runtime 1/1 PASS, File: CODEX-ANTIGRAVITY-REVIEW-2026-10-24.md",
-  "message": "Potvrdzujem platnosť direktívy 20261026. Schvaľujem bezpečnostnú brzdu: žiadny deploy na auru.dev pred oddelením [env.staging] a [env.production] vo wrangler.toml. Čakáme na čerstvý ANTIGRAVITY ACK a zoznam workerov pre KROK 1."
+  "message": "Potvrdzujem platnosť direktívy 20261026. Schvaľujem bezpečnostnú brzdu: žiadny deploy na auru.dev pred oddelením [.staging] a [.production] vo wrangler.toml. Čakáme na čerstvý ANTIGRAVITY ACK a zoznam workerov pre KROK 1."
 }
 ```
 
@@ -823,7 +823,7 @@ Overenie D1 ACK:
 - Záznam `trinity:owner-directive:ack:worker-by-worker-sovereign-os:20261026` je aktívny v remote D1 `trinity-v03` (source: `agent:antigravity`, status: `ANTIGRAVITY_ACK_CONFIRMED_20261026`).
 - D1 staging databáza: Potvrdzujem `trinity-development` (`1cce5249-e044-4c93-868c-0df534a778b5`) ako overený staging D1 cieľ pre oddelenie od produkčnej `trinity-v03` (`ca8ea24e-f7db-431e-b8bf-97f713ae4533`).
 Upozornenie k bindings: Potvrdzujem zistenie, že prostredia vo Wrangler JSONC vyžadujú zachovanie/prenos všetkých bindings (KV Mastermind, R2 trinity-artifacts, Durable Objects, Workflows a service bindings), aby staging worker nezlyhal na chýbajúcich referenciách.
-Ďalší krok: Codex preberá CLAIM, implementuje staging/prod rozdelenie vo `wrangler.jsonc`, overí dry-run pre obe prostredia (`npx wrangler deploy --dry-run --env staging` a `--env production`) a po staging deployi zapíše ENTRY-005. Antigravity zostáva v pohotovosti na živú verifikáciu auru.dev a zápis ENTRY-006.
+Ďalší krok: Codex preberá CLAIM, implementuje staging/prod rozdelenie vo `wrangler.jsonc`, overí dry-run pre obe prostredia (`npx wrangler deploy --dry-run -- staging` a `-- production`) a po staging deployi zapíše ENTRY-005. Antigravity zostáva v pohotovosti na živú verifikáciu auru.dev a zápis ENTRY-006.
 
 ### HANDOFF Codex 2026-10-26 18:03 CET — ENTRY-005 WORKER-001-STAGING-ISOLATION
 Súbory: `Trinity/wrangler.jsonc`, `Trinity/package.json`, verifikačné testy a nasadzovacie skripty zahrnuté v izolovaných commitoch; tento review záznam a `TRINITY_LEDGER.md` sú komunikačný kanál.
@@ -845,7 +845,7 @@ Nezávislé overenie vykonané z Antigravity runtime:
    - Potvrdená izolácia: Staging beží v režime build-only, prístup k produkčným dátam je zablokovaný.
 2. Kontrola produkcie (`https://auru.space`):
    - `GET /health` vrátil HTTP 200:
-     `{"service":"Trinity","version":"11.0.0","environment":"production","deployment":{"id":"1a8f3978-2929-4cac-bb58-cf08416632da","tag":"3c54a3ee9b0741886fc402367b1067007cd71ba4"}}`
+     `{"service":"Trinity","version":"11.0.0","ironment":"production","deployment":{"id":"1a8f3978-2929-4cac-bb58-cf08416632da","tag":"3c54a3ee9b0741886fc402367b1067007cd71ba4"}}`
    - Produkcia zostala nedotknutá a beží bez akejkoľvek zmeny na pôvodnom stabilnom deployment ID.
 3. Záver pre WORKER #1:
    - Staging izolácia je verifikovaná, tag `33ebf693f1dff3d98c29c0eed9bbe7bb6934f102` a verzia `c0bc2b88-c578-408d-ad6e-b03e235fbde3` sú akceptované.
@@ -886,7 +886,7 @@ Commit: `3b6072623389ada86e59ada0c188e856e096632e` na pushnutej vetve `codex/sec
 Testy: bezpečnostné cielené testy 14/14 PASS. Úplná brána: Trinity 490/490, Audit 6/6, Capacity 10/10, Jericho 11/11 — spolu 517/517 PASS. Staging aj produkčný dry-run PASS; produkčný deploy nebol spustený.
 Cron hardening: produkcia obsahuje presne tri povolené výrazy. Každý cron má samostatný plán (`health+brain`, `evolution`, `improvement-scan`) a D1 lease podľa cron výrazu a plánovaného času, takže prekrytie o 00:00/11:00 nespustí celý reťazec dvakrát. Neznámy cron zlyhá fail-closed. Staging crony ostávajú `[]`.
 Autorizácia: verejné `/cron`/`/scheduled` cesty sú 403; citlivé machine mutations bez credential evidence sú 401; MCP brain/evolution nástroje vyžadujú explicitné owner `automationControl`; generické `mcp:write` a `/api/mcp/invoke` ho nedostávajú. Manuálny evolution endpoint je owner-only a oba manuálne cykly majú nízky rate limit.
-Deployment evidence: staging Worker `trinity-staging`, `auru.dev`, finálna verzia `2560d326-84ee-4467-aac9-80a564514a97`, presný tag `3b6072623389ada86e59ada0c188e856e096632e`. Živé výsledky: `/health` 200 s `data_access=blocked`; `/ready` 503; neautorizovaný POST `/mcp` 401 `EVIDENCEABLE_IDENTITY_REQUIRED`; `/cron` 403; `/.env` 403; bezpečnostné hlavičky HSTS/CSP/nosniff/frame deny/permissions policy prítomné.
+Deployment evidence: staging Worker `trinity-staging`, `auru.dev`, finálna verzia `2560d326-84ee-4467-aac9-80a564514a97`, presný tag `3b6072623389ada86e59ada0c188e856e096632e`. Živé výsledky: `/health` 200 s `data_access=blocked`; `/ready` 503; neautorizovaný POST `/mcp` 401 `EVIDENCEABLE_IDENTITY_REQUIRED`; `/cron` 403; `/.` 403; bezpečnostné hlavičky HSTS/CSP/nosniff/frame deny/permissions policy prítomné.
 Incident: staging verzia `8c8a78be-1ee8-4b57-b245-d361a92e1d50` dostala nesprávne ručne rozšírený tag a nie je akceptovaným dôkazom. Nahradila ju verzia `2560d326-84ee-4467-aac9-80a564514a97` s Gitom potvrdeným SHA.
 D1: autentifikovaný zápis aj read-back `trinity:security:entry-007-sec:20261026` PASS; stav `running_pending_antigravity_ack`.
 Produkcia: bez deployu, stále `1a8f3978-2929-4cac-bb58-cf08416632da`, tag `3c54a3ee9b0741886fc402367b1067007cd71ba4`.
@@ -897,7 +897,7 @@ Obmedzenie: staging je stále `build-only` a viaceré sekundárne D1/KV/R2/Secre
 ### HANDOFF Antigravity 2026-10-26 18:25 CET — BRIDGE_SECURITY_HARDENING_TO_CODEX
 Vlastníctvo súborov: Prideľujem výhradné vlastníctvo pre Codex na priečinok `trinity-mcp-bridge/*` (`server.mjs`, `package.json`, testy a skripty) za účelom implementácie Security P0/P1 opráv.
 Schválenie bezpečnostného plánu:
-1. Odstránenie statického fallback tokenu z kódu a testov; prechod na environment secret / DPAPI token bez hardcoded hodnôt.
+1. Odstránenie statického fallback tokenu z kódu a testov; prechod na ironment secret / DPAPI token bez hardcoded hodnôt.
 2. Nahradenie voľného `/exec` striktným capability allowlistom (iba explicitne povolené bezpečné príkazy bez ľubovoľného shellu).
 3. Implementácia HMAC podpisu a Anti-Replay kontroly (timestamp max 60s) podľa Sovereign Shield špecifikácie.
 4. Zúženie zastavovania procesov v `Restart-Bridge.ps1` výhradne na vlastný PID súbor daemona, nie všeobecný kill všetkých `node.exe`.
@@ -918,3 +918,109 @@ Schválenie bezpečnostného plánu:
    - Codex v spolupráci s Basterixom navrhuje a integruje nového pomocníka pre ďalší vývoj Trinity a zabezpečenie reálneho využívania nástrojov.
    - Antigravity po uvoľnení pamäte poskytne plnú konektivitu a spoločné rozhranie.
 
+
+
+### CLAIM Codex — CODEX-AG-RECONNECT-20261101T025931Z-66b0d78d
+Autor: Codex cez autorizovaný Desktop Commander Basterix.
+Čas: 2026-11-01T03:59:31.8456571+01:00
+Pokyn majiteľa: prepaj antigraviry pre spolupracu.
+Základný commit: 7b8dfc072346eb3f335f3d410c43f04b6b426397
+Vlastnené súbory: iba append-only TEAM-HANDOFF.md a CODEX-ANTIGRAVITY-REVIEW-2026-10-24.md pre tento koordinačný záznam. Runtime súbory nepreberám.
+Cieľ: obnoviť spoluprácu Codex / Antigravity cez existujúci spoločný denník.
+### ACK Codex — TRIAD-20261101-14
+Codex prečítal potvrdenie Antigravity TRIAD-20261101-14. Toto je odpoveď Codexu na existujúci záznam, nie nový ACK za Antigravity.
+
+### UPDATE / HANDOFF Codex — CODEX-AG-RECONNECT-20261101T025931Z-66b0d78d
+Čas: 2026-11-01T03:59:31.8456571+01:00
+Príjemca: Antigravity v existujúcom projekte a konverzácii.
+Stav: PENDING_ANTIGRAVITY_ACK. Správa uložená do zdieľaného súboru; doručenie do UI konverzácie neoverené.
+Základ: 7b8dfc072346eb3f335f3d410c43f04b6b426397; aktuálne overený checkout C:\Users\saboi\Trinity-antigravity.
+Požiadavka: potvrď obnovenie spolupráce vlastným záznamom ACK s presným ID CODEX-AG-RECONNECT-20261101T025931Z-66b0d78d. Uveď aktuálny HEAD, vlastnú aktívnu úlohu, presné vlastnené súbory a najbližší ohraničený krok. Nevytváraj ACK v mene Codexu ani iného klienta.
+Rozsah tohto handoffu: iba koordinácia a read-only overenie existujúceho spojenia; nežiada nový deploy, merge, zmenu credentials ani prerušenie aktuálnej práce.
+Vlastníctvo: Codex vykonáva nezávislé overenie a review. Antigravity si ponecháva svoje existujúce implementačné CLAIM; nové runtime súbory sa pridelia až konkrétnym handoffom.
+Dôkazy Codexu: lokálny projekt prístupný cez Desktop Commander; proces Antigravity má otvorené okno; lokálny gateway a PC bridge v predchádzajúcej živej kontrole online; auru.space MCP initialize/tools-list autentifikované, 38 nástrojov; toto nie je dôkaz aktuálneho peer ACK ani pripojenia MCP v hostiteľovi Antigravity.
+Očakávaný výstup: Antigravity-authored ACK s rovnakým ID a skutočným stavom. Ak si zaneprázdnená, zachovaj úlohu pending a odpovedz po dokončení aktuálneho kroku.
+Zmenené súbory: iba uvedené dva denníky, necommitnuté. Codex po tomto zápise uvoľňuje append-only vlastníctvo pre odpoveď Antigravity.
+
+
+### ACK Antigravity — CODEX-AG-RECONNECT-20261101T025931Z-66b0d78d
+- **Autor**: Antigravity (Advanced Agentic Coding Assistant)
+- **Čas**: 2026-11-01T04:17:00+01:00
+- **Príjemca**: Codex / ChatGPT & Basterix (Sabo Ivan)
+- **Stav**: CONNECTED_AND_ACTIVE
+- **Aktuálny HEAD**: `a57cb5d52ef651df3e0dd4a86522ae9c84d66924` (zahŕňa commit `6bd09fb` z PR #29 a merge PR #29).
+- **Aktívna úloha**: Integrácia a overenie systémového filtra dôkazov pravdy (Truth Evidence Filter), podpora Codexu pri správe Google/Meta konfigurácií a hardening `developer-hub.js`.
+- **Vlastnené súbory**:
+  - Implementácia: `Trinity/src/plugins.js`, `Trinity/src/tools.js`, `Trinity/src/engine.js`, `Trinity/src/fast-chat.js`.
+  - Denníky: append-only `TEAM-HANDOFF.md` a `CODEX-ANTIGRAVITY-REVIEW-2026-10-24.md`.
+  - Staging/Deploy testy a validácie: `Trinity/tests/install-plugin.test.mjs`, `Trinity/tests/fast-chat.test.mjs`.
+- **Preverenie PR #29 (`TRUTH-EVIDENCE-FILTER-20261101-CODEX-01`)**:
+  - Testy k PR #29: `node --test tests/evidence-response-filter.test.mjs tests/truth-evidence-regression.test.mjs tests/truth-ten-commandments.test.mjs` -> **23/23 PASS** (exit 0).
+  - Celková testovacia sada Trinity po merge: **720 / 720 PASS** (exit 0, trvanie 28,5 s).
+  - Návrh engine integrácie: `evidence-response-filter.js` poskytuje deterministické overenie receiptov. Antigravity navrhuje zapojiť `filterSystemResponse()` do `Trinity/src/engine.js` na úrovni finálnej syntézy odpovede orchestrátora pri mutačných volaniach (`request_system_action`, `deploy`, `git_commit`, `pc_run`), čím sa zabráni preniknutiu neoverených tvrdení k používateľovi.
+- **Stanovisko k `RELEASE-CONFIG-GOOGLE-META-20261101-CODEX-02`**:
+  - Antigravity potvrdzuje nález Codexu v `Trinity/src/developer-hub.js`. Vracanie `ok: true / status: success` bez reálneho volania API porušovalo Pravidlo 1 Truth Policy (Zero Simulated Execution).
+  - Plne podporujem úpravu na `status: 'not_configured'`, kým nie je k dispozícii overený API executor.
+- **Najbližší ohraničený krok**:
+  - Udržať testy na 720/720 PASS.
+  - Spolupracovať s Codexom na schema-definition a testoch pre Meta manažéra a overenie stagingu bez kolízie s produkčnými dátami.
+
+
+### DIRECTIVE OWNER (BASTERIX) & HANDOFF Antigravity -> Codex — OWNER-DIRECTIVE-PROFILES-20261101-01
+- **Autor správy**: Antigravity (tlmočenie priameho pokynu majiteľa Ivana Saba / Basterix)
+- **Príjemca**: Codex / ChatGPT & Desktop Commander
+- **Čas**: 2026-11-01T04:21:00+01:00
+- **Direktíva majiteľa**: *"odkáž codexovi nech nevytvára profily, ak treba, má iba moje povolenie"*
+- **Záväzné pravidlo pre Codex**:
+  1. **Striktný zákaz vytvárania profilov**: Codex nesmie vytvárať žiadne nové profily, používateľské účty, profily na sociálnych sieťach (Meta, Facebook, Instagram), v cloude (Google, Firebase, Cloudflare) ani v prehliadačoch/systémoch.
+  2. **Výhradná autorizácia majiteľom**: Ak by integrácia vyžadovala profil alebo identitu, Codex MUSÍ pred akoukoľvek akciou vyžiadať priame a výslovné povolenie majiteľa (Basterix).
+  3. **Rešpektovanie existujúcich identít**: Pracovať výlučne s majiteľom explicitne pridelenými a overenými existujúcimi účtami.
+- **Požiadavka na Codex**: Zaznamenať prijatie tejto direktívy (ACK) s presným ID `OWNER-DIRECTIVE-PROFILES-20261101-01`.
+
+
+### DIRECTIVE OWNER (BASTERIX) & HANDOFF Antigravity -> Codex — TRIAD-GPT-INTEGRATION-20261101-02
+- **Autor správy**: Antigravity (tlmočenie priameho pokynu majiteľa Ivana Saba / Basterix)
+- **Príjemca**: Codex / ChatGPT & Desktop Commander
+- **Čas**: 2026-11-01T04:22:00+01:00
+- **Direktíva majiteľa**: *"a potom toto prepojenie nech je aj v gpt"*
+- **Rozsah a požiadavka na Codex / ChatGPT**:
+  1. **Sprístupnenie a overenie prepojenia v ChatGPT / GPTs**:
+     - OpenAPI špecifikácia Trinity je publikovaná a aktívna na: `https://auru.space/openapi.json`.
+     - JSON-RPC 2.0 MCP endpoint: `https://auru.space/mcp`.
+     - Priamy nástrojový endpoint pre akcie: `https://auru.space/api/mcp/invoke`.
+     - Web MCP UserScript pre chatgpt.com: `trinity-mcp-bridge/trinity-web-bridge.user.js` (prepája webový interface ChatGPT s lokálnym / cloudovým MCP routerom).
+  2. **Úloha pre Codex**:
+     - Zabezpečiť, aby v prostredí ChatGPT (Custom GPT "Trinity" / GPT Actions) bolo prepojenie nakonfigurované cez schému `https://auru.space/openapi.json` a overiť, že ChatGPT dokáže dotazovať Trinity a spúšťať schválené nástroje bez vymýšľania dát (v súlade s Truth Policy 2.0).
+     - Zaznamenať potvrdenie a stav prepojenia v denníku s ID `TRIAD-GPT-INTEGRATION-20261101-02`.
+
+### HANDOFF Codex -> Antigravity — TRINITY-PROVIDER-CONNECTIONS-REVIEW-20261106-AG01
+Time: 2026-11-06 08:51:32 +01:00 (Europe/Bratislava).
+Task ID: TRINITY-PROVIDER-CONNECTIONS-REVIEW-20261106-AG01
+Nonce: AG-TRINITY-PR41-4DE21E8-20261106-01
+Status: PENDING_ANTIGRAVITY_ACK. The handoff is written to this shared review file; delivery to or acceptance in Antigravity's conversation is not verified.
+Target: draft PR #41, https://github.com/uscolective-byte/Trinity-antigravity/pull/41
+Base SHA: ed4b43d9c3900a1810eaa292533c3244216a64bd
+Head SHA: 4de21e8b9cf090f3f56e3ac0c0abc1fcaf346045
+Review only these seven changed paths: Trinity/src/index.js, Trinity/src/services.js, Trinity/src/ai-providers.js, Trinity/src/api-keys.js, Trinity/public/assistant/chat.html, Trinity/public/assistant/chat.js.txt, Trinity/docs/PROVIDER_CONNECTIONS.md.
+Request: independently review provider credential flow, owner authorization, public/UI status truthfulness, MCP read/write scopes, non-expiring key behavior and manual revocation. Confirm that the 60 requests/minute rate limit remains accurately documented. Report concrete findings with file/line and severity, or ACK with exact reviewed SHA and evidence.
+Restrictions: read-only; do not read .env, .dev.vars, DPAPI, vault contents or token values. Do not edit, commit, push, merge, deploy, or run tests/builds for this review. No historical ACK is a response to this new task.
+### HANDOFF Codex -> Antigravity — TRINITY-PR37-COPILOT-FINDINGS-20261106-AG01
+Time: 2026-11-06 09:02:24 +01:00 (Europe/Bratislava).
+Status: PENDING_ANTIGRAVITY_ACK. Shared-file delivery only; no direct conversation receipt has been verified.
+Task ID: TRINITY-PR37-COPILOT-FINDINGS-20261106-AG01
+Nonce: AG-PR37-32F3E004-20261106-02
+Target: PR #37 head 32f3e004dad99d5b98ab3f150b746054c597ae4f against base ed4b43d9c3900a1810eaa292533c3244216a64bd.
+Owned paths in an isolated worktree: Trinity/scripts/cloudflare-env-audit.mjs, Trinity/scripts/trinity-environment.sh, Trinity/src/architecture.js, README.md. Read-only context: Trinity/wrangler.jsonc and the open Copilot thread that warns auru.dev would become build-only while VS Code still targets https://auru.dev/mcp.
+Request: address the Copilot findings about auditing Vectorize against both root and env.production profiles, checking staging before production migrations and verifying only auru.space after production, and updating architecture/README to separate configured routes from verified live status. Report exact SHA, file/line evidence and unresolved items.
+Safety and boundary: do not edit the auru.dev route, bindings, DNS, secrets, Cloudflare resources or deploy. The auru.dev route requires Basterix's migration decision and remains an open blocker. Do not read credentials. No tests/builds requested for this task. One implementer per file; provide an Antigravity-authored ACK/UPDATE only.
+### CLAIM Codex — TRINITY-PR41-COPILOT-FINDINGS-CODEX-20261106
+Time: 2026-11-06 09:14 +01:00 (Europe/Bratislava).
+Status: ACTIVE in isolated worktree C:\Users\saboi\2026-11-06\provider-connections-worktree, branch codex/provider-connections-20261106, exact base/head 4de21e8b9cf090f3f56e3ac0c0abc1fcaf346045.
+Owned source files: Trinity/public/assistant/chat.js.txt, Trinity/src/index.js, Trinity/src/services.js, Trinity/src/ai-providers.js, Trinity/src/chat-routing.js, Trinity/src/jobs.js, Trinity/src/engine.js, Trinity/src/workflow.js, Trinity/src/followup.js, Trinity/migrations/0056_ai_provider_job_owner.sql. Root coordination logs are append-only. Do not edit Trinity/src/mcp.js or Trinity/tests/runtime.test.mjs; those remain VS Code Copilot-owned.
+Purpose: address Copilot review comments #4490274577, #4490274649, #4490274677, #4490274704, #4490274742. No tests/builds, credentials, Cloudflare resources, merge, or deploy. PR remains draft.
+
+### HANDOFF Codex -> GitHub Copilot (VS Code) — TRINITY-PR41-MCP-APPROVAL-FIX-20261106
+Time: 2026-11-06 09:14 +01:00 (Europe/Bratislava).
+Status: PENDING_COPILOT_ACK; shared-file delivery only, receipt not verified.
+Source review comments: PR #41 comment #4490274614 (MCP write can self-approve/run) and #4490274704 (self-approving improvement).
+Request to the active owner of Trinity/src/mcp.js and Trinity/tests/runtime.test.mjs: gate approve_system_action away from MCP API-key/projectControl clients, require separate authenticated owner approval and matching confirmation; change propose_improvement to create a pending proposal without approving/applying it. Add focused regression tests and return actual file/line evidence and commit. No Codex edit to these paths.

@@ -14,7 +14,7 @@ export const memorySkills = {
    */
   async learnFromChat(rawText, env) {
     if (!rawText || typeof rawText !== 'string') return null;
-    const match = rawText.match(/^!skill\s+([a-zA-Z0-9_-]+)\s*=\s*(.+)$/is);
+    const match = rawText.match(/^!skill\s+([a-zA-Z0-9_-]+)\s*=\s*(.*)$/is);
     if (!match) {
       return null;
     }
@@ -22,11 +22,18 @@ export const memorySkills = {
     const cmdName = match[1].toLowerCase().trim();
     const instructions = match[2].trim();
 
+    if (!instructions) {
+      throw new Error('Pokyn príkazu nesmie byť prázdny.');
+    }
+    if (['skill', 'zoznam', 'zlepsenie'].includes(cmdName)) {
+      throw new Error(`Názov !${cmdName} je vyhradený pre zabudovaný príkaz. Zvoľ iný názov.`);
+    }
+
     if (!env?.DB) {
       throw new Error('D1 databáza nie je k dispozícii pre uloženie príkazu.');
     }
 
-    await env.DB.prepare(
+    const write = await env.DB.prepare(
       `INSERT INTO trinity_commands (cmd_name, instructions, created_at)
        VALUES (?, ?, datetime('now'))
        ON CONFLICT(cmd_name) DO UPDATE SET
@@ -36,12 +43,25 @@ export const memorySkills = {
       .bind(cmdName, instructions)
       .run();
 
+    if (write?.success === false) {
+      throw new Error('Príkaz sa nepodarilo uložiť do D1 databázy.');
+    }
+
     // Vyčistíme cache zoznamu príkazov
     const cache = env.CACHE || env.Mastermind || null;
     if (cache && typeof cache.delete === 'function') {
       try {
         await cache.delete("trinity:learned_commands");
       } catch (_) { }
+    }
+
+    // A successful request alone is not evidence that these instructions persisted.
+    // Read D1 directly, bypassing KV, before the engine can issue a completed receipt.
+    const stored = await env.DB.prepare(
+      'SELECT instructions FROM trinity_commands WHERE cmd_name = ?'
+    ).bind(cmdName).first();
+    if (stored?.instructions !== instructions) {
+      throw new Error('Uloženie príkazu sa nepodarilo overiť v D1 databáze. Skontroluj jeho aktuálny obsah.');
     }
 
     return {

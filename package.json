@@ -1,23 +1,37 @@
 {
-  "name": "trinity-antigravity-workspace",
+  "name": "trinity-omni-core",
+  "version": "2.5.0",
   "private": true,
-  "version": "1.0.0",
-  "license": "MIT",
-  "author": "Ivan Sabo (Basterix31) <saboivan2008@gmail.com>",
   "scripts": {
-    "sync": "powershell -ExecutionPolicy Bypass -File ./SYNC-BUILD.ps1 -Full -Test",
-    "build": "powershell -ExecutionPolicy Bypass -File ./SYNC-BUILD.ps1 -Full -Test",
-    "deploy": "powershell -ExecutionPolicy Bypass -File ./SYNC-BUILD.ps1 -Full -Test -Deploy",
-    "test": "npm --prefix Trinity test",
-    "check": "node scripts/run-all-tests.mjs",
-    "deploy:all": "node scripts/deploy-all-workers.mjs",
-    "gemini:chat": "node scripts/gemini-dev-chat.mjs",
-    "docs:check": "node scripts/sync-release-docs.mjs --check",
-    "docs:sync": "node scripts/sync-release-docs.mjs",
-    "cloudflare:doctor": "node scripts/cloudflare-doctor.mjs"
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001",
+    "start:bridge": "powershell -ExecutionPolicy Bypass -File ./Start-Trinity-PC-Bridge.ps1",
+    "azure:sync": "node Trinity/scripts/azure-sync-knowledge.mjs",
+    "test:crypto": "node --test scripts/verify-tetrakis.test.mjs && npm --prefix Jericho-Worker test && npm --prefix contracts/tetrakis test",
+    "test": "node --test Local-Desktop/tests/*.test.mjs Local-Gateway/tests/*.test.mjs scripts/verify-tetrakis.test.mjs && npm --prefix Jericho-Worker test && npm --prefix contracts/tetrakis test && npm --prefix Trinity test",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:prod": "node scripts/pre-deploy-check.mjs && wrangler deploy --env production",
+    "tail:staging": "wrangler tail --env staging",
+    "tail:prod": "wrangler tail --env production",
+    "docs:check": "node scripts/sync-release-docs.mjs --check"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.453.0",
+    "next": "^16.4.5",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "tailwind-merge": "^2.5.4",
+    "wrangler": "^4.158.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "ethers": "^6.17.0",
-    "npx": "^10.2.2"
+    "typescript": "^5.9.3"
   }
 }

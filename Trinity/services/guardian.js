@@ -1,3 +1,4 @@
+import { internalAuthorized } from './internal-auth.js';
 // Trinity Guardian Worker (services/guardian.js)
 const VERSION = '2.1.0';
 
@@ -50,14 +51,7 @@ export default {
         return secure(Response.json(state, { status: state.ok ? 200 : 503 }));
       }
 
-      const authHeader = request.headers.get('Authorization') || '';
-      const bearerToken = authHeader.replace(/^Bearer\s+/i, '').trim();
-      const expectedSecret = env?.TRINITY_INTERNAL_KEY || env?.TRINITY_GATEWAY_KEY;
-      const isInternalBinding = url.hostname === 'trinity.internal' || url.hostname === 'localhost' || url.hostname === '127.0.0.1';
-
-      const isAuthorized = expectedSecret
-        ? (Boolean(bearerToken) && bearerToken === expectedSecret)
-        : isInternalBinding;
+      const isAuthorized = await internalAuthorized(request, env);
 
       // Protected REST endpoints
       if ((path === '/api/logs' || path === '/api/check') && !isAuthorized) {
@@ -75,7 +69,7 @@ export default {
 
           const traceId = call.traceId || crypto.randomUUID();
           if (call.action === 'audit.list' || call.action === 'audit.events') {
-            const limit = Number(call.data?.limit || 50);
+            const limit = Math.max(1, Math.min(100, Math.trunc(Number(call.data?.limit) || 50)));
             let results = [];
             if (env?.DB) {
               const r = await env.DB.prepare("SELECT * FROM ops_events WHERE action='guardian_check' ORDER BY id DESC LIMIT ?")
@@ -87,7 +81,7 @@ export default {
           }
           if (call.action === 'guardian.check' || call.action === 'check') {
             const rec = await record(env);
-            return secure(Response.json({ ok: true, result: rec, traceId, from: 'guardian' }));
+            return secure(Response.json({ ok: rec.ok, result: rec, traceId, from: 'guardian' }, { status: rec.ok ? 200 : 503 }));
           }
         }
       }

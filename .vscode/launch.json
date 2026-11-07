@@ -1,0 +1,42 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Trinity: Launch Next.js Dashboard",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "${workspaceFolder}",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Trinity: Cloudflare Worker Dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "${workspaceFolder}/Trinity",
+      "internalConsoleOptions": "openOnSessionStart"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Trinity: MCP Stdio Bridge",
+      "program": "${workspaceFolder}/scripts/trinity-mcp-bridge/server.mjs",
+      "env": {
+        "MCP_STDIO": "true",
+        "TRINITY_WORKSPACE": "${workspaceFolder}"
+      },
+      "internalConsoleOptions": "openOnSessionStart"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Trinity: Local Desktop Server",
+      "program": "${workspaceFolder}/Local-Desktop/server.mjs",
+      "cwd": "${workspaceFolder}/Local-Desktop",
+      "internalConsoleOptions": "openOnSessionStart"
+    }
+  ]
+}

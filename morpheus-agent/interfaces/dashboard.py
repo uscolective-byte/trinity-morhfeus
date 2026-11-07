@@ -4,6 +4,7 @@ Visual control panel for Morpheus on aura.dev.
 """
 
 import datetime
+from html import escape
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,8 +15,9 @@ from domain.models import SocialAccount, PostRecord, SocialInteractionRecord, Sh
 from domain.schemas import PostCreateSchema
 from core.config import domain_settings, domain_manager
 from infrastructure.ai.engine import ai_engine
+from core.admin_auth import require_admin
 
-router = APIRouter(tags=["Admin Control Center"])
+router = APIRouter(tags=["Admin Control Center"], dependencies=[Depends(require_admin)])
 
 
 @router.get("/dashboard", response_class=HTMLResponse)
@@ -51,7 +53,7 @@ async def serve_dashboard(request: Request, db: AsyncSession = Depends(get_db)):
                 {status_badge}
             </div>
             <div class="card-body">
-                <p class="account-name">{acc.display_name or acc.username if acc else 'Žiaden účet nie je autorizovaný'}</p>
+                <p class="account-name">{escape((acc.display_name or acc.username or '') if acc else 'Žiaden účet nie je autorizovaný')}</p>
                 <div class="permissions-tag">Práva: Read, Write, Edit, Admin</div>
             </div>
             <div class="card-footer">
@@ -65,9 +67,9 @@ async def serve_dashboard(request: Request, db: AsyncSession = Depends(get_db)):
         status_color = "#10b981" if post.status == "published" else "#f59e0b" if post.status == "scheduled" else "#ef4444"
         posts_html += f"""
         <tr>
-            <td><strong>{post.platform.upper()}</strong></td>
-            <td>{post.content_text[:80]}...</td>
-            <td><span style="color: {status_color}; font-weight:600;">{post.status.upper()}</span></td>
+            <td><strong>{escape(post.platform.upper())}</strong></td>
+            <td>{escape(post.content_text[:80])}...</td>
+            <td><span style="color: {status_color}; font-weight:600;">{escape(post.status.upper())}</span></td>
             <td>{post.scheduled_for.strftime('%d.%m %H:%M') if post.scheduled_for else '-'}</td>
         </tr>
         """
@@ -76,12 +78,12 @@ async def serve_dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     for it in interactions:
         interactions_html += f"""
         <tr>
-            <td><span class="badge badge-subtle">{it.platform.upper()}</span></td>
-            <td>{it.interaction_type.upper()}</td>
-            <td>{it.sender_username or it.sender_id}</td>
-            <td>{it.message_content[:60]}...</td>
-            <td><strong>{it.sentiment.upper() if it.sentiment else 'ANALYZING'}</strong></td>
-            <td><span class="badge badge-info">{it.status.upper()}</span></td>
+            <td><span class="badge badge-subtle">{escape(it.platform.upper())}</span></td>
+            <td>{escape(it.interaction_type.upper())}</td>
+            <td>{escape(it.sender_username or it.sender_id or '')}</td>
+            <td>{escape(it.message_content[:60])}...</td>
+            <td><strong>{escape(it.sentiment.upper() if it.sentiment else 'ANALYZING')}</strong></td>
+            <td><span class="badge badge-info">{escape(it.status.upper())}</span></td>
         </tr>
         """
 
@@ -220,7 +222,7 @@ async def serve_dashboard(request: Request, db: AsyncSession = Depends(get_db)):
             </div>
         </div>
         <div>
-            <span class="domain-tag"><i class="fa-solid fa-globe"></i> Doména: {domain_settings.full_host}</span>
+            <span class="domain-tag"><i class="fa-solid fa-globe"></i> Doména: {escape(domain_settings.full_host)}</span>
         </div>
     </header>
 

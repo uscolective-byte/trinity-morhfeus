@@ -23,5 +23,5 @@ test('custom Desktop executor shares claim receipts and replays completion witho
     execute:async()=>{executions++;return {saved:true};},onState:state=>{if(state.status==='receipt-replayed'){clearTimeout(timeout);stop();resolve();}}});
   });
   assert.equal(executions,1);assert.equal(receipts,2);assert.equal((await store.get(id)).status,'completed');
- }finally{stop();globalThis.fetch=previous;await rm(dir,{recursive:true,force:true});}
+ }finally{stop();globalThis.fetch=previous;await rm(dir,{recursive:true,force:true,maxRetries:5,retryDelay:100});}
 });

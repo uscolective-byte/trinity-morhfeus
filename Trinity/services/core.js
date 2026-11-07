@@ -1,8 +1,8 @@
 import {boundedLimit,boundedString,json,readCall,requireApproval,safeFailure} from './worker-runtime.js';
 
-const VERSION='3.2.0';
+const VERSION='3.3.0';
 const MODEL='@cf/meta/llama-3.3-70b-instruct-fp8-fast';
-const TOOL_NAMES=new Set(['knowledge_search','browser_scrape','browser_render','state_get','state_list','state_set','thought_history']);
+const TOOL_NAMES=new Set(['knowledge_search','browser_scrape','browser_render','state_get','state_list','state_set','thought_history','memory_search','calculate']);
 
 function failure(message,status=400){throw Object.assign(new Error(message),{status});}
 function requireBinding(env,name){if(!env[name])failure(`${name} binding is required`,503);return env[name];}
@@ -29,6 +29,29 @@ function limitedJson(value,max=64_000){
   return serialized;
 }
 
+function evaluateArithmetic(expression){
+  const tokens=expression.match(/\d+(?:\.\d+)?|[()+\-*\/%^]/g)||[];
+  if(tokens.join('')!==expression.replace(/\s+/g,''))failure('Invalid arithmetic expression',400);
+  let index=0;
+  const peek=()=>tokens[index];
+  const take=()=>tokens[index++];
+  const primary=()=>{
+    const token=take();
+    if(token==='+')return unary();
+    if(token==='-')return -unary();
+    if(token==='('){const value=additive();if(take()!==')')failure('Unmatched parenthesis',400);return value;}
+    if(!token||!/^\d/.test(token))failure('Expected a number',400);
+    return Number(token);
+  };
+  const power=()=>{const left=primary();return peek()==='^'?(take(),Math.pow(left,unary())):left;};
+  const unary=()=>power();
+  const multiplicative=()=>{let value=unary();while(['*','/','%'].includes(peek())){const op=take(),right=unary();value=op==='*'?value*right:op==='/'?value/right:value%right;}return value;};
+  const additive=()=>{let value=multiplicative();while(peek()==='+'||peek()==='-'){const op=take(),right=multiplicative();value=op==='+'?value+right:value-right;}return value;};
+  const value=additive();
+  if(index!==tokens.length||!Number.isFinite(value))failure('Invalid arithmetic expression',400);
+  return value;
+}
+
 export function parseAgentDirective(text){
   const source=String(text||'').trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');
   let directive;
@@ -41,13 +64,34 @@ export function parseAgentDirective(text){
 }
 
 async function invokeModel(env,messages){
+  if(env.CHAT_INFERENCE_SERVICE&&typeof env.CHAT_INFERENCE_SERVICE.fetch==='function'){
+    try{
+      const response=await env.CHAT_INFERENCE_SERVICE.fetch('https://chat-inference.internal/infer',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({messages,traceId:crypto.randomUUID()})
+      });
+      if(response.ok){
+        const data=await response.json();
+        const text=data?.response||modelText(data);
+        if(text)return {text,model:data?.model||'chat-inference-matrix',usage:data?.usage||null};
+      }
+    }catch{}
+  }
   const AI=requireBinding(env,'AI');
-  let result;
-  try{result=await AI.run(env.AI_MODEL||MODEL,{messages,max_tokens:4096,temperature:0.1});}
-  catch(error){failure(`AI provider failed: ${String(error?.message||error).slice(0,240)}`,502);}
+  let result,selectedModel=env.AI_MODEL||MODEL;
+  const primaryModel=env.AI_MODEL||MODEL;
+  try{result=await AI.run(primaryModel,{messages,max_tokens:4096,temperature:0.1});}
+  catch(error){
+    try{selectedModel='@cf/deepseek-ai/deepseek-r1-distill-qwen-32b';result=await AI.run(selectedModel,{messages,max_tokens:4096,temperature:0.1});}
+    catch{
+      try{selectedModel='@cf/meta/llama-3.1-8b-instruct-fp8-fast';result=await AI.run(selectedModel,{messages,max_tokens:4096,temperature:0.1});}
+      catch(rapidErr){failure(`AI provider failed: ${String(rapidErr?.message||rapidErr).slice(0,240)}`,502);}
+    }
+  }
   const text=modelText(result);
   if(!text)failure('AI provider returned no usable output',502);
-  return {text,model:env.AI_MODEL||MODEL,usage:result?.usage||null};
+  return {text,model:selectedModel,usage:result?.usage||null};
 }
 
 async function systemPrompt(env){
@@ -159,6 +203,29 @@ export async function executeCoreTool(env,tool,args,approval){
     const limit=boundedLimit(args.limit,10);
     const rows=await env.DB.prepare('SELECT id, prompt, output, model, created_at FROM core_thoughts ORDER BY created_at DESC LIMIT ?').bind(limit).all();
     return {items:rows.results||[]};
+  }
+  if(tool==='calculate'){
+    const expr=boundedString(args.expression||args.expr,'expression',{min:1,max:100,required:true});
+    if(!/^[0-9+\-*\/().\s^%]+$/.test(expr))failure('Invalid characters in arithmetic expression',400);
+    try{
+      const val=evaluateArithmetic(expr);
+      return {expression:expr,result:val,ok:true};
+    }catch(e){failure(`Calculation error: ${e.message}`,400);}
+  }
+  if(tool==='memory_search'){
+    const query=boundedString(args.query,'query',{min:2,max:300,required:true});
+    if(env.MEMORY&&typeof env.MEMORY.fetch==='function'){
+      try{
+        const resp=await env.MEMORY.fetch('https://trinity-memory.internal/',{
+          method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'memory.search',data:{query}})
+        });
+        if(resp.ok){const res=await resp.json();return {matches:res.result||[],ok:true};}
+      }catch{}
+    }
+    try{
+      const rows=await env.DB.prepare("SELECT key, value, category, updated_at FROM memories WHERE value LIKE ? OR key LIKE ? ORDER BY updated_at DESC LIMIT 5").bind(`%${query}%`,`%${query}%`).all();
+      return {matches:rows.results||[],ok:true};
+    }catch{return {matches:[],ok:true};}
   }
   failure('Unsupported core tool',400);
 }

@@ -1,8 +1,59 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {findUnsupportedActionClaims, truthStatus, safeTruthResponse} from '../src/truth.js';
-import {runAgent,toolReceiptForOutcome} from '../src/engine.js';
+import {runAgent,toolReceiptForOutcome,unresolvedToolOutcome} from '../src/engine.js';
 const text='Výsledok nástroja calculate je: 42';
+
+test('error, blocked and empty results cannot manufacture successful receipts',()=>{
+ for(const outcome of [null,undefined,{}, {error:'provider rejected'}, {status:'blocked'}, {status:'cancelled'}, {status:'unavailable'}, {success:false,_evidence:{effect:'mutation',receipt_id:'invented'}}]){
+  const receipt=toolReceiptForOutcome('web_fetch',outcome);
+  assert.equal(receipt.status,'failed');assert.equal(receipt.receipt_id,undefined);
+ }
+ assert.equal(toolReceiptForOutcome('write',{_evidence:{effect:'proposal',receipt_id:'proposal'}}).status,'pending');
+ assert.equal(toolReceiptForOutcome('write',{status:'approval_required'}).status,'pending');
+});
+
+test('a failed calculator cannot be replaced by a bare model answer',async()=>{
+ let calls=0;
+ const env={AI:{run:async()=>({response:++calls===1?JSON.stringify({tool:'calculate',arguments:{operation:'invented',values:[19,23]}}):'437'})}};
+ const result=await runAgent(env,'orchestrator','Použi kalkulačku a potvrď výsledok.','','fast');
+ assert.equal(result.execution_status,'failed');assert.notEqual(result.text,'437');
+ assert.match(result.text,/nepodarilo.*overiť/);assert.equal(result.tool_log[0].status,'failed');
+});
+
+test('explicit named tool request cannot be answered without executing the tool',async()=>{
+ const result=await runAgent({AI:{run:async()=>({response:'42'})}},'orchestrator','Použi nástroj calculate na súčin šesť a sedem.','','fast');
+ assert.equal(result.execution_status,'failed');assert.notEqual(result.text,'42');
+ assert.equal(result.tool_log[0].status,'not_executed');
+});
+
+test('engine prompts for an omitted required tool and accepts its real result',async()=>{
+ let calls=0;
+ const env={AI:{run:async()=>({response:++calls===1?'42':calls===2?JSON.stringify({tool:'calculate',arguments:{operation:'multiply',values:[6,7]}}):'42'})}};
+ const result=await runAgent(env,'orchestrator','Použi nástroj calculate na súčin šesť a sedem.','','fast');
+ assert.equal(calls,3);assert.equal(result.text,'42');
+ assert.equal(result.tool_log[0].tool,'calculate');assert.equal(result.tool_log[0].status,'completed');
+});
+
+test('a repaired tool call can finish while unrelated success cannot hide a failure',async()=>{
+ let calls=0;
+ const env={AI:{run:async()=>({response:++calls===1?JSON.stringify({tool:'calculate',arguments:{operation:'invented',values:[6,7]}}):calls===2?JSON.stringify({tool:'calculate',arguments:{operation:'multiply',values:[6,7]}}):'42'})}};
+ const result=await runAgent(env,'orchestrator','Spočítaj súčin šesť a sedem cez nástroj.','','fast');
+ assert.equal(result.text,'42');assert.equal(result.tool_log[1].status,'completed');
+ assert.equal(unresolvedToolOutcome([{tool:'calculate',status:'failed'},{tool:'current_time',status:'completed',receipt_id:'clock'}]).execution_status,'failed');
+ assert.equal(unresolvedToolOutcome([{tool:'pc_run',status:'pending'}]).execution_status,'pending');
+});
+
+test('truth policy allows an honest statement that PC access is unavailable',()=>{
+ assert.deepEqual(findUnsupportedActionClaims('Nemám prístup k PC. Nemám overený výsledok.',[]),[]);
+});
+
+test('direct calculator failure preserves its failed tool log for the workflow',async()=>{
+ await assert.rejects(runAgent({},'orchestrator','1 / 0','','fast'),error=>{
+  assert.equal(error.tool_log[0].tool,'calculate');
+  assert.equal(error.tool_log[0].status,'failed');return /nulou/.test(error.message);
+ });
+});
 test('named tool result requires a successful receipt for the same tool',()=>{
   for(const receipts of [[],[{tool:'calculate',status:'failed',receipt_id:'failed'}],[{tool:'calculate',status:'completed'}],[{tool:'service_status',status:'completed',receipt_id:'other'}]]){
     assert.deepEqual(findUnsupportedActionClaims(text,receipts),['tool_result:calculate']);

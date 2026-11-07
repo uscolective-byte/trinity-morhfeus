@@ -5,6 +5,13 @@ $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 foreach ($name in @('TRINITY_GATEWAY_KEY','TRINITY_PC_BRIDGE_KEY','TRINITY_CLOUD_URL','TRINITY_PC_BRIDGE_URL')) {
   Remove-Item "Env:\$name" -ErrorAction SilentlyContinue
 }
+if (Test-Path 'C:\Users\saboi\.env') {
+  foreach($line in [IO.File]::ReadAllLines('C:\Users\saboi\.env')){
+    if($line -match '^\s*(CLOUDFLARE_ACCESS_CLIENT_ID|CLOUDFLARE_ACCESS_CLIENT_SECRET)=(.*)$'){
+      Set-Item -Path ('Env:'+$Matches[1]) -Value $Matches[2].Trim()
+    }
+  }
+}
 $env:MORHFEUS_ROOT = (Resolve-Path (Join-Path $root '..')).Path
 function Read-ProtectedToken([string]$path) {
   if (-not (Test-Path -LiteralPath $path)) { return $null }

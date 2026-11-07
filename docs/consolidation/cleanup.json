@@ -1,0 +1,40 @@
+{
+  "archive_commit": "740e3e39b117cfe2bdacb8b2e9920bf33d1fc19e",
+  "remote_deleted_count": 22,
+  "remote_deleted_refs": {
+    "refs/heads/backup/pre-reset-20261103/codex/apply-release-20261102": "4926ba6ec189c4e79b90d2ae86e06237ce92289b",
+    "refs/heads/backup/pre-reset-20261103/codex/bridge-auth-20261102": "5e1117ca00bfa77a388ec491d4e9e7d7476f0925",
+    "refs/heads/backup/pre-reset-20261103/codex/omni12-foundation-20261101": "554620b28fb0a7c586f47164fbb206b9a92251bd",
+    "refs/heads/backup/pre-reset-20261103/codex/platform-configuration-20261101": "3850a606a408dea85dea34c81bace276966888f3",
+    "refs/heads/backup/pre-reset-20261103/codex/trinity-runtime-truth-repair-20261102": "b5fcae4ada70ae37a00d02e1c4d63d4c84c24e09",
+    "refs/heads/backup/pre-reset-20261103/codex/truth-evidence-filter-20261101": "2b31bb16a0fd81c842d20109e961b2613a4cba4d",
+    "refs/heads/backup/pre-reset-20261103/codex/truth-runtime-gate-20261101": "a6abf5f6c545e09bdf6f15e888ebdfc479a4dd77",
+    "refs/heads/backup/pre-reset-20261103/main": "bd9b6a40d4a1f61480156edf9a573b5cd781c32b",
+    "refs/heads/backup/pre-reset-20261103/uscolective-byte-complete-fix": "64d219d49966a0983a13db7832e87284551ba94e",
+    "refs/heads/backup/pre-reset-20261103/uscolective-byte-stunning-train": "a50c3e26fb8f8d725c39ffad3b234d66785dea3a",
+    "refs/heads/backup/pre-reset-20261103/uscolective-byte-trinity-repo-repair": "a50c3e26fb8f8d725c39ffad3b234d66785dea3a",
+    "refs/heads/backup/pre-reset-20261103/worktree-0": "b889284b503caf2f669b29ab9f291e06c66f6fb7",
+    "refs/heads/backup/pre-reset-20261103/worktree-2": "24dd67cab80b7200a039f8beeec3b8bffa81fd73",
+    "refs/heads/backup/pre-reset-20261103/worktree-8": "59fe60fea85173737a9d4a2661d6b9575a75401f",
+    "refs/heads/codex/apply-release-20261102": "4926ba6ec189c4e79b90d2ae86e06237ce92289b",
+    "refs/heads/codex/platform-configuration-20261101": "3850a606a408dea85dea34c81bace276966888f3",
+    "refs/heads/codex/recovery-index-20261103": "2e530cc66c32abbd4f8059b3e085c5ce1f283402",
+    "refs/heads/codex/truth-evidence-filter-20261101": "6bd09fbbf1bf6728ba48726e17690a6647ceb549",
+    "refs/heads/dependabot/github_actions/actions/checkout-7": "4ec0cf58df08887237f16a4f1835464d20f82b20",
+    "refs/heads/dependabot/npm_and_yarn/PC-Bridge-Worker/wrangler-4.153.0": "14584a61a7e1e322aeee586b617aa2bb95879e8a",
+    "refs/heads/dependabot/npm_and_yarn/Trinity/cloudflare/workers-types-5.20261027.1": "a7ece5b80d0e21146c78bc72f58f0038f060dc60",
+    "refs/heads/fix/all-bugs-trinity-20261102": "a50c3e26fb8f8d725c39ffad3b234d66785dea3a"
+  },
+  "local_deleted_count": 14,
+  "remaining_branches": [
+    "main",
+    "codex/consolidated-20261103"
+  ],
+  "original_tips_preserved_as_ancestors": 19,
+  "worktree_files_preserved": true,
+  "old_prs_closed": [
+    32,
+    33
+  ],
+  "active_pr": 34
+}

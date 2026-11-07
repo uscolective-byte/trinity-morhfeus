@@ -307,7 +307,7 @@ export function generateEscrowLandingHtml({ domain, salePrice = 490, leasePrice 
     </div>
 
     <footer>
-      Trinity 11.0 Domain & Hosting Desk · Bezpečný brokering a správa doménových portfólií
+      Trinity 11.1 Domain & Hosting Desk · Bezpečný brokering a správa doménových portfólií
     </footer>
   </div>
 

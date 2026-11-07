@@ -14,7 +14,7 @@ const root=env=>`https://api.github.com/repos/${env.TRINITY_GITHUB_REPO||PROJECT
 export async function githubRequest(env,path,method='GET',body){
   const token=env.TRINITY_GITHUB_TOKEN||env.GITHUB_TOKEN||env.GITHUBE_API_KEY||env.GTH||env.GITHUBE_FINE_TOKEN;
   if(!token)throw new HttpError(503,'Chýba Worker Secret TRINITY_GITHUB_TOKEN s prístupom k repozitáru Trinity.');
-  const response=await fetch(root(env)+path,{method,headers:{Authorization:`Bearer ${token}`,Accept:'application/vnd.github+json','Content-Type':'application/json','User-Agent':'Trinity-Evolution','X-GitHub-Api-Version':'2022-11-28'},body:body===undefined?undefined:JSON.stringify(body),redirect:'error',signal:AbortSignal.timeout(20000)});
+  const response=await fetch(root(env)+path,{method,headers:{Authorization:`Bearer ${token}`,Accept:'application/vnd.github+json','Content-Type':'application/json','User-Agent':'Trinity-Evolution','X-GitHub-Api-Version':'2022-11-28'},body:body===undefined?undefined:JSON.stringify(body),redirect:'manual',signal:AbortSignal.timeout(20000)});
   if(!response.ok)throw new HttpError(502,`GitHub ${method} ${path.split('?')[0]}: HTTP ${response.status}`);
   return response.status===204?{}:JSON.parse(await boundedText(response,1500000));
 }

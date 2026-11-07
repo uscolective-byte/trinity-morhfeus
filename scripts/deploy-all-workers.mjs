@@ -1,125 +1,127 @@
 #!/usr/bin/env node
 /**
- * @module TRINITY_OMNI_CORE
- * @subsystem AUTOMATION_AND_OPS_SCRIPTS
- * @author Basterix (Root Architect)
- * @license Sovereign Irrevocable Covenant
- * @description Modul deploy-all-workers.mjs (scripts/deploy-all-workers.mjs) v ekosystéme TRINITY OMNI-CORE.
- */
-/**
- * Trinity Autonomous Fleet - Deploy All Workers Script
- * Deploys all 23 specialized workers + Trinity main worker to Cloudflare Edge.
+ * Build or deploy the canonical Trinity Worker fleet.
+ *
+ * Safe default: dry-run every target. A production deploy requires both
+ * --deploy and --confirm-production and passes a full source/config preflight
+ * before the first Worker is published.
  */
 
 import { execFileSync } from 'node:child_process';
-import {checkSource} from './source-policy.mjs';
-import { existsSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { checkSource } from './source-policy.mjs';
+import {
+  WORKER_DEPLOYMENTS,
+  AURA_WORKERS,
+  TRINITY_CORE_WORKERS,
+  STANDALONE_WORKERS,
+  AUXILIARY_WORKERS,
+  PROFILE_WORKER
+} from './lib/worker-deployments.mjs';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const ROOT_DIR = resolve(__dirname, '..');
+// Canonical fleet includes all 46 Cloudflare workers plus trinity-profile (47 targets total).
 
-const AURA_WORKERS = [
-  'aura_analyzer', 'aura_architect', 'aura_codegen', 'aura_deployer', 'aura_evolver',
-  'aura_memory', 'aura_optimizer', 'aura_planner', 'aura_sentinel', 'aura_tester'
-];
+const ROOT_DIR = resolve(fileURLToPath(new URL('..', import.meta.url)));
+const DRY_RUN = process.argv.includes('--dry-run') || !process.argv.includes('--deploy');
+const DEPLOY = process.argv.includes('--deploy');
+const CONFIRM_PRODUCTION = process.argv.includes('--confirm-production');
+const HELP = process.argv.includes('--help') || process.argv.includes('-h');
 
-const TRINITY_CORE_WORKERS = [
-  'trinity-core', 'trinity-builder', 'trinity-dispatcher', 'trinity-connectors',
-  'trinity-guardian', 'trinity-memory', 'trinity-sentinel', 'trinity-skills'
-];
+function readMain(configPath) {
+  const text = readFileSync(configPath, 'utf8').replace(/^\uFEFF/, '');
+  const match = configPath.endsWith('.toml')
+    ? text.match(/^\s*main\s*=\s*["']([^"']+)["']/m)
+    : text.match(/"main"\s*:\s*"([^"]+)"/);
+  return match?.[1] || null;
+}
 
-const STANDALONE_WORKERS = [
-  { name: 'trinity-capacity', dir: 'Capacity-Worker', config: 'wrangler.jsonc' },
-  { name: 'trinity-knowledge', dir: 'Knowledge-Worker', config: 'wrangler.jsonc' },
-  { name: 'trinity-integrations', dir: 'Integrations-Worker', config: 'wrangler.jsonc' },
-  { name: 'trinity-pc-bridge', dir: 'PC-Bridge-Worker', config: 'wrangler.jsonc' },
-  { name: 'trinity-audit', dir: 'Audit-Worker', config: 'wrangler.jsonc' },
-  { name: 'jericho123', dir: 'Jericho-Worker', config: 'wrangler.jsonc' }
-];
+if (HELP) {
+  console.log('Usage: node scripts/deploy-all-workers.mjs [--dry-run | --deploy --confirm-production]');
+  console.log(`Canonical targets: ${WORKER_DEPLOYMENTS.length}`);
+  process.exit(0);
+}
 
-console.log('====================================================');
-console.log('🚀 TRINITY FULL FLEET DEPLOYMENT (23 WORKERS + CORE)');
-console.log('====================================================');
+if (DEPLOY && !CONFIRM_PRODUCTION) {
+  console.error('Refusing fleet deployment: pass --confirm-production after reviewing the target list and release evidence.');
+  process.exit(2);
+}
 
+const issues = [];
+for (const target of WORKER_DEPLOYMENTS) {
+  const config = resolve(ROOT_DIR, target.dir, target.config);
+  if (!existsSync(config)) {
+    issues.push({ name: target.name, issue: `Missing config: ${config}` });
+    continue;
+  }
+  const main = readMain(config);
+  if (!main) {
+    issues.push({ name: target.name, issue: `Config has no readable main entry: ${config}` });
+    continue;
+  }
+  const entry = resolve(config, '..', main);
+  if (!existsSync(entry)) issues.push({ name: target.name, issue: `Missing main entry: ${entry}` });
+}
+
+if (issues.length) {
+  console.error('Preflight failed; no Worker was built or deployed:');
+  for (const issue of issues) console.error(`- ${issue.name}: ${issue.issue}`);
+  process.exit(1);
+}
+
+if (DEPLOY) {
+  try {
+    checkSource(ROOT_DIR);
+  } catch (error) {
+    console.error(`Source policy failed; no Worker was deployed: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+  }
+}
+
+const wranglerScript = resolve(ROOT_DIR, 'Trinity/node_modules/wrangler/bin/wrangler.js');
+const useLocalWrangler = existsSync(wranglerScript);
+const releaseTag = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT_DIR, encoding: 'utf8' }).trim();
 const results = [];
-checkSource(ROOT_DIR);
-const releaseSha=execFileSync('git',['rev-parse','HEAD'],{cwd:ROOT_DIR,encoding:'utf8'}).trim();
-const npmCli=process.env.npm_execpath;
-if(!npmCli)throw new Error('Run through npm run deploy:all.');
-execFileSync(process.execPath,[npmCli,'run','check'],{cwd:ROOT_DIR,stdio:'inherit'});
-const wrangler=resolve(ROOT_DIR,'Trinity/node_modules/wrangler/bin/wrangler.js');
 
-function deployWorker(name, cwd, configPath, env = "") {
-  console.log(`\n⏳ Deploying ${name}...`);
-  const fullConfig = resolve(cwd, configPath);
-  if (!existsSync(fullConfig)) {
-    console.error(`❌ Missing config: ${fullConfig}`);
-    results.push({ name, success: false, error: 'Config missing' });
-    return false;
+console.log(`TRINITY ${DRY_RUN ? 'DRY-RUN' : 'PRODUCTION DEPLOY'} — ${WORKER_DEPLOYMENTS.length} canonical targets`);
+if (DRY_RUN) console.log('No Cloudflare deployments will be published.');
+
+for (const target of WORKER_DEPLOYMENTS) {
+  const config = resolve(ROOT_DIR, target.dir, target.config);
+  const cwd = resolve(ROOT_DIR, target.dir);
+  const args = ['deploy', '--config', config];
+  if (target.env) args.push('--env', target.env);
+  if (DRY_RUN) {
+    args.push('--dry-run', '--outdir', resolve(tmpdir(), 'trinity-worker-builds', target.name));
+  } else {
+    args.push('--tag', releaseTag);
   }
 
   try {
-    const output = execFileSync(process.execPath,[wrangler,'deploy','--config',fullConfig,'--env',env,'--tag',releaseSha], { cwd, stdio: 'pipe', encoding: 'utf8', env: { ...process.env, CI: '1', WRANGLER_SEND_METRICS: 'false' } });
-    console.log(`✅ ${name} deployed successfully!`);
-    results.push({ name, success: true, output });
-    return true;
-  } catch (err) {
-    const msg = err.stdout?.toString() || err.stderr?.toString() || err.message;
-    console.warn(`⚠️ Deployment issue for ${name}: ${msg.slice(0, 300)}`);
-    results.push({ name, success: false, error: msg });
-    return false;
+    const command = useLocalWrangler
+      ? [process.execPath, [wranglerScript, ...args]]
+      : ['npx', ['wrangler', ...args]];
+    execFileSync(command[0], command[1], {
+      cwd,
+      stdio: 'pipe',
+      encoding: 'utf8',
+      env: { ...process.env, CI: '1', WRANGLER_SEND_METRICS: 'false' }
+    });
+    results.push({ name: target.name, ok: true });
+    console.log(`PASS ${target.name}`);
+  } catch (error) {
+    const message = error.stdout?.toString() || error.stderr?.toString() || error.message;
+    results.push({ name: target.name, ok: false, message: message.slice(0, 500) });
+    console.error(`FAIL ${target.name}: ${message.slice(0, 300)}`);
+    if (!DRY_RUN) {
+      console.error('Stopping after the first deployment error.');
+      break;
+    }
   }
 }
 
-// 1. Deploy 10 AURA workers
-console.log('\n--- PHASE 1: Deploying 10 AURA Specialists ---');
-const auraDir = resolve(ROOT_DIR, 'Trinity/workers/aura');
-for (const role of AURA_WORKERS) {
-  deployWorker(role, auraDir, `${role}.jsonc`);
-}
-
-// 2. Deploy 8 Trinity Core workers
-console.log('\n--- PHASE 2: Deploying 8 Trinity Core Workers ---');
-const trinityDir = resolve(ROOT_DIR, 'Trinity/workers/trinity');
-for (const w of TRINITY_CORE_WORKERS) {
-  deployWorker(w, trinityDir, `${w}.jsonc`);
-}
-
-// 3. Deploy Standalone workers
-console.log('\n--- PHASE 3: Deploying Standalone Workers ---');
-for (const w of STANDALONE_WORKERS) {
-  const dir = resolve(ROOT_DIR, w.dir);
-  deployWorker(w.name, dir, w.config);
-}
-
-// Only promote the main application after every dependency deploy succeeded.
-if(results.some(result=>!result.success)) {
-  console.error('Dependency deployment failed; main application was not promoted.');
-  process.exit(1);
-}
-const bash=process.platform==='win32'?resolve(process.env.ProgramFiles||'C:/Program Files','Git/bin/bash.exe'):'bash';
-// Guarded rollout backs up both databases, applies migrations, deploys development,
-// verifies its SHA/readiness, then deploys and verifies production.
-execFileSync(bash,[resolve(ROOT_DIR,'scripts/trinity-environment.sh'),'deploy'],{cwd:ROOT_DIR,stdio:'inherit'});
-
-console.log('\n====================================================');
-console.log('📊 DEPLOYMENT SUMMARY');
-console.log('====================================================');
-let successCount = 0;
-for (const r of results) {
-  const status = r.success ? '✅ SUCCESS' : '⚠️ WARNING / ERROR';
-  console.log(`${status} - ${r.name}`);
-  if (r.success) successCount++;
-}
-console.log(`\nTotal: ${successCount} / ${results.length} workers successfully deployed.`);
-
-if (successCount !== results.length) {
-  console.error('\n❌ No workers deployed. Check Cloudflare authentication or network.');
-  process.exit(1);
-} else {
-  console.log('\n🎉 Deployment complete.');
-  process.exit(0);
-}
+const passed = results.filter(result => result.ok).length;
+console.log(`Summary: ${passed}/${results.length} passed.`);
+if (passed !== WORKER_DEPLOYMENTS.length) process.exit(1);

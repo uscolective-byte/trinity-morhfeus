@@ -1,3 +1,4 @@
+import { internalAuthorized } from './internal-auth.js';
 // Trinity Skills Worker (services/skills.js)
 const VERSION = '2.1.0';
 
@@ -39,15 +40,7 @@ export default {
     const traceId = call.traceId || crypto.randomUUID();
 
     // Priorita 1: Autorizácia interných operácií
-    const authHeader = request.headers.get('Authorization') || '';
-    const bearerToken = authHeader.replace(/^Bearer\s+/i, '').trim();
-    const expectedSecret = env?.TRINITY_INTERNAL_KEY || env?.TRINITY_GATEWAY_KEY;
-    const isInternalBinding = url.hostname === 'trinity.internal' || url.hostname === 'localhost' || url.hostname === '127.0.0.1';
-
-    // Ak je definovaný serverový kľúč, vyžaduje sa presná zhoda. Inak je povolený len vnútorný service binding.
-    const isAuthorized = expectedSecret
-      ? (Boolean(bearerToken) && bearerToken === expectedSecret)
-      : isInternalBinding;
+    const isAuthorized = await internalAuthorized(request, env);
 
     const mutatingActions = ['skill.register', 'skill.execute', 'skill.enable', 'skill.disable'];
     if (mutatingActions.includes(call.action) && !isAuthorized) {

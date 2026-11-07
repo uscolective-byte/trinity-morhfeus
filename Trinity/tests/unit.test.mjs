@@ -19,7 +19,7 @@ import {handleInboundEmail} from '../src/email.js';
 import {PLUGINS} from '../src/plugins.js';
 import {PRACTICAL_TOOL_NAMES,PRACTICAL_TOOL_SCHEMAS,runPracticalTool} from '../src/practical-skills.js';
 import {studioGenerationPlan} from '../src/studio.js';
-test('45 unique agents in nine departments',()=>{assert.equal(AGENTS.length,45);assert.equal(new Set(AGENTS.map(a=>a.id)).size,45);assert.equal(new Set(AGENTS.map(a=>a.cluster)).size,9);});
+test('46 unique agents including Gemini GEM in nine departments',()=>{assert.equal(AGENTS.length,46);assert.equal(new Set(AGENTS.map(a=>a.id)).size,46);assert.equal(new Set(AGENTS.map(a=>a.cluster)).size,9);});
 test('25 practical skills are installed as real tools for every Trinity role',()=>{assert.equal(PRACTICAL_TOOL_NAMES.length,25);assert.equal(new Set(PRACTICAL_TOOL_NAMES).size,25);assert.ok(PRACTICAL_TOOL_NAMES.every(name=>PLUGINS.some(plugin=>plugin.tools.includes(name))));assert.ok(AGENTS.every(agent=>PRACTICAL_TOOL_NAMES.every(name=>agent.tools.includes(name))));});
 test('all 25 practical skill implementations execute real bounded work',()=>{
   const cases=[

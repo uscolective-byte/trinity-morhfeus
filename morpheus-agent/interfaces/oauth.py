@@ -20,8 +20,9 @@ from infrastructure.database import get_db
 from domain.models import SocialAccount, OAuthTokenRecord, AuditLogRecord
 from core.security import vault
 from core.logging import logger
+from core.admin_auth import require_oauth_admin
 
-router = APIRouter(prefix="/api/v1/auth", tags=["OAuth 2.0 Engine"])
+router = APIRouter(prefix="/api/v1/auth", tags=["OAuth 2.0 Engine"], dependencies=[Depends(require_oauth_admin)])
 
 pkce_store: Dict[str, Dict[str, str]] = {}
 
@@ -139,7 +140,7 @@ async def oauth_callback(
         raise HTTPException(status_code=400, detail="Missing required code or state parameter.")
 
     stored_state = pkce_store.pop(state, None)
-    if not stored_state:
+    if not stored_state or stored_state.get('platform') != platform:
         raise HTTPException(status_code=400, detail="Invalid or expired OAuth state parameter.")
 
     config = OAuthProviderConfig.get_config(platform)

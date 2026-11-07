@@ -332,6 +332,22 @@ function renderDashboard(prices, signals, treasury, latestWork) {
     </div>
 
     <div class="two-cols">
+      <!-- Basterix Founder Wallet -->
+      <div class="box" style="border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05);">
+        <div class="box-title">
+          <span style="color: #10b981;">👑 Basterix Sovereign Founder Peňaženka</span>
+          <span style="font-size: 0.8rem; color: #34d399; font-weight: 600;">1 000 000 TTK (GENESIS)</span>
+        </div>
+        <div class="wallet-field">
+          <div class="wallet-label">Osobná EVM Peňaženka (Base, Ethereum, Arbitrum)</div>
+          <div class="wallet-val" style="color: #38bdf8; font-weight: 600;">0x7e17f9072cfCbc7fE45973De0F11eC8db99281e4</div>
+        </div>
+        <div class="wallet-field">
+          <div class="wallet-label">Staking Tier & Výhody</div>
+          <div style="color: #cbd5e1; font-size: 0.85rem;">Tier 3 · Sovereign Mastermind (Podiel na ziskoch Trinity, prioritná fronta)</div>
+        </div>
+      </div>
+
       <!-- Treasury Wallets -->
       <div class="box">
         <div class="box-title">

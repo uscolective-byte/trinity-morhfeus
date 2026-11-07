@@ -1,0 +1,12 @@
+{
+  "name": "Trinity",
+  "project_id": "proj_FdhrNRLpsRia3MexJI7LigsV",
+  "agent_id": "agent_1aaaff96407d4cf78c03ec66862a88d6297656902a1f417293",
+  "agent": {
+    "model": "gpt-6-astra",
+    "reasoning": { "effort": "max", "summary": "auto" },
+    "text": { "format": { "type": "text" }, "verbosity": "medium" }
+  },
+  "environment": { "type": "openai_hosted" },
+  "initial_message": "Over svoj skutočný pracovný priestor: vytvor /workspace/outputs/trinity123-overenie.txt s textom Trinity123 runtime check, prečítaj jeho obsah a uveď skutočný výsledok. Oddelene uveď, či máš overený lokálny PC Bridge. Ak niečo nemôžeš vykonať alebo overiť, povedz presne čo a prečo."
+}

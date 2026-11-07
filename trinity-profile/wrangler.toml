@@ -1,0 +1,29 @@
+name = "trinity-profile"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "production"
+TOKEN_SALT = "trinity_sovereign_identity_v3"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "trinity_d1"
+database_id = "ca8ea24e-f7db-431e-b8bf-97f713ae4533"
+
+[[kv_namespaces]]
+binding = "TRINITY_KV"
+id = "0b92ed2717d742daa860f1827797297f"
+
+[[services]]
+binding = "TRINITY_SENTINEL"
+service = "trinity-sentinel"
+
+[[services]]
+binding = "TRINITY_AUDIT"
+service = "trinity-audit"
+
+[[services]]
+binding = "CORE"
+service = "trinity-core"

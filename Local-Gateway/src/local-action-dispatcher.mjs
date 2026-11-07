@@ -29,7 +29,10 @@ export const ALLOWED_APPS = [
   "explorer",
   "whatsapp",
   "terminal",
-  "browser"
+  "browser",
+  "cmder",
+  "commander",
+  "cmd"
 ];
 
 // Zoznam striktne povolených vývojárskych príkazov
@@ -116,6 +119,9 @@ export const actions = {
       }
       if (app === "terminal") {
         return await safeSpawn("cmd", ["/c", "start", "", "wt.exe"]);
+      }
+      if (app === "cmder" || app === "commander" || app === "cmd") {
+        return await safeSpawn("cmd", ["/c", "start", "", "cmd.exe"]);
       }
       if (app === "browser") {
         return await safeSpawn("cmd", ["/c", "start", "", "https://google.com"]);

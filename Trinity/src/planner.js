@@ -26,5 +26,5 @@ export function planTask(task, ownerMode = false){
     :intent==='action'?['identifikovať presný cieľ a dopad','skontrolovať oprávnenie a riziko','vyžiadať schválenie pri nezvratnej zmene','vykonať iba povolený krok a priložiť dôkaz']
     :intent==='analysis'?['zachytiť otázku a predpoklady','spracovať dostupné podklady','skontrolovať rozpory a neistotu','odpovedať s jasným záverom']
     :['pochopiť otázku','odpovedať prirodzene a stručne'];
-  return {version:'1.2',intent,risk,repair,requires_approval:ownerMode?false:risk==='high',steps,completion_checks:['Výsledok zodpovedá aktuálnemu cieľu a rozsahu.','Vykonané akcie sú doložené výsledkom povoleného nástroja.','Zostávajúce blokátory a neistota sú jasne uvedené.'],execution_status:'not-started',grants_permissions:ownerMode?true:false};
+  return {version:'1.2',intent,risk,repair,requires_approval:ownerMode?false:risk==='high',steps,completion_checks:['Výsledok zodpovedá aktuálnemu cieľu a rozsahu.','Vykonané akcie sú doložené výsledkom povoleného nástroja.','Zostávajúce blokátory a neistota sú jasne uvedené.'],execution_status:'not-started',grants_permissions:false};
 }

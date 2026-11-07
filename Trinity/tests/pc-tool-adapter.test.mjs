@@ -44,4 +44,8 @@ test('admin PC tools validate their own schema and dispatch bounded gateway payl
   assert.equal(payloads.length,before);
   const openApp=await runTool(env,{tools:['pc_open_app']},'pc_open_app',{target:'calculator'},{adminAuthorized:true});
   assert.equal(payloads.at(-1).target,'calculator');
+  await runTool(env,{tools:['pc_open_app']},'pc_open_app',{target:'cmder'},{adminAuthorized:true});
+  assert.equal(payloads.at(-1).target,'cmder');
+  await runTool(env,{tools:['pc_open_url']},'pc_open_url',{url:'https://auru.dev'},{adminAuthorized:true});
+  assert.equal(payloads.at(-1).url,'https://auru.dev');
 });

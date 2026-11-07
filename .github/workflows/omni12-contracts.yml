@@ -1,0 +1,35 @@
+name: OMNI12 contracts (no deployment)
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - packages/contracts/**
+      - Trinity/src/tap-runtime.js
+      - Trinity/src/tap-mcp-adapter.js
+      - Trinity/src/mcp.js
+      - Trinity/wrangler.jsonc
+      - Trinity/tests/tap-*.test.mjs
+      - Trinity/docs/omni12/**
+      - .github/workflows/omni12-contracts.yml
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+        working-directory: packages/contracts
+      - run: npm test && npm run schema:check
+        working-directory: packages/contracts
+      - run: npm ci --ignore-scripts
+        working-directory: Trinity
+      - run: npm run build
+        working-directory: Trinity
+      - run: node --test tests/tap-foundation.test.mjs tests/tap-mcp-http.test.mjs
+        working-directory: Trinity
+      - run: node docs/omni12/run-local-proof.mjs "$RUNNER_TEMP/omni12-proof"
+        working-directory: Trinity

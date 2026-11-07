@@ -3,6 +3,10 @@ import {runAuraAi, parseAuraJson, safeDbRun} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
+    if (request.method === "GET" && new URL(request.url).pathname === "/health") {
+      return Response.json({ ok: true, service: "aura_analyzer", version: "10.3.0", status: "serving", bindings: { AI: !!env.AI, DB: !!env.DB } });
+    }
+
     if (request.method !== "POST") return Response.json({ ok: false, error: "Method not allowed" }, { status: 405 });
     let call;
     try { call = await request.json(); } catch { return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 }); }
@@ -38,7 +42,7 @@ export default {
         return Response.json({ ok: true, result, traceId, from: "aura-analyzer" });
       }
       if (call.action === "aura.status") {
-        return Response.json({ ok: true, result: { agent: "analyzer", role: "Analyzuje kód, dáta, systémové správanie a bezpečnosť", status: "active", version: "10.2.0" }, traceId, from: "aura-analyzer" });
+        return Response.json({ ok: true, result: { agent: "analyzer", role: "Analyzuje kód, dáta, systémové správanie a bezpečnosť", status: "active", version: "10.3.0" }, traceId, from: "aura-analyzer" });
       }
       const text = await runAuraAi(env, "Si AURA Analyzer. Analyzuj a poskytni presné, štruktúrované výsledky.", d.prompt || call.action);
       return Response.json({ ok: true, result: { response: text }, traceId, from: "aura-analyzer" });

@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.mjs",
+    "agent:trinity123": "node src/trinity123/cli.mjs",
+    "agent:trinity": "node src/trinity123/cli.mjs",
     "test": "node --test tests/*.test.mjs"
   },
   "engines": {

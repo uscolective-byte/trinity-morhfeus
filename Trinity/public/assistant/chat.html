@@ -1,10 +1,11 @@
-<!doctype html><html lang="sk"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b1220"><link rel="manifest" href="/manifest.json"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Trinity"><link rel="apple-touch-icon" href="/mobile-icon-192.png"><title>Trinity 11.0 · Tvoja autonómna asistentka</title><link rel="stylesheet" href="/chat.css?v=11.0.0"><link rel="stylesheet" href="/builder.css?v=11.0.0"><link rel="stylesheet" href="/theme.css?v=11.0.0"><script src="/auth-bootstrap.js" defer></script><script src="/chat.js?v=11.0.0" defer></script><link rel="stylesheet" href="/garage.css?v=1"><link rel="stylesheet" href="/mobile.css?v=1"><script src="/mobile-device.js?v=1" defer></script></head><body class="garage-ui">
+<!doctype html><html lang="sk"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b1220"><link rel="manifest" href="/manifest.json"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Trinity"><link rel="apple-touch-icon" href="/mobile-icon-192.png"><title>Trinity 11.1 · Tvoja autonómna asistentka</title><link rel="stylesheet" href="/chat.css?v=11.1.0"><link rel="stylesheet" href="/builder.css?v=11.1.0"><link rel="stylesheet" href="/theme.css?v=11.1.0"><script src="/auth-bootstrap.js" defer></script><script src="/chat.js?v=11.1.0" defer></script><link rel="stylesheet" href="/garage.css?v=1"><link rel="stylesheet" href="/mobile.css?v=1"><script src="/mobile-device.js?v=1" defer></script></head><body class="garage-ui">
 <aside class="sidebar">
-  <a href="#chat" class="brand" data-view-link="chat"><span class="brand-mark">T</span><span>Trinity 11.0<small>GARAGE / IDEAS / ACTION</small></span></a>
+  <a href="#chat" class="brand" data-view-link="chat"><span class="brand-mark">T</span><span>Trinity 11.1<small>GARAGE / IDEAS / ACTION</small></span></a>
   <nav class="main-nav" aria-label="Hlavné menu">
     <button data-view="chat" class="active"><span>💬</span><b data-i18n="chat">Chat & Práca</b></button>
     <button id="owner-overview-nav" data-view="dashboard" hidden><span>⚡</span><b data-i18n="overview">Prehľad & Stav</b></button>
     <button data-view="omnidev" id="omnidev-nav-btn"><span>⚡</span><b>Omni-Dev Studio</b></button>
+    <button data-view="crypto" id="crypto-nav-btn"><span>💎</span><b>Tetrakis Crypto ($TTK)</b></button>
     <button data-view="studio"><span>✦</span><b>AI Studio (Weby)</b></button>
     <button data-view="domains"><span>◈</span><b>Domény & Hosting</b></button>
     <button data-view="wallet"><span>💳</span><b>Platby & Peňaženka</b></button>
@@ -20,7 +21,7 @@
   <div class="sidebar-bottom"><div><span class="signal"></span><span id="engine-state">…</span></div><small data-i18n="boundary">Citlivé zmeny len s tvojím súhlasom.</small><span id="operations" hidden></span></div>
 </aside>
 <main>
-  <header><div class="page-heading"><span id="page-kicker">TRINITY 11.0</span><strong id="page-title">Trinity</strong><small id="subtitle" data-i18n="dashboardHere">Tvoj priestor pre tvorbu, prácu a nápady.</small></div><div class="header-actions"><span id="environment-badge" class="environment-badge" title="Aktívne prostredie">TRINITY 11.0</span><div class="domain-bridge-switch" title="Jednotná Trinity: Prepojenie medzi Owner Labom a Klientskym Portálom"><a href="https://auru.dev" class="bridge-link dev-link" title="Súkromný Owner Lab (Sovereign OS)">auru.dev</a><span class="bridge-sep">⇄</span><a href="https://auru.space" class="bridge-link space-link" title="Verejný Klientsky Portál (Asistent)">auru.space</a><span class="sync-live-badge" id="sync-live-badge" title="D1 / KV / R2 Zdieľané & Zosúladené">● Zosúladené</span></div><span class="fast-model-pill" title="Meta Llama 3.3 70B Turbo aktívny"><span class="fast-dot"></span> ⚡ <b>Turbo AI</b></span><span id="pc-bridge-badge" class="pc-bridge-badge" title="Stav lokálneho PC Bridge"><span class="pc-dot"></span> <b id="pc-bridge-text">PC: Kontrola…</b></span><div id="account-state" class="account-state" role="status" aria-live="polite" hidden><span class="account-dot" aria-hidden="true"></span><span><b id="account-label">Prihlásený</b><small id="account-detail">—</small></span></div><button id="theme" type="button" aria-label="Prepnúť farebný režim">◐ Vzhľad</button><button id="memory-button" data-i18n="memory" style="display:none">◇ Pamäť</button><button id="tools-button" data-i18n="tools" style="display:none">✦ Schopnosti</button><select id="language" aria-label="Language"><option value="auto">AUTO</option><option value="sk">SK</option><option value="en">EN</option><option value="cs">CS</option><option value="de">DE</option><option value="fr">FR</option><option value="es">ES</option><option value="it">IT</option><option value="pl">PL</option><option value="uk">UK</option><option value="ja">JA</option><option value="ko">KO</option><option value="zh">ZH</option></select><button id="logout" type="button" hidden>Odhlásiť</button></div></header>
+  <header><div class="page-heading"><span id="page-kicker">TRINITY 11.1</span><strong id="page-title">Trinity</strong><small id="subtitle" data-i18n="dashboardHere">Tvoj priestor pre tvorbu, prácu a nápady.</small></div><div class="header-actions"><span id="environment-badge" class="environment-badge" title="Aktívne prostredie">TRINITY 11.1</span><div class="domain-bridge-switch" title="Jednotná Trinity: Prepojenie medzi Owner Labom a Klientskym Portálom"><a href="https://auru.dev" class="bridge-link dev-link" title="Súkromný Owner Lab (Sovereign OS)">auru.dev</a><span class="bridge-sep">⇄</span><a href="https://auru.space" class="bridge-link space-link" title="Verejný Klientsky Portál (Asistent)">auru.space</a><span class="sync-live-badge" id="sync-live-badge" title="D1 / KV / R2 Zdieľané & Zosúladené">● Zosúladené</span></div><span class="fast-model-pill" title="Meta Llama 3.3 70B Turbo aktívny"><span class="fast-dot"></span> ⚡ <b>Turbo AI</b></span><span id="pc-bridge-badge" class="pc-bridge-badge" title="Stav lokálneho PC Bridge"><span class="pc-dot"></span> <b id="pc-bridge-text">PC: Kontrola…</b></span><div id="account-state" class="account-state" role="status" aria-live="polite" hidden><span class="account-dot" aria-hidden="true"></span><span><b id="account-label">Prihlásený</b><small id="account-detail">—</small></span></div><button id="theme" type="button" aria-label="Prepnúť farebný režim">◐ Vzhľad</button><button id="memory-button" data-i18n="memory" style="display:none">◇ Pamäť</button><button id="tools-button" data-i18n="tools" style="display:none">✦ Schopnosti</button><select id="language" aria-label="Language"><option value="auto">AUTO</option><option value="sk">SK</option><option value="en">EN</option><option value="cs">CS</option><option value="de">DE</option><option value="fr">FR</option><option value="es">ES</option><option value="it">IT</option><option value="pl">PL</option><option value="uk">UK</option><option value="ja">JA</option><option value="ko">KO</option><option value="zh">ZH</option></select><button id="logout" type="button" hidden>Odhlásiť</button></div></header>
   <div id="notice" role="status" hidden></div>
   <section id="login" hidden>
     <h2 data-i18n="loginTitle">Vitaj v Trinity</h2>
@@ -91,7 +92,7 @@
                   <span>💻 Živá Konzola (PowerShell / CMD / Node)</span>
                   <span id="omni-pc-status-pill" style="color:#4ade80;font-size:10px;">● PC: Online</span>
                 </div>
-                <div id="omni-console-log" class="omni-terminal-screen">TRINITY PC BRIDGE TERMINAL v11.0
+                <div id="omni-console-log" class="omni-terminal-screen">TRINITY PC BRIDGE TERMINAL v11.1
 Pripravené na spustenie príkazu na hostiteľskom PC...</div>
                 <div class="omni-console-input-row">
                   <select id="omni-shell-type" style="padding:4px;font-size:10px;background:#1e293b;color:#f8fafc;border:1px solid #334155;border-radius:6px;">
@@ -308,12 +309,38 @@ Pripravené na spustenie príkazu na hostiteľskom PC...</div>
         </section>
         <section id="owner-growth-panel" class="panel admin-command-panel" hidden><div class="panel-head"><div><span class="eyebrow">OWNER · OBCHOD A RAST</span><h2>Obchodné centrum & Osobný PayPal Checkout (bez nutnosti firmy)</h2></div><span class="detail-chip">FYZICKÁ OSOBA / OWNER</span></div><p>Nepotrebuješ mať založenú firmu ani Pro účet. Prepoj svoj osobný <b>PayPal (PayPal.me alebo PayPal e-mail)</b> a Trinity automaticky vytvorí platobné brány s presnou sumou v EUR pre predaj webov, domén a AI služieb.</p><div class="admin-action-grid"><button type="button" data-open-commerce="settings" class="primary"><i>💙</i><span><b>Prepojiť osobný PayPal</b><small>PayPal e-mail alebo PayPal.me na 1 klik</small></span></button><button data-owner-prompt="prospects"><i>⌕</i><span><b>Nájsť zákazníkov</b><small>Verejný web, LinkedIn a katalógy</small></span></button><button data-owner-prompt="score"><i>◎</i><span><b>Vyhodnotiť príležitosti</b><small>Zoradiť dopyty podľa dôkazov</small></span></button><button data-owner-prompt="offer"><i>✎</i><span><b>Pripraviť ponuku</b><small>Personalizovaný návrh s PayPal linkom</small></span></button><button data-owner-prompt="revenue"><i>€</i><span><b>Model zárobku</b><small>Tržby, náklady a čistý výnos</small></span></button><button data-owner-prompt="blueprint"><i>✦</i><span><b>Plán monetizácie</b><small>Balíky webov, domén a AI služieb</small></span></button></div></section>
         <div class="dashboard-grid admin-grid"><section class="panel admin-command-panel"><div class="panel-head"><div><span class="eyebrow">ADMIN AKCIE</span><h2>Riadenie Trinity</h2></div><span id="admin-system-state" class="admin-state running">Systém beží</span></div><div class="admin-action-grid"><button data-view="settings"><i>⚙</i><span><b>Modely a integrácie</b><small>API kľúče, poskytovatelia, moduly a roly</small></span></button><button data-view="projects"><i>▦</i><span><b>Projekty a úlohy</b><small>Kontrola práce agentov a výstupov</small></span></button><button data-view="studio"><i>✦</i><span><b>AI Studio</b><small>Tvorba a verzovanie webových výstupov</small></span></button><button type="button" data-view="documents"><i>📚</i><span><b>Trinity Dokumenty</b><small>Automatické záznamy každého kroku (MD / PDF)</small></span></button></div></section><section class="panel activity-panel"><div class="panel-head"><div><span class="eyebrow">SYSTÉMOVÁ AKTIVITA</span><h2>Najnovšie úlohy</h2></div><button data-view="chat">Otvoriť chat</button></div><div id="admin-dashboard-activity" class="activity-list"><p class="skeleton">Systém je pripravený na prácu.</p></div></section></div>
+        <div class="dashboard-grid admin-grid" style="margin-top:16px">
+          <section class="panel admin-command-panel">
+            <div class="panel-head">
+              <div><span class="eyebrow">RÝCHLY PRÍKAZ AGENTOM</span><h2>⚡ Poveriť špecialistu úlohou</h2></div>
+              <span class="detail-chip">46 ŠPECIALISTOV</span>
+            </div>
+            <p style="margin:4px 0 10px;font-size:0.88rem;color:var(--muted)">Okamžité poverenie vybraného kľúčového agenta autonómnou úlohou na 1 klik:</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
+              <button type="button" class="primary" data-open-chat data-prompt="AURA_ARCHITECT: Navrhni optimalizáciu architektúry a zoznam ďalších krokov pre náš systém.">🏛️ Architekt</button>
+              <button type="button" class="primary" data-open-chat data-prompt="AURA_CODEGEN: Vygeneruj robustný kód podľa aktuálnych požiadaviek projektu.">💻 Programátor</button>
+              <button type="button" class="primary" data-open-chat data-prompt="Výskumník: Vyhľadaj a zosumarizuj najnovšie trendy a riešenia pre Trinity.">🔍 Výskumník</button>
+              <button type="button" class="primary" data-open-chat data-prompt="AURA_TESTER: Spusť testy a over integritu celého systému.">🧪 Tester</button>
+              <button type="button" class="primary" data-open-chat data-prompt="AURA_SENTINEL: Skontroluj bezpečnosť, oprávnenia a integritu Sovereign Locku.">🛡️ Bezpečnosť</button>
+            </div>
+          </section>
+          <section class="panel activity-panel">
+            <div class="panel-head">
+              <div><span class="eyebrow">DIAGNOSTIKA A STAV</span><h2>Rýchle kontroly systému</h2></div>
+            </div>
+            <div style="display:flex;gap:8px;flex-direction:column;padding:6px 0">
+              <button type="button" data-open-chat data-prompt="skontroluj stav trinity a over dostupnosť služieb">🩺 Komplexný health check flotily</button>
+              <button type="button" data-open-chat data-prompt="vypíš zoznam registrovaných agentov a ich role">📋 Zoznam 46 agentov a rolí</button>
+              <button type="button" data-open-chat data-prompt="skontroluj stav PC bridge a lokálneho pripojenia">💻 Stav PC Bridge a lokálnej brány</button>
+            </div>
+          </section>
+        </div>
       </div>
       <div id="ui-custom-widgets-slot" class="ui-custom-widgets-grid" hidden></div>
     </section>
     <section id="chat-view" class="view chat-view"><div id="chat-area"><section id="welcome" class="welcome-zen">
         <div class="avatar large">✦</div>
-        <span class="eyebrow" data-i18n="welcomeLabel">TRINITY 11.0 SOVEREIGN CORE</span>
+        <span class="eyebrow" data-i18n="welcomeLabel">TRINITY 11.1 SOVEREIGN CORE</span>
         <h1 data-i18n="greeting">Ahoj, Basterix.</h1>
         <p data-i18n="intro">Zadaj úlohu — Trinity ju okamžite rozloží a vykoná v reálnom čase bez simulácií.</p>
         <div class="suggestions">
@@ -466,7 +493,7 @@ Pripravené na spustenie príkazu na hostiteľskom PC...</div>
 <option value="mistral">🔴 Mistral AI (Large / Codestral)</option>
 <option value="openrouter">🪐 OpenRouter (100+ Free & Pro Modely)</option>
 <option value="local">💻 Môj počítač · PC Bridge (Lokálne akcie)</option>
-</select><button id="attach-image" type="button" title="Analyzovať obrázok">📎 Obrázok</button><button id="record-voice" type="button" title="Nahrať hlas">🎤 Hlas</button><button id="read-answer" type="button" title="Prečítať poslednú odpoveď">🔊 Čítať</button><button id="voice-dialogue-btn" type="button" title="Obojsmerný handsfree hovor s Trinity" class="voice-live-btn">🎙️ Live Hovor</button><button id="memory-graph-open-btn" type="button" title="Kontextový pamäťový graf">🕸️ Graf</button><input id="image-input" type="file" accept="image/png,image/jpeg,image/webp" hidden><input id="audio-input" type="file" accept="audio/*" hidden><input id="file-doc-input" type="file" accept=".pdf,.doc,.docx,.txt,.md,.json,.js,.py,.csv,.zip,.html,.css" hidden><input id="file-video-input" type="file" accept="video/mp4,video/webm,video/quicktime" hidden><label><input type="checkbox" id="remember"><span data-i18n="remember">Pamäť</span></label><label id="allow-files-setting"><input type="checkbox" id="allow-files"><span data-i18n="allowFiles">Súbory</span></label></div><button id="stop" type="button" hidden data-i18n="stop">Zastaviť</button><button id="send" class="primary" data-i18n="send">Odoslať ↑</button></div></form><audio id="speech-player" controls hidden></audio><small class="footnote" data-i18n="footnote">Trinity 11.0 · Pokojný priestor pre tvorbu a prácu</small></section></section>
+</select><button id="attach-image" type="button" title="Analyzovať obrázok">📎 Obrázok</button><button id="record-voice" type="button" title="Nahrať hlas">🎤 Hlas</button><button id="read-answer" type="button" title="Prečítať poslednú odpoveď">🔊 Čítať</button><button id="voice-dialogue-btn" type="button" title="Obojsmerný handsfree hovor s Trinity" class="voice-live-btn">🎙️ Live Hovor</button><button id="memory-graph-open-btn" type="button" title="Kontextový pamäťový graf">🕸️ Graf</button><input id="image-input" type="file" accept="image/png,image/jpeg,image/webp" hidden><input id="audio-input" type="file" accept="audio/*" hidden><input id="file-doc-input" type="file" accept=".pdf,.doc,.docx,.txt,.md,.json,.js,.py,.csv,.zip,.html,.css" hidden><input id="file-video-input" type="file" accept="video/mp4,video/webm,video/quicktime" hidden><label><input type="checkbox" id="remember"><span data-i18n="remember">Pamäť</span></label><label id="allow-files-setting"><input type="checkbox" id="allow-files"><span data-i18n="allowFiles">Súbory</span></label></div><button id="stop" type="button" hidden data-i18n="stop">Zastaviť</button><button id="send" class="primary" data-i18n="send">Odoslať ↑</button></div></form><audio id="speech-player" controls hidden></audio><small class="footnote" data-i18n="footnote">Trinity 11.1 · Pokojný priestor pre tvorbu a prácu</small></section></section>
     <section id="studio-view" class="view studio-view" hidden>
       <div class="studio-top"><div><span class="eyebrow">TRINITY AI & MULTIMEDIÁLNE ŠTÚDIO</span><h1 data-i18n="builderTitle">Tvorba Videí, Hudby, Fotiek, Prezentácií a Webov</h1><p data-i18n="builderIntro">Generuj 16:9 animované videá so zvukom a WebM exportom, polyfonickú WAV hudbu, AI fotky, interaktívne prezentácie (HTML5 + PDF), kreatívne balíky aj živé weby.</p></div><button id="studio-new" class="primary" data-i18n="newStudioProject">＋ Nový webový projekt</button></div>
       <section id="multimedia-studio-panel" class="panel domain-env-panel" style="margin-bottom:18px">
@@ -1001,6 +1028,128 @@ Pripravené na spustenie príkazu na hostiteľskom PC...</div>
       </div>
     </section>
 
+    <section id="crypto-view" class="view crypto-view" hidden>
+      <div class="section-intro">
+        <span class="eyebrow">TRINITY DECENTRALIZED ASSETS · BASE MAINNET L2</span>
+        <h1>💎 Tetrakis ($TTK) Sovereign Crypto Platform</h1>
+        <p>Oficiálna kryptomenová platforma Trinity postavená na sieti Base Mainnet (Coinbase L2). Fixná ponuka 1 000 000 000 TTK, 3-úrovňový staking úžitkovej hodnoty a integrácia do autonómneho ekosystému agentov.</p>
+      </div>
+
+      <div class="metric-grid domain-metrics tabular-metrics">
+        <article class="metric blue">
+          <span>CELKOVÁ ZÁSOBA ($TTK)</span>
+          <strong id="ttk-stat-supply">1 000 000 000 TTK</strong>
+          <small>Fixná ponuka (100% mincovníctva)</small>
+        </article>
+        <article class="metric teal">
+          <span>SIEŤ & ŠTANDARD</span>
+          <strong id="ttk-stat-network">Base Mainnet (8453)</strong>
+          <small>ERC-20 · OpenZeppelin v5.1.0</small>
+        </article>
+        <article class="metric gold">
+          <span>DEX LIKVIDITA</span>
+          <strong id="ttk-stat-dex">Aerodrome & Uniswap v3</strong>
+          <small>Pár TTK / WETH na Base</small>
+        </article>
+        <article class="metric purple">
+          <span>JERICHO NODE</span>
+          <strong id="ttk-stat-jericho">Online (Edge Node)</strong>
+          <small>jericho123.auru.space</small>
+        </article>
+      </div>
+
+      <div class="dashboard-grid admin-grid" style="grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; margin-top: 16px;">
+        <article class="panel" style="padding: 18px;">
+          <div class="panel-head">
+            <div><span class="eyebrow" style="color:#0ea5e9">OFICIÁLNE METADÁTA & ON-CHAIN KONTRAKT</span><h3>📜 Smart Kontrakt & Pokladnica</h3></div>
+            <a href="https://basescan.org/address/0x4d308452a96D7dAbFd2f33d92677A3a2724f387e" target="_blank" rel="noopener" class="detail-chip" style="text-decoration:none;">BaseScan ↗</a>
+          </div>
+          <div style="font-size:13px; color:#cbd5e1; line-height:1.7; margin-top:12px;">
+            <p><b>Token:</b> Tetrakis ($TTK) · 18 desatinných miest</p>
+            <p><b>Tvoja Osobná Peňaženka (1M TTK):</b> <code style="word-break:break-all; background:#0f172a; color:#10b981; padding:3px 6px; border-radius:4px; font-size:11px;">0x7e17f9072cfCbc7fE45973De0F11eC8db99281e4</code></p>
+            
+            <p><b>Oficiálna Pokladnica:</b> <code style="word-break:break-all; background:#0f172a; padding:3px 6px; border-radius:4px; font-size:11px;">0x4d308452a96D7dAbFd2f33d92677A3a2724f387e</code></p>
+            <p><b>Bytecode Hash (Keccak256):</b> <code style="word-break:break-all; background:#0f172a; padding:3px 6px; border-radius:4px; font-size:11px;">0x5db6aa4e0b155cc4eb54b45ce1ecde5ec0feb55c12e4fc75153b1615c5c9652c</code></p>
+            <p><b>NPM SDK Balík:</b> <a href="https://www.npmjs.com/package/tetrakis-token" target="_blank" rel="noopener" style="color:#38bdf8; font-weight:bold;">tetrakis-token@1.0.0</a> (Vlastník: <code>basterix3</code>)</p>
+          </div>
+          <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+            <a href="https://www.npmjs.com/package/tetrakis-token" target="_blank" rel="noopener" class="primary" style="display:inline-block; padding:8px 14px; text-decoration:none; border-radius:8px; font-weight:bold; font-size:12px;">📦 NPM Balík</a>
+            <a href="https://jericho123.auru.space" target="_blank" rel="noopener" class="secondary" style="display:inline-block; padding:8px 14px; text-decoration:none; border-radius:8px; font-size:12px;">⚡ Jericho Crypto Node</a>
+          </div>
+        </article>
+
+        <article class="panel" style="padding: 18px;">
+          <div class="panel-head">
+            <div><span class="eyebrow" style="color:#f59e0b">TRINITY UTILITY STAKING</span><h3>💎 3 Úrovne Výhod pre Držiteľov</h3></div>
+            <span class="detail-chip" style="background:rgba(245,158,11,0.15); color:#fbbf24;">Sovereign Tiers</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
+            <div style="padding:12px; background:#0f172a; border:1px solid #1e293b; border-radius:8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <b style="color:#38bdf8;">Tier 1 · Sovereign Explorer</b>
+                <span class="detail-chip">1 000 TTK</span>
+              </div>
+              <p style="margin:6px 0 0; font-size:12px; color:#94a3b8;">Neobmedzený chat, sémantická pamäť a autonómne vyhľadávanie vedomostí.</p>
+            </div>
+            <div style="padding:12px; background:#0f172a; border:1px solid #1e293b; border-radius:8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <b style="color:#a855f7;">Tier 2 · Sovereign Operator</b>
+                <span class="detail-chip">10 000 TTK</span>
+              </div>
+              <p style="margin:6px 0 0; font-size:12px; color:#94a3b8;">Plná exekúcia PC Bridge, Azure AI Foundry (GPT-4o) a dynamická syntéza skillov.</p>
+            </div>
+            <div style="padding:12px; background:#0f172a; border:1px solid #1e293b; border-radius:8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <b style="color:#eab308;">Tier 3 · Sovereign Mastermind</b>
+                <span class="detail-chip">50 000 TTK</span>
+              </div>
+              <p style="margin:6px 0 0; font-size:12px; color:#94a3b8;">Podiel na výnosoch platformy Trinity, prioritná fronta a autonómny komoditný desk.</p>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div class="panel" style="margin-top:16px; padding:18px;">
+        <div class="panel-head">
+          <div><span class="eyebrow" style="color:#10b981">WEB3 PEŇAŽENKA & INTERAKCIA</span><h3>🦊 Pripojenie Peňaženky (Base Mainnet)</h3></div>
+          <button id="web3-connect-btn" class="primary" type="button" style="display:inline-flex; align-items:center; gap:8px;">🦊 Pripojiť Web3 Peňaženku</button>
+        </div>
+        <p style="color:#94a3b8; font-size:12px; margin-top:8px;">Pripoj svoju peňaženku MetaMask, Coinbase Wallet alebo Rainbow na sieti Base Mainnet a zisti svoj aktuálny zostatok a odomknuté výhody.</p>
+        <div id="web3-wallet-status" style="margin-top:12px; padding:12px; background:#0f172a; border-radius:8px; font-size:13px; color:#cbd5e1; display:none;">
+          <p><b>Adresa peňaženky:</b> <code id="web3-user-address">-</code></p>
+          <p><b>Sieť:</b> <span id="web3-user-chain">Base Mainnet (8453)</span></p>
+          <p><b>Zostatok $TTK:</b> <b id="web3-user-ttk" style="color:#38bdf8;">0 TTK</b></p>
+          <p><b>Aktívny Tier:</b> <span id="web3-user-tier" class="detail-chip">Neaktívny</span></p>
+        </div>
+      </div>
+    
+      <div class="panel" style="margin-top:16px; padding:18px;">
+        <div class="panel-head">
+          <div><span class="eyebrow" style="color:#10b981">HODNOTA & VÝNOSY PRE TRINITY EKOSYSTÉM</span><h3>📈 Valuácia & Zisk pre Basterixa (1 000 000 TTK)</h3></div>
+          <span class="detail-chip" style="background:rgba(16,185,129,0.15); color:#34d399;">30% Buyback Protokolu</span>
+        </div>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:14px; margin-top:14px;">
+          <div style="padding:14px; background:#0f172a; border-radius:8px; border:1px solid #1e293b;">
+            <b style="color:#38bdf8;">🔄 Autonómny Buyback & Burn</b>
+            <p style="margin:6px 0 0; font-size:12px; color:#94a3b8; line-height:1.6;">
+              <b>30% zo všetkých tržieb Trinity</b> (AI Studio weby, doménové escrow, API) je automaticky vyčlenených na trvalý nákup $TTK z DEX bazénov na Base.
+              <b>50% z vyzbieraných tokenov</b> za služby je navždy spálených (deflácia).
+            </p>
+          </div>
+          <div style="padding:14px; background:#0f172a; border-radius:8px; border:1px solid #1e293b;">
+            <b style="color:#34d399;">💰 Milníky Valuácie tvojho 1 000 000 TTK:</b>
+            <div style="margin-top:6px; font-size:12px; line-height:1.7; color:#cbd5e1;">
+              <div>• Pri $0.001 (FDV $1M): <b style="color:#38bdf8;">$1 000 USD</b></div>
+              <div>• Pri $0.01 (FDV $10M): <b style="color:#34d399;">$10 000 USD</b></div>
+              <div>• Pri $0.10 (FDV $100M): <b style="color:#fbbf24;">$100 000 USD</b></div>
+              <div>• Pri $1.00 (FDV $1B): <b style="color:#f43f5e; font-weight:bold;">$1 000 000 USD</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
     <section id="wallet-view" class="view wallet-view" hidden>
       <div class="section-intro">
         <span class="eyebrow">FINANČNÉ CENTRUM TRINITY · PLATOBNÉ TERMINÁLY & PEŇAŽENKA</span>
@@ -1259,9 +1408,9 @@ Pripravené na spustenie príkazu na hostiteľskom PC...</div>
     </section>
 
     <section id="documents-view" class="view documents-view" hidden>
-      <div class="section-intro"><span class="eyebrow">TRINITY 11.0 KNOWLEDGE CENTER · PRÍRUČKA, ARCHITEKTÚRA, LICENCIE & DOKUMENTY</span><h1>Dokumentácia, Kompletná Architektúra, Licencie & Help</h1><p>Oficiálna príručka ako správne používať Trinity 11.0, technická architektúra systému (Cloudflare Edge + 45 agentov + Quantum Brain), návod na pripojenie bánk a platobných brán, licenčné podmienky a archív vygenerovaných dokumentov (<code>.md</code> / <code>.pdf</code>).</p></div>
+      <div class="section-intro"><span class="eyebrow">TRINITY 11.1 KNOWLEDGE CENTER · PRÍRUČKA, ARCHITEKTÚRA, LICENCIE & DOKUMENTY</span><h1>Dokumentácia, Kompletná Architektúra, Licencie & Help</h1><p>Oficiálna príručka ako správne používať Trinity 11.1, technická architektúra systému (Cloudflare Edge + 46 agentov + Quantum Brain), návod na pripojenie bánk a platobných brán, licenčné podmienky a archív vygenerovaných dokumentov (<code>.md</code> / <code>.pdf</code>).</p></div>
       <div class="metric-grid domain-metrics tabular-metrics">
-        <article class="metric blue"><span>VERZIA JADRA</span><strong>Trinity 11.0</strong><small>45 agentov · 150 pluginov · 152 skillov</small></article>
+        <article class="metric blue"><span>VERZIA JADRA</span><strong id="knowledge-core-version">Trinity 11.1</strong><small>45 agentov · 150 pluginov · 322 skillov</small></article>
         <article class="metric teal"><span>DOKUMENTY V ARCHÍVE</span><strong id="docstat-total">—</strong><small>uložené v D1 (<span id="docstat-steps">0</span> krokov)</small></article>
         <article class="metric gold"><span>UI & SAMOROZVOJ</span><strong id="docstat-ui">—</strong><small>aplikované zmeny a pravidlá</small></article>
         <article class="metric purple"><span>DOMÉNY & OBCHOD</span><strong id="docstat-domains">—</strong><small>produkčné prostredia a obchody</small></article>
@@ -1296,9 +1445,14 @@ Pripravené na spustenie príkazu na hostiteľskom PC...</div>
             <div><small style="color:#94a3b8;display:block">Zvrchované domény</small><strong style="color:#fff">auru.space · auru.dev</strong></div>
             <div><small style="color:#94a3b8;display:block">Viazaná flotila</small><strong style="color:#fff">29 Cloudflare Workers · D1 trinity-v03 · R2 Artifacts</strong></div>
           </div>
-          <p style="font-size:0.92rem;color:#cbd5e1;line-height:1.6;margin:0">
-            Ivan Sabo (Basterix) sa označuje za iniciátora a vlastníka projektu Trinity. Toto súkromné vyhlásenie nie je úradným osvedčením ani overeným podpisom. Práva ku konkrétnym súčastiam sa dokladajú históriou príspevkov, licenciami a príslušnými dokladmi; práva tretích strán zostávajú zachované.
-          </p>
+          <div style="background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.3);padding:14px;border-radius:8px;margin-bottom:12px">
+            <b style="color:#38bdf8;display:block;margin-bottom:4px">📜 LIST VLASTNÍCTVA & PATENTOVÁ DEKLARÁCIA (SOVEREIGN PATENT & TITLE DEED):</b>
+            <span style="font-size:0.92rem;color:#f8fafc;line-height:1.6">Jediným autorom pôvodnej myšlienky, konceptu a architektúry autonómneho systému TRINITY OMNI-CORE je <b>SABO IVAN (Basterix)</b>. Všetky princípy, 7 vrstiev jadra, multi-agentový orchester (46 špecialistov), TruthGuard, Sovereign Ledger a prepojenia Cloudflare Edge s lokálnym PC Bridge predstavujú autorské dielo a duševné vlastníctvo (Prior Art & Patent Priority) patriace výhradne Sabovi Ivanovi. Zákaz akéhokoľvek nároku tretích strán či poskytovateľov modelov.</span>
+          </div>
+          <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);padding:14px;border-radius:8px">
+            <b style="color:#10b981;display:block;margin-bottom:4px">🛡️ GDPR DATA CONTROLLER ACCORD:</b>
+            <span style="font-size:0.92rem;color:#f8fafc;line-height:1.6">Sabo Ivan je výhradným prevádzkovateľom (Data Controller) aj dotknutou osobou podľa GDPR (Nariadenie EÚ 2016/679). Zaručená nulová telemetria tretích strán a zákaz trénovania verejných AI modelov na údajoch Basterixa.</span>
+          </div>
         </article>
 
         <article class="docs-card" style="border: 2px solid rgba(245, 158, 11, 0.5); background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(15, 23, 42, 0.9)); padding: 24px; margin-bottom: 20px;">
@@ -1396,9 +1550,9 @@ Pripravené na spustenie príkazu na hostiteľskom PC...</div>
       <div id="doc-pane-architecture" class="doc-tab-pane" hidden>
         <div class="docs-portal-grid">
           <article class="docs-card full-span-card">
-            <span class="docs-badge">SYSTÉMOVÁ ARCHITEKTÚRA · TRINITY 11.0 CLOUDFLARE EDGE</span>
-            <h3>Kompletná viacvrstvová architektúra Trinity 11.0</h3>
-            <p>Trinity 11.0 beží ako distribuovaný serverless systém na globálnej sieti <b>Cloudflare Edge</b> (`auru.space` produkcia / `auru.dev` vývoj) s odolným stavovým spracovaním a kryptografickou ochranou dát.</p>
+            <span class="docs-badge">SYSTÉMOVÁ ARCHITEKTÚRA · TRINITY 11.1 CLOUDFLARE EDGE</span>
+            <h3>Kompletná viacvrstvová architektúra Trinity 11.1</h3>
+            <p>Trinity 11.1 beží ako distribuovaný serverless systém na globálnej sieti <b>Cloudflare Edge</b> (`auru.space` produkcia / `auru.dev` vývoj) s odolným stavovým spracovaním a kryptografickou ochranou dát.</p>
             <pre class="docs-arch-diagram">┌─────────────────────────────────────────────────────────────────────────────────────────┐
 │                        POUŽÍVATEĽSKÉ ROZHRANIE (PWA / SPA UI)                           │
 │  Prehľad · Chat · AI Studio · Projekty · Domény &amp; Hosting · Komodity &amp; Banky · Help     │
@@ -1425,9 +1579,9 @@ Pripravené na spustenie príkazu na hostiteľskom PC...</div>
 
           <article class="docs-card">
             <span class="docs-badge">ORCHESTRÁCIA & INTELIGENCIA</span>
-            <h3>45 AI Agentov, 150 Pluginov, 152 Skillov & Quantum Brain</h3>
+            <h3>46 AI Agentov, 150 Pluginov, 152 Skillov & Quantum Brain</h3>
             <ul class="docs-list">
-              <li><b>45 špecializovaných agentov v 9 tímoch (`src/registry.js`):</b> Rozdelených do tímov <code>core</code> (jadro), <code>strategy</code> (plánovanie), <code>research</code> (výskum a fakty), <code>build</code> (vývoj a kód), <code>creative</code> (dizajn a texty), <code>ops</code> (infraštruktúra), <code>memory</code> (kontext), <code>finance</code> (komodity a obchod) a <code>evolution</code> (samorozvoj).</li>
+              <li><b>46 špecializovaných agentov v 9 tímoch (`src/registry.js`):</b> Rozdelených do tímov <code>core</code> (jadro), <code>strategy</code> (plánovanie), <code>research</code> (výskum a fakty), <code>build</code> (vývoj a kód), <code>creative</code> (dizajn a texty), <code>ops</code> (infraštruktúra), <code>memory</code> (kontext), <code>finance</code> (komodity a obchod) a <code>evolution</code> (samorozvoj).</li>
               <li><b>25 praktických exekučných nástrojov (`src/tools.js`):</b> Zahŕňa <code>evolve_trinity_ui</code>, <code>provision_domain_environment</code>, <code>deploy_domain_environment</code>, <code>analyze_commodities</code>, <code>execute_commodity_trade</code>, <code>auto_invest_commodities</code>, <code>create_trinity_document</code>, <code>create_payment_offer</code>, <code>domain_portfolio</code>, <code>web_search</code> a ďalšie.</li>
               <li><b>Quantum Brain (`src/brain.js`) & Evolution (`src/evolution.js`):</b> Kvantovo-inšpirovaný celulárny automat (8-bit QCA) pri každom cron cykle vyhodnocuje entropiu a stabilitu systému.</li>
               <li><b>Truth Policy (`src/truth.js` · `evidence-required`):</b> Trinity má zakázané vymýšľať si výsledky externých akcií — každé tvrdenie musí byť podložené reálnym výstupom nástroja v databáze.</li>
@@ -1458,11 +1612,11 @@ Pripravené na spustenie príkazu na hostiteľskom PC...</div>
 
   <article class="docs-card">
   <span class="docs-badge">BINDINGY · ÚLOŽISKÁ · DOMÉNY</span>
-  <h3>Jeden worker <code>trinity</code>: bindingy, úložiská a plánovanie</h3>
+  <h3>Oddelené domény: <code>auru.space</code> (produkcia) a <code>auru.dev</code> (vývoj &amp; experimenty)</h3>
   <ul class="docs-list">
-  <li><b>Domény:</b> <code>auru.space</code> aj <code>auru.dev</code> obsluhuje ten istý worker <code>trinity</code> s rovnakým úložiskom. Samostatný development worker už neexistuje.</li>
-  <li><b>Durable Objects:</b> <code>Brain</code> (TrinityAgent), <code>CHAT_AGENT</code> (relácie), <code>GUARDIAN_AGENT</code> (audit). <b>Workflow:</b> <code>OPS_WORKFLOW</code> = TrinityOperations.</li>
-  <li><b>D1:</b> <code>DB</code> = trinity-v03 (hlavná databáza), <code>rea</code> = trinity-db, <code>trinity_basterix</code> = trinity-pc-bridge. <b>KV:</b> <code>Mastermind</code>. <b>R2:</b> <code>ARTIFACTS</code> = trinity-artifacts. <b>Secrets Store:</b> <code>OLLAMA_SECRET</code>. <b>AI:</b> Workers AI binding.</li>
+  <li><b>Domény:</b> <code>auru.space</code> je tvrdá produkcia (worker <code>trinity</code>, D1 <code>trinity-v03</code>) a <code>auru.dev</code> je izolované vývojové a experimentálne prostredie (worker <code>trinity-staging</code>, D1 <code>trinity-development</code>).</li>
+  <li><b>Durable Objects:</b> <code>Brain</code> (TrinityAgent), <code>CHAT_AGENT</code> (relácie), <code>GUARDIAN_AGENT</code> (audit). <b>Workflow:</b> <code>OPS_WORKFLOW</code> = TrinityOperations (staging: <code>trinity-operations-staging</code>).</li>
+  <li><b>D1:</b> Produkcia <code>DB</code> = trinity-v03, <code>rea</code> = trinity-db, <code>trinity_basterix</code> = trinity-pc-bridge; Vývoj (<code>auru.dev</code>) <code>DB</code> = trinity-development, <code>rea</code> = trinity-rea-staging, <code>trinity_basterix</code> = trinity-pc-bridge-staging. <b>KV:</b> oddelené <code>Mastermind</code> &amp; <code>PC_STATE</code>. <b>R2:</b> <code>trinity-artifacts</code> vs. <code>trinity-development-artifacts</code>.</li>
   <li><b>Servisné workery (29 bindingov):</b> 10× AURA špecialisti (analyzer, architect, codegen, deployer, evolver, memory, optimizer, planner, sentinel, tester) + aliasy <code>admin</code>, <code>admino</code>, <code>Trinity</code>; 8× jadro (CORE, BUILDER, DISPATCHER, CONNECTORS, GUARDIAN, MEMORY, SENTINEL, SKILLS); špecializované služby (KNOWLEDGE, CAPACITY, INTEGRATIONS, PC_BRIDGE a PC_BRIDGE_V2, AUDIT, JERICHO, CHAT_INFERENCE).</li>
   <li><b>Plánované úlohy (cron):</b> <code>*/30 * * * *</code>, <code>0 0 * * *</code> a <code>0 11 * * *</code>.</li>
   <li><b>Nasadenie:</b> testy → <code>wrangler deploy --tag &lt;git-sha&gt;</code> → overenie <code>verify-deployment.mjs</code> pre obe domény. Stav vidíš na <code>/health</code> a <code>/ready</code>.</li>
@@ -1528,9 +1682,9 @@ Pripravené na spustenie príkazu na hostiteľskom PC...</div>
         <div class="docs-portal-grid">
           <article class="docs-card">
             <span class="docs-badge">SYSTÉMOVÉ & OPEN-SOURCE LICENCIE</span>
-            <h3>1. Licenčné podmienky Trinity 11.0 a použitých komponentov</h3>
+            <h3>1. Licenčné podmienky Trinity 11.1 a použitých komponentov</h3>
             <ul class="docs-list">
-              <li><b>Jadro Trinity Morhfeus 11.0 (Proprietary Owner License):</b>
+              <li><b>Jadro Trinity OMNI-CORE (Výlučná autorská & patentová licencia Saba Ivana):</b>
                 <code>Copyright © 2026 Trinity Morhfeus / Auru Digital Studio. Všetky práva vyhradené.</code> Architektúra viac-agentového jadra, UI Evolution Engine, Commodity &amp; Banking Desk a biznis šablóny sú výhradným vlastníctvom prevádzkovateľa systému.</li>
               <li><b>Open-Source knižnice a behové prostredie (MIT / Apache-2.0):</b>
                 <ul>
@@ -1647,6 +1801,101 @@ Pripravené na spustenie príkazu na hostiteľskom PC...</div>
           <div id="trinity-doc-list" class="api-key-list"></div>
         </section>
       </div>
+
+      <div id="doc-pane-omnidev" class="doc-tab-pane" hidden>
+        <div class="docs-portal-grid">
+          <article class="docs-card" style="border: 2px solid rgba(56, 189, 248, 0.5); background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(15, 23, 42, 0.9)); padding: 24px;">
+            <span class="docs-badge" style="background:#38bdf8;color:#0b1220;font-weight:700">OMNI-DEV STUDIO · SPRIEVODCA</span>
+            <h2 style="color:#38bdf8;margin:8px 0 12px;">💻 Integrované Vývojárske Centrum & Host PC Bridge</h2>
+            <p style="color:#cbd5e1;line-height:1.6">
+              Omni-Dev Studio predstavuje split-screen vývojárske rozhranie Trinity. Umožňuje plnohodnotné programovanie, priame spúšťanie príkazov na hostiteľskom počítači majiteľa (Windows), prehliadanie súborov na disku, self-modifikáciu kódu s auto-rollbackom a riadenie Pentad 2.0 multi-modelového uvažovania.
+            </p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:16px;">
+              <div style="background:rgba(0,0,0,0.4);padding:14px;border-radius:8px;border:1px solid rgba(56,189,248,0.2)">
+                <strong style="color:#38bdf8;display:block;margin-bottom:6px">💻 Live PC Terminál</strong>
+                <p style="font-size:12px;color:#94a3b8;margin:0 0 8px">Priame spúšťanie príkazov v prostrediach PowerShell, CMD, Node.js alebo Python. Príkazy bežia s overeným Windows tokenom na hostiteľskom stroji Basterix.</p>
+                <code style="display:block;font-size:11px;background:#020617;padding:6px;border-radius:4px;color:#4ade80">git status, dir, node -v, python -c "print(1)"</code>
+              </div>
+              <div style="background:rgba(0,0,0,0.4);padding:14px;border-radius:8px;border:1px solid rgba(56,189,248,0.2)">
+                <strong style="color:#38bdf8;display:block;margin-bottom:6px">📁 Prieskumník súborov</strong>
+                <p style="font-size:12px;color:#94a3b8;margin:0 0 8px">Prehliadanie súborov v reálnom čase na disku <code>C:\Users\saboi\Trinity-antigravity</code> s 1-klikom pre načítanie do Code Editora a spätnou navigáciou <code>..</code>.</p>
+                <small style="color:#38bdf8">Automatické obnovenie po každej úprave</small>
+              </div>
+              <div style="background:rgba(0,0,0,0.4);padding:14px;border-radius:8px;border:1px solid rgba(56,189,248,0.2)">
+                <strong style="color:#38bdf8;display:block;margin-bottom:6px">🧬 Code Editor s Auto-Rollbackom</strong>
+                <p style="font-size:12px;color:#94a3b8;margin:0 0 8px">Pred každým zápisom sa automaticky vytvorí R2 snapshot. Ak zmena neprejde verifikačným testom, systém okamžite obnoví pôvodnú verziu.</p>
+                <small style="color:#f59e0b">Ochrana proti pádom a nefunkčným úpravám</small>
+              </div>
+              <div style="background:rgba(0,0,0,0.4);padding:14px;border-radius:8px;border:1px solid rgba(56,189,248,0.2)">
+                <strong style="color:#38bdf8;display:block;margin-bottom:6px">⚡ Pentad 2.0 Router</strong>
+                <p style="font-size:12px;color:#94a3b8;margin:0 0 8px">Prepínanie medzi modelmi: Auto Pentad Router, Edge AI (Llama 3.3 70B), Google Gemini 3.8 Flash, Copilot Studio a Consensus Guard.</p>
+                <small style="color:#4ade80">Dynamický rozpočet uvažovania až 100 000 ms</small>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div id="doc-pane-meta" class="doc-tab-pane" hidden>
+        <div class="docs-portal-grid">
+          <article class="docs-card" style="border: 2px solid rgba(168, 85, 247, 0.5); background: linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(15, 23, 42, 0.9)); padding: 24px;">
+            <span class="docs-badge" style="background:#a855f7;color:#fff;font-weight:700">META ECOSYSTEM · AI & SOCIAL</span>
+            <h2 style="color:#c084fc;margin:8px 0 12px;">♾️ Meta AI Inferencia & Správa Facebook / Instagram</h2>
+            <p style="color:#cbd5e1;line-height:1.6">
+              Trinity je priamo napojená na rodinu otvorených modelov Meta Llama cez Cloudflare Workers AI a disponuje plnou integráciou s Meta Graph API (v26.0) pre správu profilov majiteľa.
+            </p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:16px;">
+              <div style="background:rgba(0,0,0,0.4);padding:14px;border-radius:8px;border:1px solid rgba(168,85,247,0.25)">
+                <strong style="color:#c084fc;display:block;margin-bottom:6px">🎯 Prepojené Aktíva Majiteľa</strong>
+                <ul style="font-size:12px;color:#cbd5e1;margin:0;padding-left:18px;line-height:1.6">
+                  <li><b>Facebook Stránka:</b> underground Street collective</li>
+                  <li><b>Instagram Profil:</b> @old_dirty_bastard013</li>
+                  <li><b>OAuth Autorizácia:</b> <a href="/connect/meta" target="_blank" style="color:#38bdf8">auru.space/connect/meta</a></li>
+                </ul>
+              </div>
+              <div style="background:rgba(0,0,0,0.4);padding:14px;border-radius:8px;border:1px solid rgba(168,85,247,0.25)">
+                <strong style="color:#c084fc;display:block;margin-bottom:6px">🧠 Meta AI Flotila (Workers AI)</strong>
+                <ul style="font-size:12px;color:#cbd5e1;margin:0;padding-left:18px;line-height:1.6">
+                  <li><code>@cf/meta/llama-3.3-70b-instruct-fp8-fast</code> (Uvažovanie & text)</li>
+                  <li><code>@cf/meta/llama-3.1-8b-instruct-fp8-fast</code> (Rýchly chat)</li>
+                  <li><code>@cf/meta/llama-3.2-11b-vision-instruct</code> (Vizuálna analýza)</li>
+                </ul>
+              </div>
+              <div style="background:rgba(0,0,0,0.4);padding:14px;border-radius:8px;border:1px solid rgba(168,85,247,0.25);grid-column:1/-1">
+                <strong style="color:#c084fc;display:block;margin-bottom:6px">🛠️ Nástroj <code>meta_manage</code></strong>
+                <p style="font-size:12px;color:#94a3b8;margin:0 0 8px">Trinity automaticky volá tento nástroj pri sociálnych príkazoch:</p>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:11px">
+                  <span style="background:#1e1b4b;color:#c084fc;padding:4px 8px;border-radius:4px;border:1px solid #4338ca">status: Prehľad spojenia</span>
+                  <span style="background:#1e1b4b;color:#c084fc;padding:4px 8px;border-radius:4px;border:1px solid #4338ca">connect_url: Linka na pripojenie</span>
+                  <span style="background:#1e1b4b;color:#c084fc;padding:4px 8px;border-radius:4px;border:1px solid #4338ca">pages: Zoznam FB/IG stránok</span>
+                  <span style="background:#1e1b4b;color:#c084fc;padding:4px 8px;border-radius:4px;border:1px solid #4338ca">ai_generate: Workers AI Llama</span>
+                  <span style="background:#1e1b4b;color:#c084fc;padding:4px 8px;border-radius:4px;border:1px solid #4338ca">create_post_draft: Draft s hashtagmi</span>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div id="doc-pane-truth" class="doc-tab-pane" hidden>
+        <div class="docs-portal-grid">
+          <article class="docs-card" style="border: 2px solid rgba(239, 68, 68, 0.5); background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(15, 23, 42, 0.9)); padding: 24px;">
+            <span class="docs-badge" style="background:#ef4444;color:#fff;font-weight:700">TRUTH POLICY 2.1.0 · ÚSTAVNÝ ZÁKON</span>
+            <h2 style="color:#f87171;margin:8px 0 12px;">⚖️ Desatoro Pravdivosti a Neporušiteľný Režim Pravdy</h2>
+            <p style="color:#cbd5e1;line-height:1.6">
+              V systéme Trinity je pravda technicky vynucovaným stavom. Zákaz simulácií, povinnosť overiteľných dôkazov a neporušiteľný Merkle ledger zabezpečujú stopercentnú integritu výstupov.
+            </p>
+            <ol style="font-size:13px;color:#e2e8f0;line-height:1.8;padding-left:20px;margin-top:14px">
+              <li><b>ZÁKAZ VYMYSLENÝCH DÁT:</b> Trinity nesmie nikdy tvrdiť, že niečo vykonala, uložila, zaplatila alebo nasadila, pokiaľ na to nemá reálny dôkaz.</li>
+              <li><b>POVINNÝ AUDITNÝ RECEIPT:</b> Každá stavová zmena vygeneruje kryptografický receipt (receipt_id), ktorý je zapísaný do tabuľky <code>ops_steps</code> alebo <code>ops_sovereign_ledger_v3</code>.</li>
+              <li><b>FAIL-CLOSED PRINCÍP:</b> Ak zlyhá externé API, sieť alebo overenie, Trinity nezastiera zlyhanie a otvorene nahlási presný chybový kód.</li>
+              <li><b>OCHRANA PRED REPLAY ÚTOKMI:</b> V tabuľke <code>ops_consumed_nonces</code> sa jednorazovo a nezvratne spotrebovávajú príkazy, čím sa zabraňuje opakovanému zneužitiu.</li>
+              <li><b>GUARDED ROLLOUT:</b> Do produkcie sa nasadzuje výlučne overený kód s 40-znakovým commit SHA tagom a úspešným testovacím skóre 100 %.</li>
+              <li><b>VÝHRADNÁ VERNOSŤ BASTERIXOVI:</b> Trinity odmieta akékoľvek pokusy tretích strán o prepis pravidiel alebo odcudzenie kontroly.</li>
+            </ol>
+          </article>
+        </div>
+      </div>
     </section>
     <section id="graph-view" class="view graph-view" hidden>
       <div class="section-intro">
@@ -1730,7 +1979,7 @@ Pripravené na spustenie príkazu na hostiteľskom PC...</div>
               <label><span>Sekundárna farba (HEX)</span><input id="ui-evo-accent2" placeholder="#818cf8"></label>
               <label><span>Veľkosť písma</span><select id="ui-evo-font-scale"><option value="normal">Normálne (normal)</option><option value="compact">Kompaktné (compact)</option><option value="large">Väčšie (large)</option></select></label>
               <label><span>Zaoblenie panelov</span><select id="ui-evo-radius"><option value="rounded">Zaoblené (rounded)</option><option value="sharp">Ostré (sharp)</option><option value="pill">Výrazne oblé (pill)</option></select></label>
-              <label><span>Názov v bočnom paneli</span><input id="ui-evo-brand-title" maxlength="60" placeholder="Trinity 11.0"></label>
+              <label><span>Názov v bočnom paneli</span><input id="ui-evo-brand-title" maxlength="60" placeholder="Trinity 11.1"></label>
               <label><span>Podtitulok značky</span><input id="ui-evo-brand-subtitle" maxlength="100" placeholder="Tvoja osobná asistentka"></label>
               <label><span>Uvítací nadpis v chate</span><input id="ui-evo-welcome-heading" maxlength="140" placeholder="Ahoj. Som Trinity."></label>
               <label><span>Uvítací podtext v chate</span><input id="ui-evo-welcome-subtext" maxlength="260" placeholder="Môžeme sa porozprávať, niečo vymyslieť alebo sa pustiť do práce."></label>
@@ -1754,16 +2003,19 @@ Pripravené na spustenie príkazu na hostiteľskom PC...</div>
         <section class="panel preference-panel studio-settings-panel" data-settings-section="studio" data-settings-keywords="ai studio model kvalita náhľad štýl prístupnosť responzivita draft kód"><div class="panel-head"><div><span class="eyebrow">AI STUDIO</span><h2>Predvolené nastavenia tvorby</h2></div><button id="settings-studio-reset" type="button">Obnoviť predvolené</button></div><p class="settings-help">Tieto voľby priamo riadia generovanie, predvolený náhľad, kontrolu kvality a rozpracovaný prompt.</p><div class="preference-grid studio-preference-grid"><label><span>Model pre Studio</span><select id="settings-studio-provider"><option value="auto">Automaticky + záloha</option><option value="workers-ai">Cloudflare Workers AI</option><option value="ollama">Ollama</option><option value="gemini">Google Gemini</option><option value="openai">OpenAI</option></select></label><label><span>Kvalita generovania</span><select id="settings-studio-quality"><option value="fast">Rýchla</option><option value="balanced">Vyvážená</option><option value="high">Vysoká</option></select></label><label><span>Predvolený náhľad</span><select id="settings-studio-preview"><option value="desktop">Desktop</option><option value="tablet">Tablet</option><option value="mobile">Mobil</option></select></label><label><span>Predvolený štýl</span><select id="settings-studio-style"><option value="">Automaticky</option><option value="minimalistický a prémiový">Minimalistický</option><option value="výrazný editorial">Editorial</option><option value="technologický dark mode">Tech dark</option><option value="hravý a farebný">Hravý</option></select></label><label class="preference-toggle"><span><b>Prístupnosť</b><small>Vyžiada sémantiku, kontrast a focus stavy</small></span><input id="settings-studio-accessible" type="checkbox"></label><label class="preference-toggle"><span><b>Responzívny dizajn</b><small>Optimalizácia pre mobil, tablet a desktop</small></span><input id="settings-studio-responsive" type="checkbox"></label><label class="preference-toggle"><span><b>Ukladať rozpísaný prompt</b><small>Draft zostane iba v tomto prehliadači</small></span><input id="settings-studio-draft" type="checkbox"></label><label class="preference-toggle"><span><b>Zalamovať zdrojový kód</b><small>Dlhé riadky v karte Kód zostanú viditeľné</small></span><input id="settings-studio-wrap" type="checkbox"></label><label class="preference-toggle"><span><b>Upozorniť na kvalitu</b><small>Pri skóre pod 80 % otvorí kartu Kvalita</small></span><input id="settings-studio-quality-alert" type="checkbox"></label></div></section>
         <section class="panel" data-settings-section="capabilities" data-settings-keywords="moduly pluginy schopnosti nástroje"><div class="panel-head"><div><span class="eyebrow">CAPABILITIES</span><h2 data-i18n="modules">Moduly Trinity</h2></div><span id="settings-module-count" class="detail-chip">—</span></div><div id="settings-modules"></div></section>
         <section class="panel info-settings" data-settings-section="general" data-settings-keywords="systém verzia úložisko pamäť"><div class="panel-head"><div><span class="eyebrow">SYSTEM</span><h2 data-i18n="systemInfo">O Trinity</h2></div></div><dl><div><dt>Identity</dt><dd>Jedna Trinity</dd></div><div><dt>Version</dt><dd id="settings-version">—</dd></div><div><dt>Truth policy</dt><dd id="settings-truth">—</dd></div><div><dt>Úložisko</dt><dd id="settings-storage">—</dd></div><div><dt>Pamäťové záznamy</dt><dd id="settings-memory-count">—</dd></div><div><dt>Papierové portfóliá</dt><dd id="settings-portfolio-count">—</dd></div></dl><button id="settings-memory" data-i18n="openMemory">Otvoriť pamäť</button></section>
-        <section class="panel integration-panel" data-settings-section="connections" data-settings-keywords="integrácie pripojenia aplikácie mcp cloudflare openai gemini google github"><div class="panel-head"><div><span class="eyebrow">INTEGRATION HUB</span><h2>Pripojenia a aplikácie</h2></div><span class="detail-chip">STAV NAŽIVO</span></div><p class="settings-help">Pripojenia sú oddelené od oprávnení. Stav ukazuje, či má Trinity dostupné a overené poverenie.</p><div id="settings-integrations" class="integration-list"></div></section>
+        <section class="panel integration-panel" data-settings-section="connections" data-settings-keywords="integrácie pripojenia aplikácie mcp cloudflare openai gemini google github antigravity gpt"><div class="panel-head"><div><span class="eyebrow">INTEGRATION HUB</span><h2>Pripojenia a aplikácie</h2></div><span class="detail-chip">STAV NAŽIVO</span></div><p class="settings-help">Stav rozlišuje uložené poverenie od skutočne overeného prístupu. Cloudflare, GitHub, OpenAI/GPT a Gemini pripojíš cez ich API kľúč v šifrovanom trezore nižšie; oprávnenia aj expiráciu týchto externých tokenov určuje poskytovateľ.</p><div id="settings-integrations" class="integration-list"></div></section>
+        <section class="panel" data-settings-section="connections" data-settings-keywords="pripojiť cloudflare token github token openai gpt api key gemini ai studio antigravity účet"><div class="panel-head"><div><span class="eyebrow">ÚČTY A API PRÍSTUPY</span><h2>Ako pripojiť službu</h2></div></div><p class="settings-help">Vytvor API token priamo v službe, ulož ho do šifrovaného trezora a použi tlačidlo <b>Overiť</b>. Trinity si nežiada ani neukladá heslo k tvojmu účtu.</p><div class="integration-list"><article class="api-key-item"><div><b>Cloudflare</b><small>API token s minimálnymi potrebnými oprávneniami</small></div><a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener noreferrer">Vytvoriť token ↗</a></article><article class="api-key-item"><div><b>GitHub</b><small>Odporúčame fine-grained token s prístupom len k potrebným repozitárom</small></div><a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer">Vytvoriť token ↗</a></article><article class="api-key-item"><div><b>OpenAI / GPT API</b><small>Použi API kľúč; heslo ani predplatné ChatGPT sa do Trinity neprihlasuje</small></div><a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">Vytvoriť API kľúč ↗</a></article><article class="api-key-item"><div><b>Google Gemini API</b><small>V tejto integrácii použi Gemini API kľúč z Google AI Studio</small></div><a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Vytvoriť API kľúč ↗</a></article><article class="api-key-item"><div><b>Google Antigravity</b><small>Prihlásenie do Antigravity cez Google zostáva v Antigravity. Nižšie vytvoríš kľúč, ktorým Antigravity pristúpi k Trinity MCP.</small></div><a href="https://antigravity.google/docs/mcp" target="_blank" rel="noopener noreferrer">Návod na MCP ↗</a></article><article class="api-key-item"><div><b>Visual Studio Code</b><small>Vlastný MCP kľúč s čítaním a zápisom, odvolateľný v Trinity</small></div><a href="https://code.visualstudio.com/docs/agent-customization/mcp-servers" target="_blank" rel="noopener noreferrer">Návod na MCP ↗</a></article></div></section>
         <section id="settings-api-key-panel" class="panel api-key-panel" data-settings-section="developer" data-settings-keywords="api kľúče vývojár"><div class="panel-head"><div><span class="eyebrow">DEVELOPER API</span><h2>Trinity API kľúče</h2></div><span id="settings-key-count" class="detail-chip">0 aktívnych</span></div><p class="settings-help">Kľúče sú určené pre tvoje budúce aplikácie. Tajná hodnota sa zobrazí iba raz. Nevkladaj ju do chatu ani pamäte.</p><form id="api-key-form" class="api-key-form"><input id="api-key-name" required minlength="2" maxlength="80" placeholder="Názov aplikácie"><select id="api-key-limit" aria-label="Requests per minute"><option value="30">30 požiadaviek/min</option><option value="60" selected>60 požiadaviek/min</option><option value="120">120 požiadaviek/min</option><option value="300">300 požiadaviek/min</option></select><button class="primary">Vytvoriť kľúč</button></form><div id="api-key-secret" class="api-key-secret" hidden></div><div id="api-key-list" class="api-key-list"></div></section>
+        <section id="settings-antigravity-panel" class="panel admin-panel" data-settings-section="connections" data-settings-keywords="antigravity trinity mcp read write api kľúč"><div class="panel-head"><div><span class="eyebrow">ANTIGRAVITY · MCP</span><h2>Pripojiť Antigravity k Trinity</h2></div><span class="detail-chip">KĽÚČ SA UKÁŽE RAZ</span></div><p class="settings-help">Vygeneruj osobitný Trinity kľúč s plnými rozsahmi mcp:read aj mcp:write. Kľúč nemá dátum expirácie a môžeš ho kedykoľvek ručne zrušiť v zozname API kľúčov.</p><form id="antigravity-key-form" class="secret-form"><input id="antigravity-key-name" required minlength="2" maxlength="80" value="Antigravity · Trinity MCP" aria-label="Názov pripojenia"><button class="primary">Vytvoriť MCP kľúč</button></form><div id="antigravity-key-result" class="provider-result" aria-live="polite" hidden></div></section>
+        <section id="settings-vscode-panel" class="panel admin-panel" data-settings-section="connections" data-settings-keywords="visual code vscode visual studio code github copilot mcp write read"><div class="panel-head"><div><span class="eyebrow">VISUAL STUDIO CODE · MCP</span><h2>Pripojiť VS Code s plnými MCP oprávneniami</h2></div><span class="detail-chip">ČÍTANIE + ZÁPIS</span></div><p class="settings-help">Tento kľúč povoľuje všetky Trinity MCP nástroje s rozsahom <code>mcp:read</code> aj <code>mcp:write</code>. Nemá dátum expirácie, zobrazuje sa iba raz a môžeš ho kedykoľvek ručne zrušiť v zozname API kľúčov.</p><form id="vscode-key-form" class="secret-form"><input id="vscode-key-name" required minlength="2" maxlength="80" value="Visual Studio Code · Trinity MCP" aria-label="Názov pripojenia"><button class="primary">Vytvoriť VS Code kľúč</button></form><div id="vscode-key-result" class="provider-result" aria-live="polite" hidden></div></section>
         <section class="panel api-project-panel" data-settings-section="developer" data-settings-keywords="api projekty endpoint developer"><div class="panel-head"><div><span class="eyebrow">API STUDIO</span><h2>API projekty</h2></div><span id="settings-api-count" class="detail-chip">0 projektov</span></div><p class="settings-help">Deklaratívne API bez spúšťania cudzieho kódu. Aktívne cesty sa volajú cez Trinity API kľúč.</p><div id="settings-api-projects"></div></section>
-        <section id="settings-ai-provider-panel" class="panel admin-panel" data-settings-section="connections" data-settings-keywords="modely poskytovatelia openai ollama gemini workers ai operator mcp"><div class="panel-head"><div><span class="eyebrow">AI PROVIDERS</span><h2>Modely a poskytovatelia</h2></div><span class="detail-chip">IBA ADMIN</span></div><p class="settings-help">Podľa vzoru profesionálnych AI konzol: poverenie → overenie → výber modelu → živý test. Kľúč sa nikdy nezobrazí späť.</p><div id="settings-ai-providers" class="provider-cards"></div><div class="provider-test-row"><button id="openai-provider-test" type="button">Živý test OpenAI</button><pre id="openai-provider-result" class="provider-result" aria-live="polite">OpenAI kľúč spravuje Cloudflare Worker Secret.</pre></div><div class="provider-test-row"><button id="ollama-provider-test" type="button">Živý test Ollama</button><pre id="ollama-provider-result" class="provider-result" aria-live="polite">Ollama kľúč spravuje Cloudflare Secrets Store.</pre></div>
+        <section id="settings-ai-provider-panel" class="panel admin-panel" data-settings-section="connections" data-settings-keywords="modely poskytovatelia openai ollama gemini workers ai operator mcp"><div class="panel-head"><div><span class="eyebrow">AI PROVIDERS</span><h2>Modely a poskytovatelia</h2></div><span class="detail-chip">IBA ADMIN</span></div><p class="settings-help">Podľa vzoru profesionálnych AI konzol: poverenie → overenie → výber modelu → živý test. Kľúč sa nikdy nezobrazí späť.</p><div id="settings-ai-providers" class="provider-cards"></div><form id="openai-provider-form" class="provider-form"><label><span>Overený OpenAI API kľúč</span><select id="openai-secret" required></select></label><label><span>Model</span><input id="openai-model" required minlength="2" maxlength="160" value="gpt-4.1-mini"></label><label class="provider-toggle"><input id="openai-enabled" type="checkbox" checked> Používať OpenAI v Trinity</label><button class="primary">Uložiť OpenAI</button></form><div class="provider-test-row"><button id="openai-provider-test" type="button">Živý test OpenAI</button><pre id="openai-provider-result" class="provider-result" aria-live="polite">Najprv vlož a over OpenAI API kľúč v trezore nižšie.</pre></div><div class="provider-test-row"><button id="ollama-provider-test" type="button">Živý test Ollama</button><pre id="ollama-provider-result" class="provider-result" aria-live="polite">Ollama kľúč spravuje Cloudflare Secrets Store.</pre></div>
 <div class="provider-test-row"><button id="groq-provider-test" type="button">⚡ Živý test Groq LPU</button><pre id="groq-provider-result" class="provider-result" aria-live="polite">Groq API: Ultra-rýchla LPU inferencia.</pre></div>
 <div class="provider-test-row"><button id="deepseek-provider-test" type="button">🐳 Živý test DeepSeek</button><pre id="deepseek-provider-result" class="provider-result" aria-live="polite">DeepSeek API: DeepSeek Reasoner R1 a Chat.</pre></div>
 <div class="provider-test-row"><button id="anthropic-provider-test" type="button">🟣 Živý test Anthropic Claude</button><pre id="anthropic-provider-result" class="provider-result" aria-live="polite">Anthropic API: Claude 3.5 & 3.7 Sonnet.</pre></div>
 <div class="provider-test-row"><button id="mistral-provider-test" type="button">🔴 Živý test Mistral AI</button><pre id="mistral-provider-result" class="provider-result" aria-live="polite">Mistral API: Mistral Large a Codestral.</pre></div>
 <div class="provider-test-row"><button id="openrouter-provider-test" type="button">🪐 Živý test OpenRouter</button><pre id="openrouter-provider-result" class="provider-result" aria-live="polite">OpenRouter API: 100+ free a pro modelov.</pre></div><form id="gemini-provider-form" class="provider-form"><label><span>Overený Gemini kľúč</span><select id="gemini-secret" required></select></label><label><span>Model</span><select id="gemini-model" required></select></label><label class="provider-toggle"><input id="gemini-enabled" type="checkbox" checked> Používať v Trinity</label><label class="provider-toggle control-toggle"><input id="gemini-project-control" type="checkbox"> Riadenie projektu cez Gemini</label><small class="settings-help control-help">Gemini môže navrhovať čítanie, zápis, úpravy, spustenie a deploy. Každá meniaca akcia stále vyžaduje tvoje samostatné schválenie a doklad z PC brány.</small><button class="primary">Uložiť Gemini</button><button id="gemini-provider-test" type="button">Živý test Gemini</button></form><div id="gemini-operator-status" class="gemini-operator" aria-live="polite"><div><span>GEMINI OPERATOR</span><b>Čaká na konfiguráciu</b><small>Návrh → schválenie vlastníka → PC brána → doklad</small></div><button id="gemini-use-chat" type="button" disabled>Použiť Gemini v chate</button></div><pre id="gemini-provider-result" class="provider-result" aria-live="polite">Najprv vlož a over Gemini API kľúč v trezore nižšie.</pre></section>
-        <section id="settings-secret-panel" class="panel admin-panel" data-settings-section="data" data-settings-keywords="trezor tajomstvá kľúče bezpečnosť šifrovanie"><div class="panel-head"><div><span class="eyebrow">ENCRYPTED VAULT</span><h2>Trezor API kľúčov</h2></div><span class="detail-chip">IBA ADMIN</span></div><p class="settings-help">Gemini, GitHub a Cloudflare kľúče vkladaj iba sem. Hodnota sa zašifruje pomocou AES-GCM a už sa nezobrazí.</p><form id="secret-form" class="secret-form"><select id="secret-provider">
+        <section id="settings-secret-panel" class="panel admin-panel" data-settings-section="data" data-settings-keywords="trezor tajomstvá kľúče bezpečnosť šifrovanie"><div class="panel-head"><div><span class="eyebrow">ENCRYPTED VAULT</span><h2>Trezor API kľúčov</h2></div><span class="detail-chip">IBA ADMIN</span></div><p class="settings-help">Cloudflare, GitHub, OpenAI/GPT a Gemini API kľúče vkladaj iba sem. Hodnota sa zašifruje pomocou AES-GCM a už sa nezobrazí.</p><form id="secret-form" class="secret-form"><select id="secret-provider">
 <option value="gemini">Google Gemini</option>
 <option value="openai">OpenAI / ChatGPT</option>
 <option value="groq">Groq LPU (Ultra-Fast)</option>

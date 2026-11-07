@@ -1,0 +1,13 @@
+{
+  "name": "trinity-guardian",
+  "version": "1.0.0",
+  "description": "Guardian service protocol and authenticated audit worker",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node --test ../../Trinity/tests/guardian-package.test.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module"
+}

@@ -31,5 +31,12 @@ export default class IntegrationsService extends WorkerEntrypoint {
     const safe={version:typeof health?.version==='string'?health.version.slice(0,80):'unknown',status:typeof health?.status==='string'?health.status.slice(0,80):'unknown'};
     try{return {ok:true,result:await publishFirebase(this.env,safe)};}catch(e){return {ok:false,status:e.status||502,error:e.status?e.message:'Firebase integration failed'};}
   }
-  fetch(){return new Response('Not found',{status:404});}
+  async fetch(request){
+    const url = new URL(request.url);
+    if(request.method==='GET'&&url.pathname==='/health'){
+      const s = this.getStatus();
+      return Response.json({ok:true,service:'trinity-integrations',version:'2.1.0',status:'healthy',integrations:s});
+    }
+    return new Response('Not found',{status:404});
+  }
 }

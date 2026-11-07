@@ -1,4 +1,4 @@
-# Trinity na Cloudflare (TRINITY OMNI-CORE v11.0.0)
+# Trinity na Cloudflare (TRINITY OMNI-CORE v11.1.0)
 
 [![Trinity CI](https://github.com/uscolective-byte/Trinity-antigravity/actions/workflows/webpack.yml/badge.svg?branch=main)](https://github.com/uscolective-byte/Trinity-antigravity/actions/workflows/webpack.yml)
 [![CodeQL Security](https://github.com/uscolective-byte/Trinity-antigravity/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/uscolective-byte/Trinity-antigravity/actions/workflows/codeql.yml)
@@ -8,7 +8,7 @@ Jedna asistentka so spoločným zdrojom, dvoma prostrediami a samostatnou
 konfiguráciou prihlásenia a externých služieb.
 
 <!-- trinity-release:start -->
-Verzia zdroja: **11.0.0**. Repozitár: [uscolective-byte/Trinity-antigravity](https://github.com/uscolective-byte/Trinity-antigravity), vetva **`main`**.
+Verzia zdroja: **11.1.0**. Repozitár: [uscolective-byte/Trinity-antigravity](https://github.com/uscolective-byte/Trinity-antigravity), vetva **`main`**.
 
 | Doména | Prostredie | Worker |
 |---|---|---|

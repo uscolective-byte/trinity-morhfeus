@@ -987,14 +987,9 @@ export const chatGptSkills = {
       if (lang === 'json') {
         result = JSON.parse(raw);
       } else {
-        const safeScope = {
-          Math, Number, String, Array, Object, Boolean, Date, JSON,
-          sum: (a) => a.reduce((x, y) => x + y, 0),
-          avg: (a) => a.reduce((x, y) => x + y, 0) / a.length,
-          median: (a) => { const s = [...a].sort((x, y) => x - y); return s.length % 2 ? s[Math.floor(s.length / 2)] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2; }
-        };
-        const fn = new Function(...Object.keys(safeScope), `"use strict"; return (() => { ${raw.includes('return') ? raw : 'return (' + raw + ')'} })();`);
-        result = fn(...Object.values(safeScope));
+        // Function parameters do not isolate globals, credentials, I/O or CPU.
+        // Arbitrary code must run through a separately authorized sandbox.
+        return { success: false, error: 'Spustenie kódu vyžaduje izolovaný executor, ktorý nie je pripojený. Pre výpočty použi calculate; JSON je dostupný s language=json.', code: 'SANDBOX_UNAVAILABLE', language: lang, duration_ms: Date.now() - start };
       }
       return { success: true, output: result, type: typeof result, language: lang, duration_ms: Date.now() - start };
     } catch (err) {
@@ -2154,6 +2149,10 @@ skillRegistry.register('resolveCustomCommand', (text, env) => memorySkills.resol
 import { delegateWorker, orchestratePipeline, inspectFleet } from './orchestrator.js';
 skillRegistry.register('callWorkerAction', (params = {}, env) => delegateWorker(env, params.worker, params.action, params.data), { category: 'orchestration' });
 skillRegistry.register('orchestrateTeamTask', (params = {}, env) => orchestratePipeline(env, params.task || params.prompt || ''), { category: 'orchestration' });
+skillRegistry.register('diagnostic_ping', async (params = {}, env) => {
+  const { runTool } = await import('./tools.js');
+  return runTool(env, null, 'diagnostic_ping', params);
+}, { category: 'diagnostics' });
 skillRegistry.register('fleetHealthCheck', (_params, env) => inspectFleet(env), { category: 'orchestration' });
 
 export { developerSkills, entertainmentSkills, educationSkills, lifestyleSkills, creativeSkills, scienceSkills };

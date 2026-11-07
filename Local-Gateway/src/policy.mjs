@@ -19,6 +19,8 @@ export const CAPABILITIES=Object.freeze([
   {id:'upload',risk:'critical',approval:true},
   {id:'upgrade',risk:'critical',approval:true},
   {id:'open_app',risk:'change',approval:true},
+  {id:'open_url',risk:'read',approval:false},
+  {id:'open_file',risk:'read',approval:false},
   {id:'screenshot',risk:'read',approval:false},
   {id:'notify',risk:'read',approval:false},
   {id:'system_info',risk:'read',approval:false}
@@ -44,10 +46,20 @@ async function nearestExisting(target){
 }
 
 export async function resolveSafePath(workspaceRoot,relativePath,{allowMissing=false}={}){
-  if(typeof relativePath!=='string'||!relativePath.trim()||relativePath.includes('\0')||path.isAbsolute(relativePath))throw new Error('Cesta musí byť relatívna k Morhfeus.');
-  const segments=relativePath.replaceAll('\\','/').split('/').filter(Boolean);
-  if(segments.some(segment=>segment==='..'||BLOCKED_SEGMENTS.has(segment.toLowerCase())||BLOCKED_NAMES.some(rule=>rule.test(segment))))throw new Error('Táto cesta je chránená.');
+  if(typeof relativePath!=='string'||!relativePath.trim()||relativePath.includes('\0'))throw new Error('Cesta musí byť relatívna k Morhfeus.');
   const root=await realpath(workspaceRoot);
+  let relPath=relativePath;
+  if(path.isAbsolute(relativePath)){
+    const resolvedCandidate=path.resolve(relativePath);
+    let realCandidate=resolvedCandidate;
+    try{realCandidate=await realpath(resolvedCandidate);}catch{}
+    if(!isInside(root,resolvedCandidate)||!isInside(root,realCandidate))throw new Error('Cesta je mimo pracovného priestoru.');
+    relPath=path.relative(root,resolvedCandidate);
+    if(relPath==='')relPath='.';
+  }
+  const segments=relPath.replaceAll('\\','/').split('/').filter(Boolean);
+  if(segments.some(segment=>segment==='..'||BLOCKED_SEGMENTS.has(segment.toLowerCase())||BLOCKED_NAMES.some(rule=>rule.test(segment))))throw new Error('Táto cesta je chránená.');
+  // root resolved above
   const target=path.resolve(root,...segments);
   if(!isInside(root,target))throw new Error('Cesta je mimo pracovného priestoru.');
   const existing=await nearestExisting(target);

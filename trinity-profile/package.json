@@ -1,0 +1,16 @@
+{
+  "name": "trinity-profile",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Trinity Live User Profile & Preferences Engine",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261104.1",
+    "typescript": "^5.6.3",
+    "wrangler": "^4.158.0"
+  }
+}

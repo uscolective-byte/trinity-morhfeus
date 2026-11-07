@@ -49,13 +49,15 @@ test('Pravidlo 3: Zákaz predstierania prepojenia (No Fake APIs)', async () => {
   };
   const timeoutRes = await fetchWithHardTimeout('https://dead.endpoint.local/api', {}, 100, deadFetcher);
   assert.equal(timeoutRes.ok, false);
-  assert.equal(timeoutRes.message, 'Chyba spojenia: Endpoint neodpovedá. Operácia nebola vykonaná.');
+  assert.equal(timeoutRes.outcome, 'unknown');
+  assert.match(timeoutRes.message, /Výsledok operácie nie je overený/);
 
   // Simulácia 500 odpovede
   const errFetcher = async () => ({ ok: false, status: 502 });
   const errRes = await fetchWithHardTimeout('https://broken.endpoint.local/api', {}, 100, errFetcher);
   assert.equal(errRes.ok, false);
-  assert.equal(errRes.message, 'Chyba spojenia: Endpoint neodpovedá. Operácia nebola vykonaná.');
+  assert.equal(errRes.outcome, 'unknown');
+  assert.equal(errRes.status, 502);
 });
 
 test('Pravidlo 4: Fyzické overenie pred nahlásením (Disk & State Check)', () => {

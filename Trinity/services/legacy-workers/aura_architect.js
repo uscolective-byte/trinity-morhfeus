@@ -3,6 +3,10 @@ import {runAuraAi, parseAuraJson, safeDbRun} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
+    if (request.method === "GET" && new URL(request.url).pathname === "/health") {
+      return Response.json({ ok: true, service: "aura_architect", version: "10.3.0", status: "serving", bindings: { AI: !!env.AI, DB: !!env.DB } });
+    }
+
     if (request.method !== "POST") return Response.json({ ok: false, error: "Method not allowed" }, { status: 405 });
     let call;
     try { call = await request.json(); } catch { return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 }); }
@@ -56,7 +60,7 @@ export default {
         return Response.json({ ok: true, traceId, from: "aura-architect" });
       }
       if (call.action === "aura.status") {
-        return Response.json({ ok: true, result: { agent: "architect", role: "Navrhuje systémovú architektúru, diagramy a grafové závislosti", status: "active", version: "10.2.0" }, traceId, from: "aura-architect" });
+        return Response.json({ ok: true, result: { agent: "architect", role: "Navrhuje systémovú architektúru, diagramy a grafové závislosti", status: "active", version: "10.3.0" }, traceId, from: "aura-architect" });
       }
       return Response.json({ ok: false, error: "Unknown action: " + call.action, traceId, from: "aura-architect" });
     } catch (e) { return Response.json({ ok: false, error: e.message, traceId, from: "aura-architect" }); }

@@ -1,0 +1,52 @@
+{
+  "name": "trinity-omni-knowledge",
+  "fields": [
+    {
+      "name": "id",
+      "type": "Edm.String",
+      "key": true,
+      "filterable": true
+    },
+    {
+      "name": "title",
+      "type": "Edm.String",
+      "searchable": true,
+      "filterable": true,
+      "sortable": true
+    },
+    {
+      "name": "content",
+      "type": "Edm.String",
+      "searchable": true
+    },
+    {
+      "name": "category",
+      "type": "Edm.String",
+      "filterable": true,
+      "facetable": true
+    },
+    {
+      "name": "path",
+      "type": "Edm.String",
+      "filterable": true
+    },
+    {
+      "name": "sha256",
+      "type": "Edm.String",
+      "filterable": true
+    },
+    {
+      "name": "updated_at",
+      "type": "Edm.DateTimeOffset",
+      "filterable": true,
+      "sortable": true
+    }
+  ],
+  "corsOptions": {
+    "allowedOrigins": [
+      "https://auru.space",
+      "https://auru.dev"
+    ],
+    "maxAgeInSeconds": 3600
+  }
+}

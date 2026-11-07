@@ -38,6 +38,13 @@
   },
   "rules": [
     {
+      "type": "Data",
+      "globs": [
+        "**/*.webp"
+      ],
+      "fallthrough": true
+    },
+    {
       "type": "Text",
       "globs": [
         "**/*.html",

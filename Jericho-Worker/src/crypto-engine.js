@@ -35,6 +35,8 @@ export const TETRAKIS_TOKEN = {
   decimals: 18,
   total_supply: '1,000,000,000 TTK',
   standard: 'ERC-20 (EVM)',
+  basterix_wallet: '0x7e17f9072cfCbc7fE45973De0F11eC8db99281e4',
+  basterix_holding: '1,000,000 TTK',
   treasury_wallet: '0x4d308452a96D7dAbFd2f33d92677A3a2724f387e',
   target_networks: ['Base (Coinbase L2)', 'Arbitrum', 'Polygon'],
   dex_pair: 'TTK / ETH (Uniswap v3 / Aerodrome)',

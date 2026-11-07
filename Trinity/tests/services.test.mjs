@@ -5,8 +5,8 @@ import proxy from '../services/ops-proxy.js';
 test('guardian checks the real health contract through its binding',async()=>{const r=await guardian.fetch(new Request('https://guardian.test/health'),{TRINITY:{fetch:async()=>Response.json({status:'serving',version:'6.1.0'})}});assert.equal(r.status,200);assert.equal((await r.json()).ok,true);});
 test('guardian responds to orchestrator service action audit.list',async()=>{
   const mockDB={prepare(){return {bind(){return this;},all:async()=>({results:[{id:1,action:'sec_test',details:'{}',created_at:'2026-10-19'}]})};}};
-  const req=new Request('https://trinity.internal/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'audit.list',data:{limit:1}})});
-  const res=await guardian.fetch(req,{DB:mockDB});
+  const req=new Request('https://trinity.internal/',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer fixture-guardian'},body:JSON.stringify({action:'audit.list',data:{limit:1}})});
+  const res=await guardian.fetch(req,{DB:mockDB,TRINITY_INTERNAL_KEY:'fixture-guardian'});
   assert.equal(res.status,200);
   const data=await res.json();
   assert.equal(data.ok,true);

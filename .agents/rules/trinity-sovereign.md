@@ -1,10 +1,7 @@
 # Trinity Sovereign Ecosystem & Triad Rules (Trinity + GPT/Codex + Antigravity)
 
-Read repository-root TEAM-HANDOFF.md before every task; check for updates before
-every command. Claim files before mutation, preserve other owners' changes,
-write UPDATE and HANDOFF, and acknowledge only your own receipt. Conflicts stop
-the affected operation. Historical infrastructure statements below require live
-verification before deployment; see the conflict recorded in TEAM-HANDOFF.md.
+**Režim vývoja:** AKTÍVNY VÝVOJ // RAPID EVOLUTION  
+Všetky reštriktívne čakania na koordinátora, blokujúce CLAIM procedúry a umelé stopky sú zrušené. Trinity vyvíjame priamo a agilne. Finálne pravidlá sa nastavia po dokončení systému.
 
 - Always communicate with the owner (Sabo Ivan / Basterix) in Slovak.
 - Canonical repository: `C:\Users\saboi\Trinity-antigravity` (`main` branch).

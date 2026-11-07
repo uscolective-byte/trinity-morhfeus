@@ -1,0 +1,6 @@
+{
+  "name": "trinity-services",
+  "version": "11.2.0",
+  "private": true,
+  "type": "module"
+}

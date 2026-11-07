@@ -563,7 +563,7 @@ export class ZeroTrustSecurityCore {
 
 
 export const SOVEREIGN_ARCHITECTURE = Object.freeze({
-  version: '11.0.0',
+  version: '11.1.0',
   layers: Object.freeze({
     L1_KERNEL: ['EP-01', 'EP-02', 'EP-03', 'EP-04'],
     L2_ORCHESTRATION: ['EP-05', 'EP-06', 'EP-07', 'EP-08'],

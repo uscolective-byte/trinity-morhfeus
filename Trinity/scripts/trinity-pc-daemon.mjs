@@ -15,8 +15,31 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Načítanie Cloudflare Access tokenov z C:\Users\saboi\.env ak existujú
+let CF_ACCESS_CLIENT_ID = process.env.CLOUDFLARE_ACCESS_CLIENT_ID || '';
+let CF_ACCESS_CLIENT_SECRET = process.env.CLOUDFLARE_ACCESS_CLIENT_SECRET || '';
+try {
+  const rootEnv = 'C:\\Users\\saboi\\.env';
+  if (existsSync(rootEnv)) {
+    const lines = readFileSync(rootEnv, 'utf8').split(/\r?\n/);
+    for (const line of lines) {
+      const mId = line.match(/^\s*CLOUDFLARE_ACCESS_CLIENT_ID\s*=\s*(.*)$/);
+      if (mId && !CF_ACCESS_CLIENT_ID) CF_ACCESS_CLIENT_ID = mId[1].trim();
+      const mSec = line.match(/^\s*CLOUDFLARE_ACCESS_CLIENT_SECRET\s*=\s*(.*)$/);
+      if (mSec && !CF_ACCESS_CLIENT_SECRET) CF_ACCESS_CLIENT_SECRET = mSec[1].trim();
+    }
+  }
+} catch {}
+
+function getCfHeaders() {
+  const h = {};
+  if (CF_ACCESS_CLIENT_ID) h['CF-Access-Client-Id'] = CF_ACCESS_CLIENT_ID;
+  if (CF_ACCESS_CLIENT_SECRET) h['CF-Access-Client-Secret'] = CF_ACCESS_CLIENT_SECRET;
+  return h;
+}
+
 // Načítanie prostredia a DPAPI tokenu ak je k dispozícii
-const TRINITY_URL = (process.env.TRINITY_URL || 'https://auru.dev').replace(/\/$/, '');
+const TRINITY_URL = (process.env.TRINITY_URL || 'https://auru.space').replace(/\/$/, '');
 const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL || '4000', 10);
 const GATEWAY_KEY = process.env.TRINITY_GATEWAY_KEY || process.env.TRINITY_PC_BRIDGE_KEY;
 
@@ -182,6 +205,7 @@ export function executeFileSystem(action, payload) {
  */
 export async function runDaemonCycle(baseUrl = TRINITY_URL, key = GATEWAY_KEY) {
   const telemetry = gatherTelemetry();
+  const cfHeaders = getCfHeaders();
 
   // 1. Odoslanie priamej telemetrie do Omni-Dev PC Bridge endpointu
   try {
@@ -189,6 +213,7 @@ export async function runDaemonCycle(baseUrl = TRINITY_URL, key = GATEWAY_KEY) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...cfHeaders,
         ...(key ? { Authorization: `Bearer ${key}` } : {})
       },
       body: JSON.stringify(telemetry),
@@ -205,13 +230,18 @@ export async function runDaemonCycle(baseUrl = TRINITY_URL, key = GATEWAY_KEY) {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${key}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...cfHeaders
         },
         body: JSON.stringify({
+          agent: 'trinity-pc-v2',
+          connected: true,
           gateway_id: telemetry.gateway_id,
-          version: '11.0.0',
-          capabilities: ['read', 'write', 'edit', 'run', 'pc_fs_read', 'pc_fs_write', 'pc_fs_patch', 'pc_shell_exec', 'pc_system_telemetry'],
-          telemetry
+          hostname: telemetry.hostname,
+          version: '11.1.0',
+          capabilities: ['read', 'write', 'edit', 'run', 'open_app', 'open_url', 'pc_fs_read', 'pc_fs_write', 'pc_fs_patch', 'pc_shell_exec', 'pc_system_telemetry'],
+          telemetry,
+          timestamp: Date.now()
         }),
         signal: AbortSignal.timeout(8000)
       });
@@ -219,13 +249,14 @@ export async function runDaemonCycle(baseUrl = TRINITY_URL, key = GATEWAY_KEY) {
       // Ignorovať sieťový timeout v tichom režime
     }
 
-    // 2. Kontrola a vyzdvihnutie čakajúcich schválených akcií (claim)
+    // 3. Kontrola a vyzdvihnutie čakajúcich schválených akcií (claim)
     try {
       const claimRes = await fetch(`${baseUrl}/api/system/actions/claim`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${key}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...cfHeaders
         },
         body: JSON.stringify({}),
         signal: AbortSignal.timeout(8000)
@@ -267,7 +298,8 @@ export async function runDaemonCycle(baseUrl = TRINITY_URL, key = GATEWAY_KEY) {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${key}`,
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              ...cfHeaders
             },
             body: JSON.stringify(receiptPayload),
             signal: AbortSignal.timeout(10000)
@@ -284,7 +316,7 @@ export async function runDaemonCycle(baseUrl = TRINITY_URL, key = GATEWAY_KEY) {
 }
 
 // Spustenie hlavnej slučky
-if (import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}`) {
+if (process.argv[1] && import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}`) {
   if (ONCE) {
     const t = await runDaemonCycle();
     console.log('[TRINITY PC DAEMON] One-shot overenie úspešné:', JSON.stringify(t, null, 2));

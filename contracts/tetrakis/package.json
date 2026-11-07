@@ -1,14 +1,49 @@
 {
   "name": "tetrakis-token",
   "version": "1.0.0",
-  "description": "Tetrakis ($TTK) ERC-20 Smart Contract for Trinity",
+  "description": "Tetrakis ($TTK) Official ERC-20 Smart Contract & SDK for Trinity Sovereign AI OS",
   "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./artifact": "./build/TetrakisToken.json",
+    "./contract": "./TetrakisToken.sol"
+  },
+  "files": [
+    "index.js",
+    "TetrakisToken.sol",
+    "build/TetrakisToken.json",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "compile": "node scripts/compile.mjs",
     "test": "node scripts/compile.mjs && node --test tests/*.test.mjs",
     "deploy:plan": "node scripts/deploy-base-sepolia.mjs --dry-run",
-    "deploy:base-sepolia": "node scripts/deploy-base-sepolia.mjs"
+    "deploy:plan:mainnet": "node scripts/deploy-base-mainnet.mjs --dry-run",
+    "deploy:base-sepolia": "node scripts/deploy-base-sepolia.mjs",
+    "deploy:base-mainnet": "node scripts/deploy-base-mainnet.mjs",
+    "deploy:base-mainnet:live": "node scripts/deploy-base-mainnet.mjs --broadcast"
   },
+  "author": "Basterix (Sabo Ivan) <saboivan2008@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uscolective-byte/Trinity-antigravity.git",
+    "directory": "contracts/tetrakis"
+  },
+  "keywords": [
+    "erc20",
+    "crypto",
+    "trinity",
+    "tetrakis",
+    "ttk",
+    "ethereum",
+    "base",
+    "token",
+    "smart-contract",
+    "defi"
+  ],
   "dependencies": {
     "@openzeppelin/contracts": "5.1.0",
     "ethers": "6.17.0",

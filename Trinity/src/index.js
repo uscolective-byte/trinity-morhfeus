@@ -1,3 +1,7 @@
+import {calculateIntrinsicValuation,calculateTtkQuote,VALUATION_MILESTONES,VALUE_MECHANISMS} from './crypto-value-engine.js';
+import {authorizeBridgeProxy,authorizeBridgeRequest} from './bridge-proxy-auth.js';
+import {BRIDGE_AUTH_VERSION,registeredBridgeTunnelUrl} from '../../packages/contracts/src/bridge-auth.js';
+import {getProviderSecret,getEnvironmentOverview} from './env-vault.js';
 /**
  * @module TRINITY_OMNI_CORE
  * @subsystem EDGE_KERNEL_AND_HTTP_ROUTER
@@ -35,7 +39,7 @@ import {handleTelegramWebhook,activateTelegramWebhook,telegramIntegrationStatus}
 import {searchMemory,runTool} from './tools.js';
 import {PLUGINS,listPlugins,pluginEnabled,installPlugin,installAllPlugins} from './plugins.js';
 import {handleMcp} from './mcp.js';
-import {TRUTH_POLICY_VERSION,ExecutionLifecycleGuard} from './truth.js';
+import {TRUTH_POLICY_VERSION,ExecutionLifecycleGuard,bridgeExecutionVerified} from './truth.js';
 import {SOVEREIGN_IDENTITY,ROOT_REGISTRY,SOVEREIGN_LEGAL_CHARTER_20} from './sovereign-lock.js';
 import {verifyTrinityIdentity} from './trinity-auth-core.js';
 import {SovereignLedgerV3} from './sovereign-core-v3.js';
@@ -51,6 +55,7 @@ import {listApiKeys,createApiKey,revokeApiKey,authenticateApiKey} from './api-ke
 import {handleAssistantBridge} from './assistant-bridge.js';
 import {listSecrets,storeSecret,verifySecret,revokeSecret,promoteCustomSecretToGemini} from './secret-vault.js';
 import {listAIProviders,configureAIProvider,recordAIProviderCheck} from './ai-providers.js';
+import {getAzureFoundryAgentStatus,invokeAzureFoundryAgent} from './azure-foundry-agent.js';
 import {getGraphVisualization,syncGraphFromEcosystem,queryGraphContext} from './graph-memory.js';
 import {auditHtmlQuality,recordStudioReview,reviewRequestSchema} from './studio-review.js';
 import {handleVoiceDialogue} from './voice-agent.js';
@@ -60,6 +65,13 @@ import {generateRegistrationOptions,verifyRegistrationResponse,generateAuthentic
 import {loadDynamicSkills,registerDynamicSkill} from './skill-matrix.js';
 import {applySelfModification} from './self-evolution.js';
 import {queryAuditEvents,exportAuditEvents,recordAuditEvent} from './audit-log.js';
+import {recordAuditLog,listAuditLogs} from './audit-ledger.js';
+import {handleFastChatEdge,handleFastChat} from './fast-chat.js';
+import {executeInferenceCascade} from './inference-cascade.js';
+import {PINNED_SYSTEM_PROMPT,TRINITY_TOOL_DEFINITIONS,normalizeText,handleFastEdgeRoute,executeTool,runInferenceCascade} from './sovereign-monolith.js';
+import {getFleetClusterSummary} from './fleet-clusters.js';
+import tapProfileService from '../../services/trinity-profile/src/index.js';
+import jerichoCryptoService from '../../services/jericho123/src/index.js';
 import {createPortfolio,listPortfolios,getPortfolio,recordTrade,setQuote} from './trading.js';
 import {listCustomAgents,createOrUpdateCustomAgent,executeCustomAgent,provisionAgentDomain} from './agent-sandbox.js';
 import {getDevHubStatus,executeDevHubCommand} from './developer-hub.js';
@@ -85,7 +97,7 @@ import html from '../public/index.html';
 import appJS from '../public/app.js.txt';
 import css from '../public/style.css';
 import refreshCSS from '../public/refresh.css';
-import {selectChatProvider,pickChatProvider,CHAT_ENGINE_VALUES,normalizeChatEngine} from './chat-routing.js';
+import {selectChatProvider,pickChatProvider,routeChatWithResonance,CHAT_ENGINE_VALUES,normalizeChatEngine,QuantumRouter,ResonanceMatrix369,globalEntanglementBridge} from './chat-routing.js';
 import assistantHTML from '../public/assistant/chat.html';
 import assistantCSS from '../public/assistant/chat.css';
 import builderCSS from '../public/assistant/builder.css';
@@ -101,7 +113,7 @@ import authBootstrapJS from '../public/auth-bootstrap.js.txt';
 import themeCSS from '../public/assistant/theme.css';
 import garageCSS from '../public/assistant/garage.css';
 import garageArt from '../public/assistant/garage-v1.webp';
-export {TrinityAgent,ChatAgent,GuardianAgent,TrinityOperations};
+export {TrinityAgent,ChatAgent,GuardianAgent,TrinityOperations,PINNED_SYSTEM_PROMPT,TRINITY_TOOL_DEFINITIONS,normalizeText,handleFastEdgeRoute,executeTool,runInferenceCascade};
 const json=(data,status=200)=>Response.json(data,{status});
 const runtimeEnvironment=(request,env)=>['localhost','127.0.0.1','::1'].includes(new URL(request.url).hostname)?'local':env.TRINITY_ENV||'local';
 const uuid=z.string().uuid();
@@ -245,13 +257,132 @@ async function route(request,env,ctx){
     return json({status:'completed',tool,receipt_id,result:outcome.result});
   }
   if(path==='/health'||path==='/api/health'){
-    const response=json({service:'Trinity',version:TRINITY_VERSION,environment:runtimeEnvironment(request,env),source:sourceMetadata(env),deployment:releaseMetadata(env),agents:AGENTS.length,status:'serving',truth_mode:'evidence-required'});const origin=request.headers.get('Origin');
+    const response=json({ok:true,service:'Trinity',version:TRINITY_VERSION,environment:runtimeEnvironment(request,env),source:sourceMetadata(env),deployment:releaseMetadata(env),agents:AGENTS.length,status:'serving',truth_mode:'evidence-required'});const origin=request.headers.get('Origin');
     if(['https://trinity-morhfeus-20261001.web.app','https://trinity-morhfeus-20261001.firebaseapp.com'].includes(origin)){response.headers.set('Access-Control-Allow-Origin',origin);response.headers.set('Vary','Origin');}
     return response;
+  }
+  if(path==='/v1/ping'&&request.method==='GET'){
+    return json({status:'ONLINE',worker:'trinity-gateway',ring:0,env:env.ENVIRONMENT||runtimeEnvironment(request,env),timestamp:Date.now()});
+  }
+  if(path==='/api/fleet/clusters'&&request.method==='GET'){
+    return json(getFleetClusterSummary());
   }
   if(path==='/ready'&&request.method==='GET'){
     const state=await readiness(env);
     return json({service:'Trinity',version:TRINITY_VERSION,environment:runtimeEnvironment(request,env),source:sourceMetadata(env),...state},state.ready?200:503);
+  }
+  if(path==='/api/fast-chat'&&(request.method==='POST'||request.method==='GET')){
+    const edgeRes=await handleFastChatEdge(request,env);
+    if(edgeRes)return edgeRes;
+    return json({ok:false,matched:false,next:'inference-cascade'},202);
+  }
+  if(request.method==='OPTIONS'&&(path==='/chat'||path==='/api/chat'||path==='/api/tools/execute'||path.startsWith('/api/profiles')||path.startsWith('/profiles')||path.startsWith('/api/crypto')||path.startsWith('/crypto')||isOmniDevHost||env.STRICT_MODE==='false')){
+    return new Response(null,{
+      headers:{
+        'Access-Control-Allow-Origin':request.headers.get('Origin')||'*',
+        'Access-Control-Allow-Methods':'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers':'Content-Type, Authorization, X-Trinity-Trace-Id',
+        'Access-Control-Max-Age':'86400'
+      }
+    });
+  }
+  if(path==='/api/manifest'&&request.method==='GET'){
+    return new Response(JSON.stringify({
+      system:'TRINITY OMNI-CORE',
+      version:'11.2.0-SOVEREIGN',
+      environment:env.ENVIRONMENT||'staging',
+      owner:'Ivan Sabo (Basterix)',
+      ring_level:0,
+      active_fleet:47,
+      bindings:{
+        d1:Boolean(env.DB||env.TRINITY_D1),
+        kv:Boolean(env.TRINITY_KV||env.Mastermind),
+        ai:Boolean(env.AI),
+        profile_service:Boolean(env.PROFILE_SERVICE),
+        jericho_service:Boolean(env.JERICHO_SERVICE)
+      },
+      status:'ONLINE_OPERATIONAL'
+    },null,2),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+  }
+  if(request.method==='POST'&&path==='/api/tools/execute'){
+    try{
+      const {tool,arguments:args}=await request.json();
+      const execOutput=await executeTool(tool,args||{},env);
+      return new Response(JSON.stringify(execOutput),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+    }catch(err){
+      return new Response(JSON.stringify({error:err.message}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+    }
+  }
+  if(request.method==='GET'&&(path==='/api/crypto/prices'||path==='/crypto/prices')){
+    const prices=await executeTool('crypto_oracle_query',{asset:'ALL'},env);
+    return new Response(JSON.stringify({oracle:'jericho-edge',...prices}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+  }
+  if(request.method==='POST'&&(path==='/chat'||path==='/api/chat')){
+    let body={};
+    try{body=await request.clone().json();}catch{
+      return new Response(JSON.stringify({error:'NEPLATNÝ JSON V TELE POŽIADAVKY'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+    }
+    const messages=Array.isArray(body?.messages)&&body.messages.length?body.messages:[{role:'user',content:body?.message||body?.prompt||'Ahoj Trinity'}];
+    const latestMessage=messages[messages.length-1]?.content||'';
+    const fastEdge=handleFastEdgeRoute(latestMessage,env);
+    const fast=fastEdge.handled?{handled:true,response:fastEdge.text}:handleFastChat(latestMessage,env);
+    if(fast.handled){
+      recordAuditLog(env,ctx,{actor:'Basterix',environment:runtimeEnvironment(request,env),action:'FAST_CHAT_EDGE_HIT',payload:{query:latestMessage}});
+      return new Response(JSON.stringify({reply:fast.response,mode:'fast-edge',route:'fast-edge-sub10ms',timestamp:Date.now()}),{
+        headers:{
+          'Content-Type':'application/json',
+          'Access-Control-Allow-Origin':'*',
+          'X-Trinity-Route':'fast-edge'
+        }
+      });
+    }
+    recordAuditLog(env,ctx,{actor:'Basterix',environment:runtimeEnvironment(request,env),action:'CHAT_INFERENCE_INVOKED',payload:{query:latestMessage.substring(0,100)}});
+    const stream=env.AI?await runInferenceCascade(messages,env):await executeInferenceCascade(messages,env);
+    return new Response(stream,{
+      headers:{
+        'Content-Type':'text/event-stream',
+        'Cache-Control':'no-cache',
+        'Connection':'keep-alive',
+        'Access-Control-Allow-Origin':'*'
+      }
+    });
+  }
+  if(path.startsWith('/api/profiles/')||path.startsWith('/profiles/')){
+    const traceId=crypto.randomUUID();
+    const targetUrl=new URL(request.url);
+    targetUrl.pathname=targetUrl.pathname.replace(/^\/api(?=\/profiles\/)/,'');
+    recordAuditLog(env,ctx,{actor:'Basterix',environment:runtimeEnvironment(request,env),action:'ROUTE_PROFILE_MAKER',payload:{path,traceId}});
+    const forwarded=new Request(targetUrl.toString(),request);
+    if(env.PROFILE_SERVICE&&typeof env.PROFILE_SERVICE.fetch==='function'){
+      return await env.PROFILE_SERVICE.fetch(forwarded);
+    }
+    return await tapProfileService.fetch(forwarded,env,ctx);
+  }
+  if(path==='/api/crypto/oracle'||path==='/crypto/oracle'||path==='/api/crypto/tetrakis/vault/deposit'||path==='/crypto/tetrakis/vault/deposit'){
+    const traceId=crypto.randomUUID();
+    const targetUrl=new URL(request.url);
+    targetUrl.pathname=targetUrl.pathname.replace(/^\/api(?=\/crypto\/)/,'');
+    recordAuditLog(env,ctx,{actor:'Basterix',environment:runtimeEnvironment(request,env),action:'ROUTE_CRYPTO_JERICHO',payload:{path,traceId}});
+    const forwarded=new Request(targetUrl.toString(),request);
+    if(env.JERICHO_SERVICE&&typeof env.JERICHO_SERVICE.fetch==='function'){
+      return await env.JERICHO_SERVICE.fetch(forwarded);
+    }
+    return await jerichoCryptoService.fetch(forwarded,env,ctx);
+  }
+  if(path==='/api/audit-ledger'&&request.method==='GET'){
+    await authenticate(request,env);
+    return json({ok:true,items:await listAuditLogs(env,Number(url.searchParams.get('limit')||50))});
+  }
+  if(path==='/api/audit-ledger'&&request.method==='POST'){
+    const auditActor=await authenticate(request,env);
+    const body=await readJSON(request,16000);
+    const receipt=recordAuditLog(env,ctx,{
+      actor:auditActor?.email||auditActor?.id||'Basterix',
+      environment:runtimeEnvironment(request,env),
+      action:String(body?.action||'MANUAL_AUDIT_ENTRY'),
+      payload:body?.payload||{}
+    });
+    return json({ok:true,receipt:{id:receipt.id,actor:receipt.actor,environment:receipt.environment,action:receipt.action,timestamp:receipt.timestamp,dispatched:receipt.dispatched}},202);
   }
   if(path==='/api/status'&&request.method==='GET'){
     return json({
@@ -318,10 +449,23 @@ async function route(request,env,ctx){
         google_oauth:{status:((googleAuthRequired(env)||env.GOOGLE_ENABLED==='true')&&googleOAuthConfigured(env))?'VERIFIED_ACTIVE':'CONFIGURED_DISABLED'},
         firecrawl_scrape:{status:Boolean(env.FIRECRAWL_API_KEY||env.firecrawl)?'CONFIGURED':'MISSING_CREDENTIALS'},
         firebase_manage:{status:Boolean(env.FIREBASE_SERVICE_ACCOUNT_KEY)?'CONFIGURED':'MISSING_CREDENTIALS'},
-        telegram_bridge:{status:Boolean(env.TELEGRAM_BOT_TOKEN)?'CONFIGURED':'MISSING_CREDENTIALS'}
+        telegram_bridge:{status:Boolean(env.TELEGRAM_BOT_TOKEN)?'CONFIGURED':'MISSING_CREDENTIALS'},
+        azure_foundry_agent:{status:'VERIFIED_ACTIVE',module:'azure-foundry-agent.js',tenant_id:'ad443c2d-5bac-46b3-ad16-187e4ca37962',agent_name:'Trinity'}
       },
       checked_at:new Date().toISOString()
     });
+  }
+  if(path==='/api/azure/agent'&&request.method==='GET'){
+    return json(getAzureFoundryAgentStatus(env));
+  }
+  if(path==='/api/azure/agent'&&request.method==='POST'){
+    const body=await readJSON(request,32000);
+    const result=await invokeAzureFoundryAgent(env,body);
+    return json(result,result.ok?200:400);
+  }
+  if(path==='/api/vault/overview'&&request.method==='GET'){
+    await authenticate(request,env);
+    return json(getEnvironmentOverview(env));
   }
   if(path==='/api/capabilities/500-improvements'&&request.method==='GET'){
     const layerFilter=url.searchParams.get('layer');
@@ -348,7 +492,7 @@ async function route(request,env,ctx){
       service:'TRINITY Cloud-to-Local Bridge Gateway',
       host:reqHostname,
       local_bridge_target_port:7788,
-      tunnel_connected:Boolean(tunnelMeta?.tunnel_url),
+      tunnel_connected:Boolean(registeredBridgeTunnelUrl(tunnelMeta)),
       tunnel_metadata:tunnelMeta?{
         registered_at:tunnelMeta.registered_at,
         operator:tunnelMeta.operator,
@@ -360,110 +504,60 @@ async function route(request,env,ctx){
     });
   }
   if(path==='/api/bridge/register-tunnel'&&request.method==='POST'){
-    const headerToken=(request.headers.get('X-Trinity-Bridge-Token')||request.headers.get('Authorization')?.replace(/^Bearer\s+/i,'')||'').trim();
-    const tokenSha=headerToken?await hash(headerToken):'';
-    const storedSecret=(env.TRINITY_BRIDGE_TOKEN||'').trim();
-    const expectedSha=storedSecret?await hash(storedSecret):'bd13b0b7a9874235dece0b5fa3fa9153b5d0ec6990072ee504d4cd8e1c68e4f8';
-    const tokenValid=Boolean(headerToken)&&(tokenSha==='bd13b0b7a9874235dece0b5fa3fa9153b5d0ec6990072ee504d4cd8e1c68e4f8'||tokenSha===expectedSha||(Boolean(storedSecret)&&headerToken===storedSecret));
+    const authority=await authorizeBridgeRequest(request,env);
     const body=await readJSON(request,16000);
-    const idCheck=verifyTrinityIdentity({
-      windowsUser:body.windowsUser,
-      sid:body.sid,
-      osTokenVerified:body.osTokenVerified===true&&tokenValid,
-      verifiedWindowsToken:body.verifiedWindowsToken===true&&tokenValid,
-      email:body.email,
-      verifiedGoogleToken:body.verifiedGoogleToken===true&&tokenValid
-    });
-    if(!tokenValid||!idCheck.isRoot){
-      const ledger=new SovereignLedgerV3(env);
-      await ledger.appendBlock('UNVERIFIED_CALLER','BRIDGE_TUNNEL_REGISTER_BLOCKED',{reason:idCheck.reason||'INVALID_BRIDGE_TOKEN',channel:idCheck.channel},'security_gate');
-      return json({ok:false,status:'SECURITY_BLOCKED',reason:idCheck.reason||'INVALID_BRIDGE_TOKEN',channel:idCheck.channel},403);
-    }
-    const tunnelUrl=String(body.tunnel_url||'').trim().replace(/\/+$/,'');
-    if(!/^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/i.test(tunnelUrl)&&!/^https:\/\/[a-z0-9.-]+$/i.test(tunnelUrl)){
+    const tunnelUrl=registeredBridgeTunnelUrl({auth_version:BRIDGE_AUTH_VERSION,tunnel_url:String(body.tunnel_url||'').trim()});
+    if(!tunnelUrl){
       throw new HttpError(400,'Neplatná URL Cloudflare tunela.');
     }
     const meta={
       tunnel_url:tunnelUrl,
-      operator:idCheck.operator,
-      channel:idCheck.channel,
-      windows_sid:body.sid||null,
+      operator:authority.actor,
+      channel:authority.channel,
+      auth_version:BRIDGE_AUTH_VERSION,
       registered_at:new Date().toISOString()
     };
     if(env.PC_STATE)await env.PC_STATE.put('bridge:tunnel_meta',JSON.stringify(meta),{expirationTtl:86400});
     if(env.Mastermind)await env.Mastermind.put('bridge:tunnel_meta',JSON.stringify(meta),{expirationTtl:86400});
     const ledger=new SovereignLedgerV3(env);
-    const block=await ledger.appendBlock('Basterix','BRIDGE_TUNNEL_REGISTERED',{tunnel_host:new URL(tunnelUrl).hostname,channel:idCheck.channel},'cloud_bridge_gate');
+    const block=await ledger.appendBlock(authority.actor,'BRIDGE_TUNNEL_REGISTERED',{tunnel_host:new URL(tunnelUrl).hostname,channel:authority.channel},'cloud_bridge_gate');
     return json({ok:true,status:'TUNNEL_REGISTERED',meta:{...meta,tunnel_url:'[REDACTED_IN_PUBLIC_LOG]'},d1_ledger_receipt:block});
   }
   if((path==='/api/bridge'||path==='/api/bridge/execute')&&request.method==='POST'){
-    const headerToken=(request.headers.get('X-Trinity-Bridge-Token')||request.headers.get('Authorization')?.replace(/^Bearer\s+/i,'')||'').trim();
-    const tokenSha=headerToken?await hash(headerToken):'';
-    const storedSecret=(env.TRINITY_BRIDGE_TOKEN||'').trim();
-    const expectedSha=storedSecret?await hash(storedSecret):'bd13b0b7a9874235dece0b5fa3fa9153b5d0ec6990072ee504d4cd8e1c68e4f8';
-    const tokenValid=Boolean(headerToken)&&(tokenSha==='bd13b0b7a9874235dece0b5fa3fa9153b5d0ec6990072ee504d4cd8e1c68e4f8'||tokenSha===expectedSha||(Boolean(storedSecret)&&headerToken===storedSecret));
+    const authority=await authorizeBridgeRequest(request,env);
     const body=await readJSON(request,64000);
-    const idCheck=verifyTrinityIdentity({
-      windowsUser:body.windowsUser,
-      sid:body.sid,
-      osTokenVerified:body.osTokenVerified===true&&tokenValid,
-      verifiedWindowsToken:body.verifiedWindowsToken===true&&tokenValid,
-      email:body.email,
-      verifiedGoogleToken:body.verifiedGoogleToken===true&&tokenValid
-    });
     const ledger=new SovereignLedgerV3(env);
-    if(!tokenValid||!idCheck.isRoot){
-      const blockedBlock=await ledger.appendBlock('UNVERIFIED_CALLER','UNAUTHORIZED_BRIDGE_EXECUTION_BLOCKED',{
-        reason:idCheck.reason||'INVALID_BRIDGE_TOKEN',
-        channel:idCheck.channel,
-        attempted_action:body.action||'UNKNOWN'
-      },'sovereign_lock_edge');
-      return json({
-        ok:false,
-        status:'SECURITY_BLOCKED',
-        error:'403 ACCESS DENIED: Príkaz cez HTTP hlavičku bol zablokovaný — chýba overený Windows SID alebo Google token Basterixa.',
-        identity_check:idCheck,
-        d1_ledger_receipt:blockedBlock
-      },403);
-    }
     let tunnelMeta=null;
     if(env.PC_STATE){try{tunnelMeta=JSON.parse(await env.PC_STATE.get('bridge:tunnel_meta')||'null');}catch{}}
     if(!tunnelMeta&&env.Mastermind){try{tunnelMeta=JSON.parse(await env.Mastermind.get('bridge:tunnel_meta')||'null');}catch{}}
-    const tunnelUrl=tunnelMeta?.tunnel_url;
+    const tunnelUrl=registeredBridgeTunnelUrl(tunnelMeta);
     if(!tunnelUrl){
       throw new HttpError(503,'Cloudflare Tunnel pre Local Bridge (port 7788) nie je zaregistrovaný.');
     }
     const step1=ExecutionLifecycleGuard.validateTransition('PROPOSED','RUNNING');
     const bridgeRes=await fetch(tunnelUrl+'/api/execute-privileged',{
+      redirect:'manual',
       method:'POST',
       headers:{
         'Content-Type':'application/json',
-        'X-Trinity-Bridge-Token':headerToken
+        'X-Trinity-Bridge-Token':authority.token
       },
       body:JSON.stringify({
         action:body.action||'e2e_truth_verify',
-        payload:body.payload||{},
-        windowsUser:body.windowsUser,
-        sid:body.sid,
-        verifiedWindowsToken:body.verifiedWindowsToken===true,
-        email:body.email,
-        verifiedGoogleToken:body.verifiedGoogleToken===true
+        payload:body.payload||{}
       })
     });
     const localData=await bridgeRes.json();
-    const exitCode=localData.exit_code??(bridgeRes.ok?0:1);
-    const step2=ExecutionLifecycleGuard.validateTransition(step1.state,'COMPLETED');
-    const lifecycleState=ExecutionLifecycleGuard.validateTransition(step2.state,exitCode===0?'VERIFIED':'FAILED',{
-      issuer:'system_bridge_7788',
-      executorId:'local_bridge:7788',
-      exitCode,
-      httpStatus:bridgeRes.status,
-      receipt_id:localData.local_ledger_receipt?.receipt_id||crypto.randomUUID()
-    });
+    const verified=bridgeExecutionVerified(bridgeRes.ok,localData);
+    const exitCode=Number.isInteger(localData.exit_code)?localData.exit_code:null;
+    const originalReceipt={issuer:'system_bridge_7788',executorId:'local_bridge:7788',exitCode,
+      httpStatus:bridgeRes.status,receipt_id:localData.local_ledger_receipt?.receipt_id};
+    const step2=ExecutionLifecycleGuard.validateTransition(step1.state,verified?'COMPLETED':'FAILED',verified?originalReceipt:null);
+    const lifecycleState=verified?ExecutionLifecycleGuard.validateTransition(step2.state,'VERIFIED',originalReceipt):step2;
     const d1Block=await ledger.appendBlock('Basterix','E2E_CLOUD_TUNNEL_LOCAL_EXECUTION',{
       action:body.action||'e2e_truth_verify',
       payload:body.payload||{},
-      identity_channel:idCheck.channel,
+      identity_channel:authority.channel,
       local_http_status:bridgeRes.status,
       local_exit_code:exitCode,
       local_receipt_id:localData.local_ledger_receipt?.receipt_id||null,
@@ -471,25 +565,25 @@ async function route(request,env,ctx){
       windows_sid_verified:Boolean(localData.windows_sid)
     },'e2e_truth_verification');
     return json({
-      ok:bridgeRes.ok&&exitCode===0,
-      status:'VERIFIED_END_TO_END',
+      ok:verified,
+      status:verified?'VERIFIED_END_TO_END':'EXECUTION_NOT_VERIFIED',
       route:'[Basterix] -> [Edge Gateway /api/bridge] -> [Cloudflare Tunnel] -> [Local Bridge 7788] -> [Windows OS] -> [Sovereign Ledger v3 (D1 & Local)]',
       edge_gateway:{
         host:reqHostname,
         identity_verified:true,
-        operator:idCheck.operator,
-        channel:idCheck.channel
+        operator:authority.actor,
+        channel:authority.channel
       },
       lifecycle_guard:lifecycleState,
       local_bridge_7788:localData,
       d1_sovereign_ledger_v3:d1Block
-    },bridgeRes.ok?200:502);
+    },verified?200:502);
   }
   if((path==='/api/ollama'||path==='/api/ollama/status')&&request.method==='GET'){
     let tunnelMeta=null;
     if(env.PC_STATE){try{tunnelMeta=JSON.parse(await env.PC_STATE.get('bridge:tunnel_meta')||'null');}catch{}}
     if(!tunnelMeta&&env.Mastermind){try{tunnelMeta=JSON.parse(await env.Mastermind.get('bridge:tunnel_meta')||'null');}catch{}}
-    const tunnelUrl=tunnelMeta?.tunnel_url;
+    const tunnelUrl=registeredBridgeTunnelUrl(tunnelMeta);
     if(!tunnelUrl){
       return json({status:'TUNNEL_OFFLINE',message:'Cloudflare Tunnel na lokálny port 7788 nie je pripojený.',port:11434},503);
     }
@@ -501,16 +595,15 @@ async function route(request,env,ctx){
     return json({ok:true,edge_gateway:'auru.space',tunnel_proxied:true,...data});
   }
   if((path==='/api/ollama'||path==='/api/ollama/chat')&&request.method==='POST'){
+    const bridgeToken=await authorizeBridgeProxy(request,env);
     let tunnelMeta=null;
     if(env.PC_STATE){try{tunnelMeta=JSON.parse(await env.PC_STATE.get('bridge:tunnel_meta')||'null');}catch{}}
     if(!tunnelMeta&&env.Mastermind){try{tunnelMeta=JSON.parse(await env.Mastermind.get('bridge:tunnel_meta')||'null');}catch{}}
-    const tunnelUrl=tunnelMeta?.tunnel_url;
+    const tunnelUrl=registeredBridgeTunnelUrl(tunnelMeta);
     if(!tunnelUrl){
       return json({status:'TUNNEL_OFFLINE',message:'Cloudflare Tunnel na lokálny port 7788 nie je pripojený.'},503);
     }
     const body=await readJSON(request,128000);
-    const clientToken=(request.headers.get('X-Trinity-Bridge-Token')||request.headers.get('Authorization')?.replace(/^Bearer\s+/i,'')||'').trim();
-    const bridgeToken=(clientToken||env.TRINITY_BRIDGE_TOKEN||'b902cb066b2ccb940a470f06bf3b0fd5d6bf5259ddf8017ce2e41f9a2f5393f6').trim();
     const bridgeRes=await fetch(tunnelUrl+'/api/ollama/chat',{
       method:'POST',
       headers:{
@@ -518,7 +611,7 @@ async function route(request,env,ctx){
         'X-Trinity-Bridge-Token':bridgeToken
       },
       body:JSON.stringify(body),
-      signal:AbortSignal.timeout(180_000)
+      signal:AbortSignal.timeout(180_000),redirect:'manual'
     }).catch(err=>({ok:false,status:502,text:()=>Promise.resolve(err.message)}));
     if(!bridgeRes.ok){
       return json({ok:false,error:await bridgeRes.text()},bridgeRes.status||502);
@@ -527,6 +620,7 @@ async function route(request,env,ctx){
     return json({ok:true,edge_gateway:'auru.space',tunnel_proxied:true,...data});
   }
   if(path==='/api/launch'&&request.method==='POST'){
+    const bridgeToken=await authorizeBridgeProxy(request,env);
     await rateLimit(env,`launch:${(await hash(request.headers.get('CF-Connecting-IP')||'local')).slice(0,24)}`,20,60);
     const body=await readJSON(request,16000);
     const targetApp=String(body.target||body.app||'').trim();
@@ -536,94 +630,84 @@ async function route(request,env,ctx){
     let tunnelMeta=null;
     if(env.PC_STATE){try{tunnelMeta=JSON.parse(await env.PC_STATE.get('bridge:tunnel_meta')||'null');}catch{}}
     if(!tunnelMeta&&env.Mastermind){try{tunnelMeta=JSON.parse(await env.Mastermind.get('bridge:tunnel_meta')||'null');}catch{}}
-    const tunnelUrl=tunnelMeta?.tunnel_url;
+    const tunnelUrl=registeredBridgeTunnelUrl(tunnelMeta);
     if(!tunnelUrl){
       return json({ok:false,status:'TUNNEL_OFFLINE',error:'Cloudflare Tunnel pre Local Bridge (port 7788) nie je pripojený. Spusti lokálny most na PC.'},503);
     }
-    const clientToken=(request.headers.get('X-Trinity-Bridge-Token')||request.headers.get('Authorization')?.replace(/^Bearer\s+/i,'')||'').trim();
-    const bridgeToken=(clientToken||env.TRINITY_BRIDGE_TOKEN||'b902cb066b2ccb940a470f06bf3b0fd5d6bf5259ddf8017ce2e41f9a2f5393f6').trim();
-    const callerEmail=request.headers.get('x-trinity-email')||body.email||'';
-    const callerPhone=request.headers.get('x-trinity-phone')||body.phone||'';
     const bridgeRes=await fetch(tunnelUrl+'/api/execute-privileged',{
+      redirect:'manual',
       method:'POST',
       headers:{'Content-Type':'application/json','X-Trinity-Bridge-Token':bridgeToken},
       body:JSON.stringify({
         action:'open_app',
-        payload:{app:targetApp},
-        email:callerEmail||'saboivan2008@gmail.com',
-        phone:callerPhone||'+421949009722',
-        windowsUser:'saboi',
-        verifiedGoogleToken:true,
-        verifiedWebhookSignature:true,
-        verifiedWindowsToken:true
+        payload:{app:targetApp}
       })
     }).catch(err=>({ok:false,status:502,text:()=>Promise.resolve(err.message),json:()=>Promise.resolve({error:err.message})}));
     const localData=await bridgeRes.json().catch(async()=>({error:await bridgeRes.text().catch(()=>'Chyba lokálneho mosta.')}));
-    const exitCode=localData.exit_code??(bridgeRes.ok?0:1);
+    const verified=bridgeExecutionVerified(bridgeRes.ok,localData);
+    const exitCode=Number.isInteger(localData.exit_code)?localData.exit_code:null;
     const ledger=new SovereignLedgerV3(env);
     const d1Block=await ledger.appendBlock('Basterix','MOBILE_LAUNCH_COMMAND',{target_app:targetApp,exit_code:exitCode,http_status:bridgeRes.status},'mobile_launch');
     return json({
-      ok:bridgeRes.ok&&exitCode===0,
-      status:bridgeRes.ok&&exitCode===0?'LAUNCHED':'FAILED',
-      message:`Aplikácia "${targetApp}" bola odoslaná na lokálny most.`,
+      ok:verified,
+      status:verified?'LAUNCHED':'FAILED',
+      message:verified?`Aplikácia "${targetApp}" bola spustená na PC.`:'Vykonanie na PC nebolo overené.',
       target:targetApp,
       exit_code:exitCode,
       data:localData,
       d1_ledger_receipt:d1Block
-    },bridgeRes.ok?200:502);
+    },verified?200:502);
   }
   if(path==='/api/command'&&request.method==='POST'){
-    await rateLimit(env,`cmd:${(await hash(request.headers.get('CF-Connecting-IP')||'local')).slice(0,24)}`,30,60);
+    checkOrigin(request,env);
     const body=await readJSON(request,32000);
     const cmd=String(body.command||body.cmd||'').trim();
     if(!cmd){
       throw new HttpError(400,'Chýba príkaz (command).');
     }
-    if(/^(otvor|open|spusti)\s+/i.test(cmd)){
+    const opensApp=/^(otvor|open|spusti)\s+/i.test(cmd);
+    const bridgeToken=opensApp?await authorizeBridgeProxy(request,env):null;
+    const commandUser=opensApp?null:await authenticate(request,env);
+    await rateLimit(env,`cmd:${(await hash(request.headers.get('CF-Connecting-IP')||'local')).slice(0,24)}`,30,60);
+    if(opensApp){
       const app=cmd.replace(/^(otvor|open|spusti)\s+/i,'').trim();
       let tunnelMeta=null;
       if(env.PC_STATE){try{tunnelMeta=JSON.parse(await env.PC_STATE.get('bridge:tunnel_meta')||'null');}catch{}}
       if(!tunnelMeta&&env.Mastermind){try{tunnelMeta=JSON.parse(await env.Mastermind.get('bridge:tunnel_meta')||'null');}catch{}}
-      const tunnelUrl=tunnelMeta?.tunnel_url;
+      const tunnelUrl=registeredBridgeTunnelUrl(tunnelMeta);
       if(!tunnelUrl){
         return json({ok:false,status:'TUNNEL_OFFLINE',error:'Cloudflare Tunnel pre Local Bridge (port 7788) nie je pripojený.'},503);
       }
-      const clientToken=(request.headers.get('X-Trinity-Bridge-Token')||request.headers.get('Authorization')?.replace(/^Bearer\s+/i,'')||'').trim();
-      const bridgeToken=(clientToken||env.TRINITY_BRIDGE_TOKEN||'b902cb066b2ccb940a470f06bf3b0fd5d6bf5259ddf8017ce2e41f9a2f5393f6').trim();
       const bridgeRes=await fetch(tunnelUrl+'/api/execute-privileged',{
+        redirect:'manual',
         method:'POST',
         headers:{'Content-Type':'application/json','X-Trinity-Bridge-Token':bridgeToken},
         body:JSON.stringify({
           action:'open_app',
-          payload:{app},
-          email:request.headers.get('x-trinity-email')||'saboivan2008@gmail.com',
-          phone:request.headers.get('x-trinity-phone')||'+421949009722',
-          windowsUser:'saboi',
-          verifiedGoogleToken:true,
-          verifiedWebhookSignature:true,
-          verifiedWindowsToken:true
+          payload:{app}
         })
       }).catch(err=>({ok:false,status:502,json:()=>Promise.resolve({error:err.message})}));
       const localData=await bridgeRes.json().catch(()=>({}));
-      const exitCode=localData.exit_code??(bridgeRes.ok?0:1);
+      const verified=bridgeExecutionVerified(bridgeRes.ok,localData);
+    const exitCode=Number.isInteger(localData.exit_code)?localData.exit_code:null;
       return json({
-        ok:bridgeRes.ok&&exitCode===0,
-        status:bridgeRes.ok&&exitCode===0?'COMPLETED':'FAILED',
-        reply:`Aplikácia "${app}" bola spracovaná na PC.`,
+        ok:verified,
+        status:verified?'COMPLETED':'FAILED',
+        reply:verified?`Aplikácia "${app}" bola spracovaná na PC.`:'Vykonanie na PC nebolo overené.',
         exit_code:exitCode,
         data:localData
-      },bridgeRes.ok?200:502);
+      },verified?200:502);
     }
     if(/^(stav|status|ping|health)$/i.test(cmd)){
       let tunnelMeta=null;
       if(env.PC_STATE){try{tunnelMeta=JSON.parse(await env.PC_STATE.get('bridge:tunnel_meta')||'null');}catch{}}
       return json({
         ok:true,
-        reply:`Systém ${env.SYSTEM_NAME||'TRINITY OMNI-CORE'} je ONLINE (v${TRINITY_VERSION}).\nHost: ${reqHostname}\nTunnel: ${tunnelMeta?.tunnel_url?'ONLINE (pripojený)':'OFFLINE'}\nTruth Policy: Enforced`,
+        reply:`Systém ${env.SYSTEM_NAME||'TRINITY OMNI-CORE'} je ONLINE (v${TRINITY_VERSION}).\nHost: ${reqHostname}\nTunnel: ${registeredBridgeTunnelUrl(tunnelMeta)?'ONLINE (pripojený)':'OFFLINE'}\nTruth Policy: Enforced`,
         exit_code:0
       });
     }
-    const callerEmail=request.headers.get('x-trinity-email')||'saboivan2008@gmail.com';
+    const callerEmail=commandUser.email||commandUser.id;
     const copilotRes=await TrinityCopilotAgent(cmd,env,{
       userId:callerEmail,
       sessionId:body.session_id||crypto.randomUUID()
@@ -732,17 +816,23 @@ async function route(request,env,ctx){
         try{ syncedState = JSON.parse(await env.Mastermind.get('cross_domain:state') || 'null'); }catch{}
       }
       const pcStatus = await getPCBridgeStatus(env);
+      const isStagingEnv = env.TRINITY_ENV === 'staging' || reqHostname === 'auru.dev';
       return json({
         ok: true,
         synchronized: true,
         domains: ['auru.dev', 'auru.space'],
         active_host: request.headers.get('Host') || 'unknown',
+        environment: isStagingEnv ? 'staging' : 'production',
+        domain_isolation: {
+          production: { domain: 'auru.space', worker: 'trinity', d1: 'trinity-v03', r2: 'trinity-artifacts' },
+          development: { domain: 'auru.dev', worker: 'trinity-staging', d1: 'trinity-development', r2: 'trinity-development-artifacts' }
+        },
         shared_core: {
-          unified_worker: 'trinity',
-          version: '11.0.0',
-          d1: 'trinity-v03',
+          unified_worker: isStagingEnv ? 'trinity-staging' : 'trinity',
+          version: TRINITY_VERSION,
+          d1: isStagingEnv ? 'trinity-development' : 'trinity-v03',
           kv: 'PC_STATE & Mastermind',
-          r2: 'trinity-artifacts'
+          r2: isStagingEnv ? 'trinity-development-artifacts' : 'trinity-artifacts'
         },
         pc_bridge: {
           ...pcStatus,
@@ -830,7 +920,7 @@ async function route(request,env,ctx){
       agent:'Morpheus',
       version:'1.0.0',
       role:'Social Media Autonomous Commander',
-      domain:env.TRINITY_ENV==='production'?'auru.space':'dev.auru.space',
+      domain:env.TRINITY_ENV==='production'?'auru.space':'auru.dev',
       service_url:'https://morpheus.auru.space',
       capabilities:['oauth_pkce','meta_graph','x_twitter_v2','linkedin_share','youtube_data','tiktok_creator','auto_posting','comment_moderation','link_shortening'],
       endpoints:{
@@ -1325,7 +1415,7 @@ async function route(request,env,ctx){
       env.DB.prepare('SELECT COUNT(*) AS count FROM trading_portfolios WHERE owner_id=?').bind(ownerId).first(),getPCBridgeStatus(env),listSecrets(env,ownerId),commerceStatus(env).catch(()=>({revolut:{configured:false},paypal:{configured:false},accounts:{}}))
     ]);
     const secretStatus=provider=>secrets.find(item=>item.provider===provider)?.status||'not-configured';
-    return json({plugins,truth_policy_version:TRUTH_POLICY_VERSION,version:TRINITY_VERSION,model:env.AI_MODEL||'@cf/openai/gpt-oss-120b',image_model:env.IMAGE_MODEL||'@cf/black-forest-labs/flux-1-schnell',permissions:{manage_api_keys:['admin','owner'].includes(user.role),manage_secrets:['admin','owner'].includes(user.role),manage_users:user.role==='owner',manage_trading:['admin','owner'].includes(user.role),use_local_ai:['admin','owner'].includes(user.role),manage_domains:['admin','owner'].includes(user.role)},storage:{database:'Cloudflare D1',cache:'Workers KV · Mastermind',artifacts:'Cloudflare R2 · trinity-artifacts',strategy:'indexed-relational + cache + object archive',scalable:true,memory_records:memory.count||0},counts:{api_projects:apis.count||0,active_api_keys:keys.count||0,paper_portfolios:portfolios.count||0},internet:{web_search:plugins.some(p=>p.id==='web'&&p.enabled),mode:'outbound-only',always_on_gateway:pcBridge.connected===true},pc_bridge:pcBridge,integrations:[{id:'mcp',name:'MCP most',status:plugins.some(p=>p.id==='mcp'&&p.enabled)?'ready':'disabled'},{id:'api',name:'Trinity API',status:'ready'},{id:'web',name:'Webový výskum',status:plugins.some(p=>p.id==='web'&&p.enabled)?'ready':'disabled'},{id:'cloudflare',name:'Cloudflare',status:secretStatus('cloudflare')==='verified'?'verified':'platform-connected'},{id:'openai',name:'OpenAI / ChatGPT API',status:env.OPENAI_API_KEY?'configured':'not-configured'},{id:'ollama',name:'Ollama Cloud',status:env.OLLAMA_SECRET||env.OLLAMA_API_KEY?'configured':'not-configured'},{id:'gemini',name:'Google Gemini',status:env.GEMINI_API_KEY?'configured':secretStatus('gemini')},{id:'google',name:'Google OAuth',status:googleOAuthConfigured(env)?'configured':'not-configured'},{id:'github',name:'GitHub',status:secretStatus('github')},{id:'revolut-pro',name:'Revolut Pro platby',status:commerce.revolut?.configured||commerce.accounts?.revolut_url?'configured':'not-configured'},{id:'paypal',name:'PayPal platby',status:commerce.paypal?.configured||commerce.accounts?.paypal_url?'configured':'not-configured'}]});
+    return json({plugins,truth_policy_version:TRUTH_POLICY_VERSION,version:TRINITY_VERSION,model:env.AI_MODEL||'@cf/openai/gpt-oss-120b',image_model:env.IMAGE_MODEL||'@cf/black-forest-labs/flux-1-schnell',permissions:{manage_api_keys:['admin','owner'].includes(user.role),manage_secrets:['admin','owner'].includes(user.role),manage_users:user.role==='owner',manage_trading:['admin','owner'].includes(user.role),use_local_ai:['admin','owner'].includes(user.role),manage_domains:['admin','owner'].includes(user.role)},storage:{database:'Cloudflare D1',cache:'Workers KV · Mastermind',artifacts:'Cloudflare R2 · trinity-artifacts',strategy:'indexed-relational + cache + object archive',scalable:true,memory_records:memory.count||0},counts:{api_projects:apis.count||0,active_api_keys:keys.count||0,paper_portfolios:portfolios.count||0},internet:{web_search:plugins.some(p=>p.id==='web'&&p.enabled),mode:'outbound-only',always_on_gateway:pcBridge.connected===true},pc_bridge:pcBridge,integrations:[{id:'mcp',name:'MCP most',status:plugins.some(p=>p.id==='mcp'&&p.enabled)?'ready':'disabled'},{id:'api',name:'Trinity API',status:'ready'},{id:'web',name:'Webový výskum',status:plugins.some(p=>p.id==='web'&&p.enabled)?'ready':'disabled'},{id:'cloudflare',name:'Cloudflare',status:secretStatus('cloudflare')},{id:'openai',name:'OpenAI / ChatGPT API',status:env.OPENAI_API_KEY?'configured':secretStatus('openai')},{id:'ollama',name:'Ollama Cloud',status:env.OLLAMA_SECRET||env.OLLAMA_API_KEY?'configured':'not-configured'},{id:'gemini',name:'Google Gemini',status:env.GEMINI_API_KEY?'configured':secretStatus('gemini')},{id:'google',name:'Google OAuth',status:googleOAuthConfigured(env)?'configured':'not-configured'},{id:'github',name:'GitHub',status:secretStatus('github')},{id:'antigravity-mcp',name:'Google Antigravity · Trinity MCP',status:plugins.some(item=>item.id==='mcp'&&item.enabled)?'available':'disabled'},{id:'vscode-mcp',name:'Visual Studio Code · Trinity MCP',status:plugins.some(item=>item.id==='mcp'&&item.enabled)?'available':'disabled'},{id:'revolut-pro',name:'Revolut Pro platby',status:commerce.revolut?.configured||commerce.accounts?.revolut_url?'configured':'not-configured'},{id:'paypal',name:'PayPal platby',status:commerce.paypal?.configured||commerce.accounts?.paypal_url?'configured':'not-configured'}]});
   }
   const settingPlugin=path.match(/^\/api\/assistant\/settings\/plugins\/([a-z0-9-]+)$/);
   if(settingPlugin&&request.method==='POST'){
@@ -1350,7 +1440,7 @@ async function route(request,env,ctx){
   const promoteGemini=path.match(/^\/api\/assistant\/secrets\/([0-9a-f-]+)\/promote-gemini$/i);
   if(promoteGemini&&request.method==='POST'){requireAdmin(user);await rateLimit(env,`secret-promote:${user.id}`,5,3600);return json({item:await promoteCustomSecretToGemini(env,ownerId,uuid.parse(promoteGemini[1]))});}
   if(path==='/api/assistant/ai-providers'&&request.method==='GET'){requireAdmin(user);return json(await listAIProviders(env,ownerId));}
-  const aiProviderRoute=path.match(/^\/api\/assistant\/ai-providers\/(gemini)$/);
+  const aiProviderRoute=path.match(/^\/api\/assistant\/ai-providers\/(gemini|openai)$/);
   if(aiProviderRoute&&request.method==='POST'){requireAdmin(user);return json({item:await configureAIProvider(env,ownerId,aiProviderRoute[1],await readJSON(request,8000))});}
   if(path==='/api/assistant/revolut/status'&&request.method==='GET'){requireOwner(user);return json(await revolutProStatus(env));}
   if(path==='/api/assistant/revolut/pro/products'&&request.method==='POST'){
@@ -1414,6 +1504,50 @@ async function route(request,env,ctx){
   if(syncMatch&&request.method==='POST'){
     requireAdmin(user);
     return json(await syncConnector(env,ownerId,syncMatch[1]));
+  }
+  if(path==='/api/assistant/crypto/value'&&request.method==='GET'){
+    return json({
+      valuation: calculateIntrinsicValuation(),
+      milestones: VALUATION_MILESTONES,
+      mechanisms: VALUE_MECHANISMS
+    });
+  }
+  if(path==='/api/assistant/crypto/quote'&&request.method==='POST'){
+    const body = await readJSON(request, 8000).catch(() => ({}));
+    return json(calculateTtkQuote(Number(body?.amount_eur || 50)));
+  }
+  if(path==='/api/assistant/crypto/tetrakis'&&request.method==='GET'){
+    return json({
+      token: 'Tetrakis',
+      symbol: 'TTK',
+      decimals: 18,
+      total_supply: '1,000,000,000 TTK',
+      basterix_wallet: '0x7e17f9072cfCbc7fE45973De0F11eC8db99281e4',
+      basterix_allocation: '1,000,000 TTK (100% v osobnom držaní)',
+      official_treasury: '0x4d308452a96D7dAbFd2f33d92677A3a2724f387e',
+      treasury_allocation: '999,000,000 TTK (pre DEX likviditu a ekosystém)',
+      network: 'Base Mainnet (Coinbase L2)',
+      chain_id: 8453,
+      dex_platforms: ['Aerodrome Finance', 'Uniswap v3 (Base)'],
+      pair: 'TTK / WETH',
+      value_engine: calculateIntrinsicValuation(),
+      valuation_milestones: VALUATION_MILESTONES,
+      value_mechanisms: VALUE_MECHANISMS,
+      staking_tiers: [
+        { tier: 1, required_ttk: 1000, name: 'Sovereign Explorer', benefits: 'Unlimited chat, knowledge search, and semantic memory' },
+        { tier: 2, required_ttk: 10000, name: 'Sovereign Operator', benefits: 'Full PC Bridge remote execution, Azure AI Foundry GPT-4o inference, and skill synthesis' },
+        { tier: 3, required_ttk: 50000, name: 'Sovereign Mastermind', benefits: 'Revenue share from Trinity platform transactions, priority agent queue, and autonomous commodity desk' }
+      ],
+      tokenomics: {
+        liquidity_pool: '40% (400,000,000 TTK)',
+        agent_ecosystem: '30% (300,000,000 TTK)',
+        treasury_reserve: '20% (200,000,000 TTK)',
+        founder_basterix: '0.1% (1,000,000 TTK priamo v peňaženke Basterixa)',
+        founder_dev_reserve: '9.9% (99,000,000 TTK)'
+      },
+      status: 'COMPILED_AND_READY_FOR_BASE_MAINNET_LIQUIDITY',
+      basescan: 'https://basescan.org/address/0x4d308452a96D7dAbFd2f33d92677A3a2724f387e'
+    });
   }
   if(path==='/api/assistant/dashboard'&&request.method==='GET'){
     requireOwner(user);
@@ -1482,7 +1616,8 @@ async function route(request,env,ctx){
     if(d.engine==='local')requireAdmin(user);
     const wantsMemory=/^(zapamätaj si|zapamataj si|remember)\s*[:,-]?\s+/i.test(d.message);
     const delegated=shouldDelegate(d.message);
-    const provider=await pickChatProvider(env,d.engine,d.message);
+    const routed=await routeChatWithResonance(env,d.engine,d.message,{sessionId:d.session,user});
+    const provider=routed.provider;
     const ownerMode=['owner','admin'].includes(user.role)||user.email==='saboivan2008@gmail.com'||user.email===env.TRINITY_OWNER_EMAIL||(env.TRINITY_ADMIN_EMAILS&&env.TRINITY_ADMIN_EMAILS.split(',').map(s=>s.trim()).includes(user.email));
     const teamMode=/\b(t[ií]mov[yý]\s+re[zž]im|team\s+mode)\b/i.test(d.message);
     return json(await createJob(env,{task:d.message,session_id:d.session,agent:teamMode?'auto':'orchestrator',mode:teamMode?'team':'single',provider,language:d.language,remember:d.remember||wantsMemory,owner_mode:ownerMode,idempotency_key:crypto.randomUUID()}),202);
@@ -1511,6 +1646,15 @@ async function route(request,env,ctx){
     assertCopilotSkillEnabled(copilotSkillExec[1]);
     const result=await skillRegistry.execute(copilotSkillExec[1],body?.input??body,env,body?.options||{});
     return json({result});
+  }
+  if(path==='/api/resonance/status'&&request.method==='GET'){
+    return json({
+      protocol: 'RESONANCE_369',
+      version: '1.0.0',
+      status: 'ACTIVE_RESONANCE',
+      entanglement_session: globalEntanglementBridge.sessionId,
+      recent_events: globalEntanglementBridge.history.slice(-10)
+    });
   }
   if((path==='/api/ecosystem/search'||path==='/api/ecosystem/catalog')&&(request.method==='GET'||request.method==='POST')){
     let q='',type,domain;

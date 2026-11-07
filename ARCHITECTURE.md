@@ -64,7 +64,7 @@
 
 ### Layer 6: Zero-Trust Security & Ring 0 Sovereign Lock (Epiky 26 – 30)
 - **EP-26:** Zjednotené autorizačné jadro (`trinity-auth-core.js` / `trinity-auth-core.mjs`) – fail-closed overenie skutočného Windows SID (`/^S-1-5-21-\d+-\d+-\d+-\d+$/`) zo systémového tokenu `WindowsIdentity::GetCurrent()`, overeného Google OAuth tokenu (`verifiedGoogleToken: true`) a HMAC overeného Telecom kanála (`verifiedWebhookSignature: true`).
-- **EP-27:** Ring 0 Sovereign Lock (`sovereign-lock.js`) – zákaz autonómneho prepisu kódu bez podpísaného `ConsentEnvelope` od Basterixa.
+- **EP-27:** Ring 0 Sovereign Lock (`sovereign-lock.js`) – zákaz autonómneho prepisu kódu bez podpísaného `Consentelope` od Basterixa.
 - **EP-28:** Trvalé atomické úložisko spotrebovaných nonce (`ops_consumed_nonces` v D1 + KV + lokálny Disk Vault) proti Replay útokom aj po reštarte procesu.
 - **EP-29:** Data-Command Boundary – všetky externé správy (WhatsApp, Facebook, Instagram, web, e-mail) sú striktne `PASSIVE_DATA`.
 - **EP-30:** Path Traversal Guard a DACL Read-Only ochrana kritických súborov jadra (`PROTECTED_RING0_FILES`).

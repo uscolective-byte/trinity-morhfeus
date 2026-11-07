@@ -33,7 +33,7 @@ export async function storeSecret(env,ownerId,input){const data=secretInputSchem
 export async function verifyGitHub(secret){
   const repository='uscolective-byte/Trinity-antigravity';
   const headers={Authorization:`Bearer ${secret}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'Trinity-Integration-Hub'};
-  const options={headers,redirect:'error',signal:AbortSignal.timeout(15000)};
+  const options={headers,redirect:'manual',signal:AbortSignal.timeout(15000)};
   const [user,repo]=await Promise.all([
     fetch('https://api.github.com/user',options),
     fetch(`https://api.github.com/repos/${repository}`,options)
@@ -78,7 +78,7 @@ export async function verifyFirebase(secret,{fetcher=fetch}={}){
   const url=`https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents?pageSize=1`;
   const response=await fetcher(url,{
     headers:{Authorization:`Bearer ${token}`},
-    signal:AbortSignal.timeout(15000),redirect:'error'
+    signal:AbortSignal.timeout(15000),redirect:'manual'
   });
   if(!response.ok)throw new Error(`Firebase odmietol Firestore prístup (HTTP ${response.status}).`);
   return {connected:true,project_id:projectId,status:'verified',permission_verified:'read'};
@@ -86,7 +86,7 @@ export async function verifyFirebase(secret,{fetcher=fetch}={}){
 export async function verifyOpenAICompatible(url,secret,provider,{fetcher=fetch}={}){
   let response;
   try {
-    response=await fetcher(url,{headers:{Authorization:`Bearer ${secret}`},signal:AbortSignal.timeout(10000),redirect:'error'});
+    response=await fetcher(url,{headers:{Authorization:`Bearer ${secret}`},signal:AbortSignal.timeout(10000),redirect:'manual'});
   } catch {
     throw new Error(`${provider.toUpperCase()} pripojenie sa nepodarilo overiť. Token zostáva neoverený.`);
   }
@@ -102,7 +102,7 @@ export async function verifyAnthropic(secret,{fetcher=fetch}={}){
   try{
     response=await fetcher('https://api.anthropic.com/v1/models',{
       headers:{'x-api-key':secret,'anthropic-version':'2023-06-01'},
-      signal:AbortSignal.timeout(10000),redirect:'error'
+      signal:AbortSignal.timeout(10000),redirect:'manual'
     });
   }catch{throw new Error('Anthropic pripojenie sa nepodarilo overiť.');}
   if(!response.ok)throw new Error(`Anthropic odmietol overenie (HTTP ${response.status}).`);
@@ -120,7 +120,7 @@ export async function verifyTelegramBot(secret,{fetcher=fetch}={}){
   let response;
   try{
     response=await fetcher(`https://api.telegram.org/bot${secret}/getMe`,{
-      signal:AbortSignal.timeout(12000),redirect:'error'
+      signal:AbortSignal.timeout(12000),redirect:'manual'
     });
   }catch{throw new Error('Telegram Bot API je nedostupné; poverenie zostáva neoverené.');}
   const data=await response.json().catch(()=>null);
@@ -260,32 +260,41 @@ async function verifyDataverse(secret){
 export async function getSecretMaterial(env,{ownerId,id,provider}){const row=await env.DB.prepare("SELECT * FROM ops_secret_vault WHERE id=? AND owner_id=? AND provider=? AND status!='revoked'").bind(id,ownerId,provider).first();if(!row)throw new HttpError(404,'Tajomstvo neexistuje.');return {...row,secret:await decrypt(env,row)};}
 export async function resolveProviderSecret(env,provider){
   const envMap={
-    cloudflare:env?.CF_API_TOKEN||env?.CLOUDFLARE_API_TOKEN||env?.TRINITY_CF_TOKEN,
-    github:env?.TRINITY_GITHUB_TOKEN||env?.GITHUB_TOKEN||env?.GITHUBE_API_KEY||env?.GTH||env?.GITHUBE_FINE_TOKEN,
-    firecrawl:env?.FIRECRAWL_API_KEY||env?.TRINITY_FIRECRAWL_KEY||env?.firecrawl,
-    firebase:env?.FIREBASE_API_KEY||env?.FIREBASE_SERVICE_ACCOUNT||env?.TRINITY_FIREBASE_KEY,
-    supabase:env?.SUPABASE_KEY||env?.SUPABASE_SERVICE_ROLE_KEY,
-    vercel:env?.VERCEL_TOKEN,
-    telegram: env?.TELEGRAM_BOT_TOKEN || null,
-    slack:env?.SLACK_WEBHOOK_URL||env?.SLACK_BOT_TOKEN,
-    discord:env?.DISCORD_WEBHOOK_URL||env?.DISCORD_BOT_TOKEN,
-    notion:env?.NOTION_API_KEY||env?.notionaccess,
-    revolut:env?.REVOLUT_API_KEY||env?.REVOLUT_SECRET,
-    paypal:env?.PAYPAL_CLIENT_SECRET||env?.PAYPAL_API_KEY,
-    ollama:env?.OLLAMA_API_KEY||env?.OLLAMA_SECRET,
-    openai:env?.OPENAI_API_KEY,
-    gemini:env?.GEMINI_API_KEY||env?.apigoogle,
-    copilot:env?.COPILOT_API_TOKEN,
-    groq:env?.GROQ_API_KEY||env?.default_grok_default,
-    deepseek:env?.DEEPSEEK_API_KEY,
-    anthropic:env?.ANTHROPIC_API_KEY,
-    mistral:env?.MISTRAL_API_KEY,
-    openrouter:env?.OPENROUTER_API_KEY
+    cloudflare:[env?.CF_API_TOKEN,env?.CLOUDFLARE_API_TOKEN,env?.TRINITY_CF_TOKEN],
+    github:[env?.TRINITY_GITHUB_TOKEN,env?.GITHUB_TOKEN,env?.GITHUBE_API_KEY],
+    firecrawl:[env?.FIRECRAWL_API_KEY,env?.TRINITY_FIRECRAWL_KEY,env?.firecrawl],
+    firebase:[env?.FIREBASE_API_KEY,env?.FIREBASE_SERVICE_ACCOUNT,env?.TRINITY_FIREBASE_KEY],
+    supabase:[env?.SUPABASE_KEY,env?.SUPABASE_SERVICE_ROLE_KEY],
+    vercel:[env?.VERCEL_TOKEN],
+    telegram:[env?.TELEGRAM_BOT_TOKEN],
+    slack:[env?.SLACK_WEBHOOK_URL,env?.SLACK_BOT_TOKEN],
+    discord:[env?.DISCORD_WEBHOOK_URL,env?.DISCORD_BOT_TOKEN],
+    notion:[env?.NOTION_API_KEY,env?.notionaccess],
+    revolut:[env?.REVOLUT_API_KEY,env?.REVOLUT_SECRET],
+    paypal:[env?.PAYPAL_CLIENT_SECRET,env?.PAYPAL_API_KEY],
+    ollama:[env?.OLLAMA_API_KEY,env?.OLLAMA_SECRET],
+    openai:[env?.OPENAI_API_KEY],
+    gemini:[env?.GEMINI_API_KEY,env?.apigoogle],
+    copilot:[env?.COPILOT_API_TOKEN],
+    groq:[env?.GROQ_API_KEY],
+    deepseek:[env?.DEEPSEEK_API_KEY],
+    anthropic:[env?.ANTHROPIC_API_KEY],
+    mistral:[env?.MISTRAL_API_KEY],
+    openrouter:[env?.OPENROUTER_API_KEY]
   };
-    if(envMap[provider]&&typeof envMap[provider].get==='function'){
-    try{const val=await envMap[provider].get();if(val&&typeof val==='string')return val.trim();}catch{}
+  const candidates=Array.isArray(envMap[provider])?envMap[provider]:[];
+  for(const candidate of candidates){
+    if(candidate&&typeof candidate.get==='function'){
+      try{
+        const val=await candidate.get();
+        if(typeof val==='string'&&val.trim())return val.trim();
+      }catch{}
+      continue;
+    }
+    if(typeof candidate==='string'&&candidate.trim())return candidate.trim();
   }
-  if(typeof envMap[provider]==='string'&&envMap[provider].trim())return envMap[provider].trim();
+  // Fail closed: broad or provider-generic secret names are not available to the
+  // shared chat worker and must never be surfaced as routine provider credentials.
   // Account-level Secrets Store is opt-in and staging-only initially.
   // This resolver is not exposed as an arbitrary read-secret API.
   const masterSecret=await readTrinityMasterSecret(env,provider);

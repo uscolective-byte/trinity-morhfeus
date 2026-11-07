@@ -1,0 +1,20 @@
+name = "trinity-ops"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "production"
+DESKTOP_COMMANDER_URL = "https://agent.auru.dev/health"
+DESKTOP_COMMANDER_FALLBACK_URL = "https://agent.aura.dev/health"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[[services]]
+binding = "TRINITY_SENTINEL"
+service = "trinity-sentinel"
+
+[[services]]
+binding = "TRINITY_AUDIT"
+service = "trinity-audit"

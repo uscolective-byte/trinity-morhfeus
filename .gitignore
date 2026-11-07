@@ -9,8 +9,7 @@ Zaznamy/
 Referencie/
 Prototypy/
 *.dpapi
-.env
-.env.*
+
 Local-Desktop/Data/
 Local-Desktop/runtime/
 Local-Desktop/Workspace/
@@ -43,12 +42,72 @@ trinity-mcp-bridge/logs/
 opencode.json
 
 
-**/.env
-**/.env.*
+**/.
+**/..*
 *service-account*.json
 .trinity-consumed-nonces.json
+Trinity/workspace/scripts/*.cmd
+Trinity/workspace/scripts/*.ps1
 
 .bin/
 Local-Gateway/data/
 **/.gemini/
 **/.mcp.json
+Trinity bruno/
+**/bruno/
+
+# Local staging dry-run output
+/Trinity/dist-staging/
+/Trinity/dist-production/
+/dist-audit/
+/dist-test/
+/dist-test-staging/
+**/dist-*/
+*.bak
+
+Trinity/workspace/receipt-test/
+
+# Next.js build and cache directory
+.next/
+
+# Archive scratch templates and experiments
+/Archive/templates/
+/Archive/experiments/
+
+# Local secrets and environment variables
+.env
+.env*.local
+
+# User profile artifacts leaked into workspace root
+/.aitk/
+/.cache/
+/.cargo/
+/.claude-server-commander/
+/.claude.json
+/.cline/
+/.config/
+/.desktop-commander-device/
+/.dotnet/
+/.gitconfig
+/.github-copilot-cli/
+/.idlerc/
+/.local/
+/.npmrc
+/.nuget/
+/.ollama/
+/.redhat/
+/.vscode-shared/
+/.vscode/argv.json
+/.vscode/cli/
+/.vscode/extensions/
+/.wakatime.cfg
+/.wakatime/
+/Links/
+/roboflow/
+/Trinity/{
+/Trinity/2026-11-03/
+/Trinity/chatgpt_*
+/src/worker.js
+/schema.sql
+/migrations/
+/.vscode/agent-plugins/

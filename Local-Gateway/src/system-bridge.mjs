@@ -18,6 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { timingSafeEqual, createHash } from 'node:crypto';
+import { configuredBridgeToken } from '../../packages/contracts/src/bridge-auth.js';
 import {
   ROOT_REGISTRY,
   inspectWindowsSession,
@@ -98,27 +99,12 @@ loadDotEnvIfPresent(path.join(workspaceRoot, '.env'));
 const digest = value => createHash('sha256').update(String(value || '')).digest();
 
 function isBridgeTokenAuthorized(request) {
-  const expectedToken = (process.env.TRINITY_BRIDGE_TOKEN || process.env.TRINITY_LOCAL_TOKEN || '').trim();
-  const headerToken = (
-    request.headers['x-trinity-bridge-token'] ||
-    request.headers.authorization?.replace(/^Bearer\s+/i, '') ||
-    ''
-  ).trim();
-  if (!headerToken) return false;
-  if (
-    headerToken === 'b902cb066b2ccb940a470f06bf3b0fd5d6bf5259ddf8017ce2e41f9a2f5393f6' ||
-    headerToken === 'bd13b0b7a9874235dece0b5fa3fa9153b5d0ec6990072ee504d4cd8e1c68e4f8' ||
-    (Boolean(expectedToken) && headerToken === expectedToken) ||
-    headerToken.startsWith('trinity-local-')
-  ) {
-    return true;
-  }
-  const headerDigest = digest(headerToken);
-  if (headerDigest.toString('hex') === 'bd13b0b7a9874235dece0b5fa3fa9153b5d0ec6990072ee504d4cd8e1c68e4f8') {
-    return true;
-  }
-  if (!expectedToken) return false;
-  return timingSafeEqual(headerDigest, digest(expectedToken));
+  const expectedToken = configuredBridgeToken(process.env);
+  const rawToken = request.headers['x-trinity-bridge-token'] || request.headers.authorization?.replace(/^Bearer\s+/i, '') || '';
+  if (!expectedToken || typeof rawToken !== 'string') return false;
+  const headerToken = rawToken.trim();
+  if (!headerToken || headerToken.length > 2048) return false;
+  return timingSafeEqual(digest(headerToken), digest(expectedToken));
 }
 
 function sendJson(response, status, data) {
@@ -164,7 +150,7 @@ export async function createSystemBridgeServer(options = {}) {
       }
 
       const url = new URL(request.url, 'http://127.0.0.1:7788');
-      const winSession = inspectWindowsSession();
+      const winSession = inspectWindowsSession(options.windowsSession || null);
 
       // 1. Public / Local Health & Status Check
       if ((request.method === 'GET' || request.method === 'HEAD') && (url.pathname === '/health' || url.pathname === '/api/status' || url.pathname === '/api/auth/status' || url.pathname === '/api/bridge' || url.pathname === '/api/bridge/status')) {
@@ -319,25 +305,43 @@ export async function createSystemBridgeServer(options = {}) {
           verifiedWebhookSignature: input.verifiedWebhookSignature === true && tokenOk,
           verifiedWindowsToken: input.verifiedWindowsToken === true && tokenOk,
           sid: input.sid || winSession.sid,
+          windowsSession: options.windowsSession || null,
           checkLocalWindows: tokenOk && !input.email && !input.phone && !input.windowsUser
         };
 
         const result = await executePrivileged(
           authContext,
-          { action: input.action || 'READ_WORKSPACE', target: input.payload?.path || input.payload?.app || input.action },
+          { action: input.action || 'READ_WORKSPACE', target: input.payload?.path || input.payload?.app || input.payload?.target || input.action },
           async verifiedAuth => {
             if (input.action === 'open_app' || input.action === 'e2e_truth_verify') {
-              const appToOpen = input.payload?.app || null;
+              const rawApp = input.payload?.app || input.payload?.target || null;
+              const appMap = {
+                calculator:'calculator',calc:'calculator',kalkulacka:'calculator',
+                notepad:'notepad',poznamkovyblok:'notepad',
+                paint:'paint',skicar:'paint',
+                explorer:'explorer',prieskumnik:'explorer',
+                chrome:'chrome',edge:'edge',
+                whatsapp:'whatsapp',watsap:'whatsapp',
+                vscode:'vscode',code:'vscode',
+                terminal:'terminal',powershell:'terminal',cmd:'terminal',
+                cmder:'cmder',commander:'commander',
+                browser:'browser',prehliadac:'browser'
+              };
+              let appToOpen = null;
+              if (rawApp) {
+                const clean = String(rawApp).toLowerCase().replace(/[^a-z]/g, '');
+                appToOpen = appMap[clean] || rawApp;
+              }
               let appResult = null;
               if (appToOpen) {
                 try {
                   appResult = await executeDesktop({ task: 'desktop-control', operation: 'launch', app: appToOpen });
                 } catch (err) {
-                  const windows = await listDesktopWindows();
+                  const windows = await listDesktopWindows().catch(() => []);
                   appResult = { operation: 'launch_fallback_list', app: appToOpen, note: err.message, active_windows_count: windows.length };
                 }
               } else {
-                const windows = await listDesktopWindows();
+                const windows = await listDesktopWindows().catch(() => []);
                 appResult = { operation: 'list', active_windows_count: windows.length, sample_windows: windows.slice(0, 5) };
               }
               const localLedger = appendLocalSovereignLedger(targetDataDir, {
@@ -358,6 +362,7 @@ export async function createSystemBridgeServer(options = {}) {
                 windows_sid: winSession.sid,
                 os_token_verified: winSession.osTokenVerified,
                 app_execution: appResult,
+                receipt: { action: 'open_app', target: appToOpen, desktop: appResult, success: !appResult?.note },
                 local_ledger_receipt: localLedger,
                 executed_at: new Date().toISOString()
               };

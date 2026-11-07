@@ -90,8 +90,8 @@ test('Copilot Plugin Registry exposes all built-in and extended plugins', () => 
   assert.ok(pluginIds.includes('cloud-worker-ops'));
 });
 
-test('All 45 Trinity agent roles have access to execute_skill, copilot_chat, ecosystem_synthesize, ecosystem_search', () => {
-  assert.equal(AGENTS.length, 45);
+test('All 46 Trinity agent roles have access to execute_skill, copilot_chat, ecosystem_synthesize, ecosystem_search', () => {
+  assert.equal(AGENTS.length, 46);
   for (const agent of AGENTS) {
     assert.ok(agent.tools.includes('execute_skill'), `${agent.id} missing execute_skill`);
     assert.ok(agent.tools.includes('copilot_chat'), `${agent.id} missing copilot_chat`);

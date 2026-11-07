@@ -7,7 +7,11 @@ import {
   inspectWindowsSession,
   verifyTrinityIdentity,
   executePrivileged,
-  validateSovereignCharterCompliance
+  validateSovereignCharterCompliance,
+  idHash,
+  idHashSync,
+  toCanonicalPhone,
+  toCanonicalIdentity
 } from '../src/trinity-auth-core.js';
 import { SovereignLedgerV3 } from '../src/sovereign-core-v3.js';
 
@@ -210,4 +214,56 @@ test('SOVEREIGN_LEGAL_CHARTER_20 obsahuje všetkých 20 právnych doložiek a pr
   assert.equal(check.compliant, true);
   assert.equal(check.clauses_count, 20);
   assert.equal(check.sole_owner, 'Basterix');
+});
+
+
+test('HMAC Identity Security: idHash (Web Crypto) a idHashSync (node:crypto) generujú identický HMAC-SHA256', async () => {
+  const secretKey = 'super-secret-identity-hmac-key-2026';
+  const val = '+421949009722';
+  const asyncHash = await idHash(val, secretKey);
+  const syncHash = idHashSync(val, secretKey);
+  assert.equal(asyncHash.length, 64, 'SHA-256 HMAC must be 64 hex characters');
+  assert.equal(asyncHash, syncHash, 'Async Web Crypto and Sync Node Crypto HMAC must match exactly');
+});
+
+test('HMAC Identity Security: toCanonicalPhone zjednocuje čísla na kanonický formát +421...', () => {
+  assert.equal(toCanonicalPhone('0949009722'), '+421949009722');
+  assert.equal(toCanonicalPhone('+421 949 009 722'), '+421949009722');
+  assert.equal(toCanonicalPhone('0949515777'), '+421949515777');
+  assert.equal(toCanonicalPhone('+421949515777'), '+421949515777');
+});
+
+test('HMAC Identity Security: Worker secrets (IDENTITY_HMAC_KEY a ROOT_ID_HASHES) overujú identitu bez plain-textu', async () => {
+  const secretKey = 'prod-hmac-secret-trinity-2026';
+  const canonicalPhone = '+421949009722';
+  const canonicalEmail = 'saboivan2008@gmail.com';
+
+  const phoneHash = idHashSync(canonicalPhone, secretKey);
+  const emailHash = idHashSync(canonicalEmail, secretKey);
+
+  const mockEnv = {
+    IDENTITY_HMAC_KEY: secretKey,
+    ROOT_ID_HASHES: `${phoneHash},${emailHash}`
+  };
+
+  // 1. Správny e-mail + overený token -> BASTERIX_ROOT
+  const validEmail = verifyTrinityIdentity({ email: canonicalEmail, verifiedGoogleToken: true }, mockEnv);
+  assert.equal(validEmail.isRoot, true);
+  assert.equal(validEmail.role, 'BASTERIX_ROOT');
+
+  // 2. Správny e-mail, ale CHÝBA token -> FAIL-CLOSED GUEST_USER
+  const unverifiedEmail = verifyTrinityIdentity({ email: canonicalEmail, verifiedGoogleToken: false }, mockEnv);
+  assert.equal(unverifiedEmail.isRoot, false);
+  assert.equal(unverifiedEmail.role, 'GUEST_USER');
+
+  // 3. Vstup s lokálnym číslom 0949009722 sa normalizuje na +421949009722 a overí proti HMAC hashu
+  const validPhone = verifyTrinityIdentity({ phone: '0949009722', verifiedWebhookSignature: true }, mockEnv);
+  assert.equal(validPhone.isRoot, true);
+  assert.equal(validPhone.role, 'BASTERIX_ROOT');
+
+  // 4. Cudzie telefónne číslo (nezodpovedá žiadnemu hashu v ROOT_ID_HASHES) -> REJECTED
+  const unknownPhone = verifyTrinityIdentity({ phone: '+421905999888', verifiedWebhookSignature: true }, mockEnv);
+  assert.equal(unknownPhone.isRoot, false);
+  assert.equal(unknownPhone.role, 'GUEST_USER');
+  assert.equal(unknownPhone.reason, 'UNAUTHORIZED_PHONE_NUMBER');
 });

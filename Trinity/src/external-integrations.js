@@ -122,7 +122,7 @@ export async function manageGitHub(env, actor = 'trinity', action = 'status', pa
       let authenticated=false;
       if(token&&resp.ok){
         try{
-          const identity=await fetch('https://api.github.com/user',{headers,redirect:'error',signal:AbortSignal.timeout(12000)});
+          const identity=await fetch('https://api.github.com/user',{headers,redirect:'manual',signal:AbortSignal.timeout(12000)});
           authenticated=identity.ok;
         }catch{authenticated=false;}
       }
@@ -478,7 +478,7 @@ export async function manageFirebase(env, actor = 'trinity', action = 'status', 
           headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
           body:JSON.stringify({fields:firestoreFields}),
           signal:AbortSignal.timeout(15000),
-          redirect:'error'
+          redirect:'manual'
         });
         firestoreHttpStatus = response.status;
         firestoreWritten = response.ok;

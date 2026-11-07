@@ -13,7 +13,7 @@ test('missing credentials fail before external calls',async()=>{
 });
 test('scrape uses v2 markdown API and preserves source in knowledge text',async()=>{
  const result=await scrape({FIRECRAWL_API_KEY:'test-only-key'}, {url:'https://firebase.google.com/docs/'},async(url,opts)=>{
-  assert.equal(url,'https://api.firecrawl.dev/v2/scrape');assert.equal(opts.redirect,'error');
+  assert.equal(url,'https://api.firecrawl.dev/v2/scrape');assert.equal(opts.redirect,'manual');
   assert.deepEqual(JSON.parse(opts.body).formats,['markdown']);
   return Response.json({success:true,data:{markdown:'Firebase documentation',metadata:{title:'Firebase'}}});
  });

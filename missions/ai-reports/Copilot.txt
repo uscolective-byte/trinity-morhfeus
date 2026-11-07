@@ -1,0 +1,1 @@
+Dedicated provider adapter not configured in this script. Use the shared mission file.

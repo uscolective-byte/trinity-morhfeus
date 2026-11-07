@@ -15,7 +15,9 @@ class CryptoVault:
     def __init__(self, master_key: Optional[str] = None):
         raw_key = master_key or os.getenv("MORPHEUS_VAULT_KEY")
         if not raw_key:
-            raw_key = os.getenv("TRINITY_VAULT_KEY", "trinity-morpheus-secure-vault-master-key-32b!")
+            raw_key = os.getenv("TRINITY_VAULT_KEY")
+        if not raw_key or not raw_key.strip():
+            raise RuntimeError("Configure MORPHEUS_VAULT_KEY or TRINITY_VAULT_KEY before starting Morpheus")
 
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),

@@ -61,5 +61,12 @@ export default class KnowledgeService extends WorkerEntrypoint {
   async refresh(id){const doc=await download(id);return this.store().put(doc,'catalog-fetch',doc.url);}
   search(query){return this.store().search(query);}
   getDocument(id){if(typeof id!=='string'||id.length>80)throw new Error('Invalid source id');return this.store().get(id);}
-  fetch(){return new Response('Not found',{status:404});}
+  async fetch(request){
+    const url = new URL(request.url);
+    if(request.method==='GET'&&url.pathname==='/health'){
+      const s = await this.getStatus();
+      return Response.json({ok:true,service:'trinity-knowledge',version:'2.1.0',status:'healthy',...s});
+    }
+    return new Response('Not found',{status:404});
+  }
 }

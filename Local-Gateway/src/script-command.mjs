@@ -37,7 +37,7 @@ export async function scriptCommand(root,payload,{platform=process.platform,pyth
   const args=payload.args??[];
   if(!Array.isArray(args)||args.length>20||args.some(a=>typeof a!=='string'||a.length>2000||/[\0\r\n]/.test(a)))throw new Error('Neplatné argumenty skriptu.');
   const timeoutMs=payload.timeout_ms??30000;
-  if(!Number.isInteger(timeoutMs)||timeoutMs<1000||timeoutMs>120000)throw new Error('Neplatný časový limit.');
+  if(!Number.isInteger(timeoutMs)||timeoutMs<1000||timeoutMs>600000)throw new Error('Neplatný časový limit.');
   let invocation;
   if(payload.runtime==='node')invocation={command:node,args:['--',target,...args]};
   if(payload.runtime==='python')invocation={command:python,args:['-I','-u',target,...args]};

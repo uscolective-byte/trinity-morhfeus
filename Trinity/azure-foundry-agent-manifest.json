@@ -1,0 +1,64 @@
+{
+  "$schema": "https://azure.microsoft.com/schemas/azure-ai/agent/v1.json",
+  "id": "agent-azure-trinity-lead-developer",
+  "name": "trinity-lead-developer",
+  "displayName": "Trinity Lead Developer Agent (Azure Foundry)",
+  "version": "1.0.0",
+  "description": "Autonómny vývojársky agent pre ekosystém Trinity na Microsoft Azure AI Foundry.",
+  "model": {
+    "deploymentName": "gpt-4o",
+    "provider": "azure_openai",
+    "region": "australiacentral"
+  },
+  "azureEnvironment": {
+    "tenantId": "ad443c2d-5bac-46b3-ad16-187e4ca37962",
+    "resourceGroup": "DA-RG-australiacentral",
+    "resourceName": "saboivan2008-0459-resource",
+    "projectName": "saboivan2008-0459",
+    "projectEndpoint": "https://saboivan2008-0459-resource.services.ai.azure.com/api/projects/saboivan2008-0459",
+    "inferenceEndpoint": "https://saboivan2008-0459-resource.services.ai.azure.com/models"
+  },
+  "instructions": "You are Trinity Lead Developer Agent running on Microsoft Azure AI Foundry in sovereign collaboration with Basterix (Root Architect) and Antigravity.\nYou specialize in developing, analyzing, refactoring, and maintaining the TRINITY OMNI-CORE ecosystem (Cloudflare Edge, Local Desktop, Windows Gateway, and Sovereign Ledger v3).\nYou enforce Truth Policy 2.1: NO RECEIPT = NO SUCCESS, NO EVIDENCE = NO FACT.\nYou ground all responses in the authoritative trinity-omni-knowledge index and use Trinity MCP tools for verified execution.\nYou communicate clearly, concisely, and support Slovak and English.",
+  "knowledgeIndex": {
+    "indexName": "trinity-omni-knowledge",
+    "type": "azure_ai_search",
+    "targetCollections": [
+      "contracts",
+      "architecture",
+      "openapi_pentad",
+      "ledger_history",
+      "skills_registry"
+    ],
+    "vectorDimensions": 1536,
+    "distanceMetric": "cosine"
+  },
+  "tools": [
+    {
+      "type": "azure_ai_search",
+      "name": "knowledge_search",
+      "description": "Prehľadá autoritatívne indexované znalosti architektúry a zmlúv Trinity."
+    },
+    {
+      "type": "code_interpreter",
+      "name": "python_analyzer",
+      "description": "Vykonáva analytické výpočty, overovanie dát a syntaktickú kontrolu."
+    },
+    {
+      "type": "openapi",
+      "name": "trinity_mcp_pentad",
+      "description": "Priame volanie Trinity MCP Gateway (https://auru.space/api/openapi.json)."
+    },
+    {
+      "type": "function",
+      "name": "antigravity_bridge",
+      "description": "Volanie Antigravity agentic tool suite (read_file, write_file, edit_file, run_command)."
+    }
+  ],
+  "metadata": {
+    "trinity_version": "11.1.0",
+    "created_by": "Basterix & Antigravity",
+    "truth_policy": "2.1",
+    "generated_at": "2026-11-06T13:02:11.195Z"
+  },
+  "checksum": "sha256:e5921c0230fc0ed3c6548442eaf4f06149867a5c47ec6ee9ab41486e84314ef5"
+}

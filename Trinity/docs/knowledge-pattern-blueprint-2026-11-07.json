@@ -1,0 +1,108 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2026-11-07",
+  "purpose": "Read-only architecture and evidence blueprint for Trinity analysis",
+  "provenance": {
+    "source_repository": "uscolective-byte/Trinity-antigravity",
+    "source_branch": "main",
+    "source_commit_at_audit_start": "c041a7bf9ae573c7031ae13ef4cca6a2a0e12727",
+    "canonical_wrangler_config": "wrangler.jsonc",
+    "canonical_worker_entry": "src/index.ts",
+    "worker_entry_target": "Trinity/src/index.js",
+    "production_database_schema_snapshot": "Trinity/schema.sql",
+    "database_snapshot_mode": "remote schema only; no row data exported"
+  },
+  "collaboration_roles": {
+    "codex": "application code architecture, refactoring and verification",
+    "antigravity": "Cloudflare infrastructure, Wrangler configuration, account resources, pipeline and Git synchronization",
+    "trinity": "strictly read-only analysis, pattern learning and knowledge summary"
+  },
+  "environments": {
+    "production": {
+      "wrangler_environment": "top-level default environment",
+      "worker_name": "trinity",
+      "primary_domain": "aura.space",
+      "version_label": "3.5.0-production",
+      "verified": ["Wrangler 4.158.0 dry-run build passed"]
+    },
+    "staging": {
+      "wrangler_environment": "staging",
+      "worker_name": "trinity-sovereign-staging",
+      "primary_domain": "aura.dev",
+      "version_label": "3.5.0-staging",
+      "verified": ["Wrangler 4.158.0 dry-run build passed"]
+    }
+  },
+  "runtime_topology": {
+    "gateway": "Cloudflare Worker trinity routes requests through the canonical Trinity/src/index.js router",
+    "inference": "CHAT_INFERENCE_SERVICE / INFERENCE_SERVICE bindings connect to trinity-chat-inference; core service fallback order is Llama 3.3 70B, DeepSeek R1, then Llama 3.1 8B",
+    "d1_migrations": {
+      "directory": "Trinity/migrations",
+      "count_at_generation": 59,
+      "production_schema_export": "Trinity/schema.sql"
+    },
+    "production_bindings": {
+      "d1": ["trinity-v03", "trinity-db", "trinity-pc-bridge", "trinity-tap-production"],
+      "kv_bindings": ["PC_STATE", "Mastermind", "TRINITY_KV"],
+      "vectorize": ["trinity-vector-index", "aura-memory"],
+      "r2": ["trinity-artifacts", "trinity-tap-evidence-production"],
+      "workers_ai": true,
+      "service_workers": ["trinity-core", "trinity-builder", "trinity-dispatcher", "trinity-chat-inference", "trinity-guardian", "trinity-knowledge", "trinity-integrations", "trinity-memory", "trinity-sentinel", "trinity-skills", "trinity-ops", "trinity-deployer", "trinity-seeder", "trinity-agent-researcher", "trinity-gemini", "trinity-chat-maintainer", "trinity-pc-bridge-v2", "trinity-pc-bridge", "trinity-profile", "aura_analyzer", "aura_architect", "aura_codegen", "aura_deployer", "aura_evolver", "aura_memory", "aura_optimizer", "aura_planner", "aura_sentinel", "aura_tester", "jericho123", "trinity-capacity", "trinity-audit"]
+    },
+    "staging_bindings": {
+      "d1": ["trinity-tap-staging", "trinity-development"],
+      "kv_bindings": ["KV", "AURA_CACHE", "PC_STATE"],
+      "vectorize": ["trinity-vector-index-staging", "aura-memory-staging"],
+      "r2": ["trinity-staging-artifacts", "trinity-tap-evidence-staging", "aura-workspace"],
+      "workers_ai": true,
+      "service_workers": ["trinity-core", "trinity-builder", "trinity-dispatcher", "trinity-chat-inference", "trinity-guardian", "trinity-knowledge", "trinity-integrations"]
+    },
+    "fleet": {
+      "cloudflare_worker_script_count": 46,
+      "all_scripts_individually_built": false,
+      "note": "Only the canonical Trinity gateway builds above are verified here; other independent Worker targets remain Antigravity's infrastructure/build audit."
+    }
+  },
+  "mcp_access": {
+    "policy": "Cloudflare Access service-token policy; no public bypass",
+    "verified_endpoints": ["https://auru.space/mcp initialize HTTP 200", "tools/list HTTP 200 with 42 tools"],
+    "credential_values_included": false
+  },
+  "code_patterns_and_findings": [
+    {
+      "area": "task_dispatch",
+      "pattern": "D1 mutations must validate identifiers and enum values, check affected row count, and avoid swallowing database failures.",
+      "state": "dispatcher candidate updated and covered by focused test"
+    },
+    {
+      "area": "worker_runtime_safety",
+      "pattern": "Avoid eval/Function in Workers; use a bounded parser for arithmetic expressions.",
+      "state": "core calculator replaced and covered by focused test"
+    },
+    {
+      "area": "model_fallback_truthfulness",
+      "pattern": "Persist/report the actual selected model and surface the final fallback error, not the first provider error.",
+      "state": "core candidate updated"
+    },
+    {
+      "area": "binding_health",
+      "pattern": "Missing required bindings are configuration failures (503); exhausted or unusable providers are upstream failures (502).",
+      "state": "builder and Guardian candidates updated"
+    }
+  ],
+  "release_blockers": [
+    "Workspace contains extensive user changes and untracked repositories/templates; no clean synchronized release candidate exists.",
+    "Trinity/package.json currently has a destructive local diff that removes the original build/test scripts, dependencies and Wrangler 4 pin. The verified deploy.ps1 avoids that manifest and invokes the supported steps explicitly; reconciliation remains assigned to Antigravity.",
+    "Untracked Trinity/wrangler.toml and Trinity/src/index.ts conflict with the canonical root wrangler.jsonc and root src/index.ts entry. Use the canonical config explicitly; do not deploy from Trinity/ with implicit config selection.",
+    "Untracked trinity-profile has unresolved authentication, authorization, CORS, response-leak and binding risks; do not deploy it.",
+    "The 46-script Cloudflare fleet has not received per-worker dry-run verification in this run.",
+    "No merge, commit, Worker deployment, or remote D1 migration was performed."
+  ],
+  "verification": {
+    "focused_runtime_tests": {"passed": 9, "failed": 0},
+    "trinity_full_tests": {"passed": 930, "failed": 0},
+    "staging_dry_run": "passed",
+    "production_dry_run": "passed",
+    "release_deploy": "not performed"
+  }
+}

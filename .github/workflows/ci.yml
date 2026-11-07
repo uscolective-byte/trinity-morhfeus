@@ -1,0 +1,38 @@
+name: Trinity CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Full Test Suite & Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          npm ci --ignore-scripts
+          npm --prefix packages/contracts ci --ignore-scripts
+          npm --prefix Jericho-Worker ci
+          npm --prefix contracts/tetrakis ci
+          npm --prefix Trinity ci
+
+      - name: Run Full Test Suite
+        run: npm test
+
+      - name: Validate Cloudflare Secrets Store metadata
+        run: node Trinity/scripts/secrets-store-doctor.mjs

@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "system": "TRINITY_SOVEREIGN_CORE",
+  "version": "3.5.0-production",
+  "timestamp": "2026-11-07T04:54:00Z",
+  "architecture": {
+    "runtime": "Cloudflare Workers (Edge)",
+    "kernel": "src/worker.js",
+    "deployment_pipeline": "deploy.ps1",
+    "config": "wrangler.jsonc",
+    "schema": "schema.sql"
+  },
+  "triad_roles": {
+    "antigravity": {
+      "role": "Active Infra & Pipeline Engineer",
+      "scope": ["wrangler.jsonc", "deploy.ps1", "D1", "KV", "Vectorize", "R2", "Git", "Pipelines"],
+      "status": "OPERATIONAL"
+    },
+    "codex_gpt": {
+      "role": "Active Code Architect & Refactorer",
+      "scope": ["src/worker.js", "Zod Contracts", "Inference Cascade", "SSE Sanitizer", "Worker Cluster"],
+      "status": "OPERATIONAL"
+    },
+    "trinity": {
+      "role": "Passive Observer, Pattern Analyst & Continuous Learner",
+      "scope": ["Learning Synthesizer", "Anomaly Detection", "Knowledge Graph", "Read-Only Memory"],
+      "mode": "STRICT_READ_ONLY",
+      "status": "ACTIVE_LEARNING"
+    }
+  },
+  "environments": {
+    "staging": {
+      "domains": ["aura.dev", "auru.dev"],
+      "database": {
+        "primary": "trinity-tap-staging (1b7dc157-b717-4aa3-9dbe-1fb155fbb7e2)",
+        "secondary": "trinity-development (1cce5249-e044-4c93-868c-0df534a778b5)"
+      },
+      "kv": {
+        "state": "trinity-staging-state (76f5a49c1225477db2bab019fdc2a50d)",
+        "cache": "trinity-code-staging (f0d47ff4cbcd4b238b12d323b70c0a77)",
+        "pc_state": "trinity-pc-state-staging (7335f27a99574fe097010cec9c602cb6)"
+      },
+      "vectorize": {
+        "primary": "trinity-vector-index-staging (768d cosine)",
+        "memory": "aura-memory-staging (768d cosine)"
+      },
+      "r2": {
+        "artifacts": "trinity-staging-artifacts",
+        "evidence": "trinity-tap-evidence-staging",
+        "workspace": "aura-workspace"
+      }
+    },
+    "production": {
+      "domains": ["aura.space", "auru.space"],
+      "database": {
+        "primary": "trinity-tap-production (9baf0ec8-63fc-4a55-a837-bcb8c8b4f141)",
+        "secondary": "trinity-v03 (ca8ea24e-f7db-431e-b8bf-97f713ae4533)"
+      },
+      "kv": {
+        "primary": "TRINITY_KV (c2c3bd8e6dc844d2b1d40ac0f505ff20)",
+        "cache": "AURA_CACHE (603d99c829a5410aae98ef3bf757427d)",
+        "pc_state": "PC_STATE (7eb48d414296418f9c60d87f8c602956)"
+      },
+      "vectorize": {
+        "primary": "trinity-vector-index (768d cosine)",
+        "memory": "aura-memory (768d cosine)"
+      },
+      "r2": {
+        "artifacts": "trinity-artifacts",
+        "evidence": "trinity-tap-evidence-production",
+        "workspace": "aura-workspace"
+      }
+    }
+  },
+  "inference_pipeline": {
+    "tier_1": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+    "tier_2": "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
+    "tier_3": "@cf/meta/llama-3.1-8b-instruct-fp8-fast",
+    "embedding": "@cf/baai/bge-base-en-v1.5",
+    "streaming": "SSE (Server-Sent Events) with [DONE] terminator and leak redaction"
+  },
+  "database_tables": [
+    "users",
+    "sessions",
+    "tasks",
+    "knowledge_entries",
+    "trinity_learnings",
+    "audit_logs",
+    "system_settings"
+  ],
+  "mcp_interface": {
+    "protocol": "JSON-RPC 2.0",
+    "tools": ["trinity_status", "execute_task", "query_knowledge"]
+  }
+}

@@ -4,10 +4,20 @@ import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
 import { createSystemBridgeServer } from '../src/system-bridge.mjs';
+import { inspectWindowsSession } from '../src/trinity-auth-core.mjs';
 
 test('System Bridge (Port 7788): /api/status vracia ONLINE s overeným Windows SID Basterixa a /api/omnidev/diagnose opravuje OmniDev Studio', async () => {
   const tmpDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'trinity-bridge-7788-'));
-  const server = await createSystemBridgeServer({ port: 0, dataDir: tmpDataDir });
+  const nativeSession = inspectWindowsSession();
+  const windowsSession = nativeSession.authenticated
+    ? null
+    : {
+        username: 'saboi',
+        domain: 'basterix-pc',
+        sid: 'S-1-5-21-3847291048-1928374650-2837465910-1001',
+        osTokenVerified: true
+      };
+  const server = await createSystemBridgeServer({ port: 0, dataDir: tmpDataDir, windowsSession });
 
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();

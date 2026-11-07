@@ -3,19 +3,9 @@
  * @subsystem AUTH_GATE
  * @author Basterix (Root Architect)
  * @license Sovereign Irrevocable Covenant
- * @description Zjednotené autorizačné jadro (Windows OS SID + Google OAuth + Telecom HMAC) s fail-closed ochranou pre výlučného architekta Basterixa.
+ * @description Zjednotené autorizačné jadro (HMAC-SHA256 Worker Secrets + Windows OS SID + Google OAuth + Telecom HMAC) s fail-closed ochranou pre výlučného architekta Basterixa.
  */
-/**
- * TRINITY UNIFIED AUTHORIZATION CORE (trinity-auth-core.js)
- * Zjednotené autorizačné jadro spájajúce:
- * 1. Windows Auth Gate (lokálne účty 'saboi', 'basterix' + autentický Windows SID zo systémového tokenu)
- * 2. Google Identity Verifier ('saboivan2008@gmail.com', 'uscolective@gmail.com', 'cadjavadvocecka013@gmail.com' + verifiedGoogleToken)
- * 3. Telecom / WhatsApp / SMS Channel ('+421949009722', '0949009722', '+421949515777', '0949515777' + verifiedWebhookSignature)
- * 4. Root vs Guest Gate (Fail-Closed):
- *    - Overený Basterix s kryptografickým/OS dôkazom (BASTERIX_ROOT) -> OKAMŽITÁ EXEKÚCIA BEZ OTÁZOK
- *    - Akýkoľvek neoverený textový vstup alebo cudzí používateľ (GUEST_USER) -> OKAMŽITÝ HARD-LOCK + zápis do Sovereign Ledgeru
- */
-
+import { createHmac } from 'node:crypto';
 import { SovereignLedgerV3 } from './sovereign-core-v3.js';
 
 export const UserRole = Object.freeze({
@@ -31,7 +21,8 @@ export const VALID_WINDOWS_SID_REGEX = /^S-1-5-21-\d+-\d+-\d+-\d+$/;
 
 /**
  * TRINITY ROOT REGISTRY
- * Nemenný register overených identít patriacich výhradne Basterixovi.
+ * Fallback zoznam identít pre offline prostredie bez nastavených Worker secrets.
+ * V produkcii je primárne overovanie cez env.IDENTITY_HMAC_KEY a env.ROOT_ID_HASHES.
  */
 export const ROOT_REGISTRY = Object.freeze({
   architect_alias: 'Basterix',
@@ -75,11 +66,32 @@ export const SOVEREIGN_LEGAL_CHARTER_20 = Object.freeze([
   { id: 20, code: 'PERPETUAL_SOVEREIGNTY_COVENANT', title: 'Večný neodvolateľný sľub zvrchovanosti' }
 ]);
 
+/**
+ * Normalizácia telefónneho čísla (odstránenie medzier, zátvoriek, pomlčiek).
+ */
 export function normalizePhone(phone) {
   if (!phone || typeof phone !== 'string') return '';
   return phone.replace(/[\s\-\(\)]/g, '').trim();
 }
 
+/**
+ * Zjednotenie telefónneho čísla na kanonický tvar E.164 (+421...).
+ */
+export function toCanonicalPhone(phone) {
+  const cleaned = normalizePhone(phone);
+  if (!cleaned) return '';
+  if (cleaned.startsWith('09') && cleaned.length === 10) {
+    return '+421' + cleaned.slice(1);
+  }
+  if (cleaned.startsWith('4219') && cleaned.length === 12) {
+    return '+' + cleaned;
+  }
+  return cleaned;
+}
+
+/**
+ * Vráti všetky akceptované varianty telefónneho čísla pre spätnú kompatibilitu.
+ */
 export function canonicalPhoneVariants(phone) {
   const cleaned = normalizePhone(phone);
   if (!cleaned) return [];
@@ -100,6 +112,72 @@ export function normalizeEmail(email) {
   return email.toLowerCase().trim();
 }
 
+/**
+ * Kanonická normalizácia akejkoľvek identity pre HMAC výpočet:
+ * malé písmená, orezanie, odstránenie medzier, konverzia čísel na +421...
+ */
+export function toCanonicalIdentity(value) {
+  let cleaned = String(value || '').trim().toLowerCase().replace(/\s+/g, '');
+  if (cleaned.startsWith('09') && cleaned.length === 10) {
+    cleaned = '+421' + cleaned.slice(1);
+  } else if (cleaned.startsWith('4219') && cleaned.length === 12) {
+    cleaned = '+' + cleaned;
+  }
+  return cleaned;
+}
+
+/**
+ * Asynchrónny výpočet HMAC-SHA256 cez štandardné Web Crypto API (Cloudflare Worker runtime).
+ */
+export async function idHash(value, key) {
+  if (!value || !key) return '';
+  const norm = toCanonicalIdentity(value);
+  const k = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(key),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(norm));
+  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Synchrónny výpočet HMAC-SHA256 cez node:crypto (Node.js & nodejs_compat).
+ */
+export function idHashSync(value, key) {
+  if (!value || !key) return '';
+  const norm = toCanonicalIdentity(value);
+  return createHmac('sha256', key).update(norm).digest('hex');
+}
+
+/**
+ * Bezpečné overenie, či je identita v zozname autorizovaných root identít.
+ * Ak sú dostupné Worker Secrets (IDENTITY_HMAC_KEY a ROOT_ID_HASHES), porovnávajú sa výhradne HMAC hashe.
+ * V opačnom prípade (offline unit testy bez tajomstiev) sa použije fallback zoznam.
+ */
+export function isAuthorizedRoot(candidate, env = {}, fallbackList = []) {
+  if (!candidate) return false;
+  const canonical = toCanonicalIdentity(candidate);
+  const hmacKey = env?.IDENTITY_HMAC_KEY || (typeof process !== 'undefined' ? process.env?.IDENTITY_HMAC_KEY : null);
+  const rootHashesRaw = env?.ROOT_ID_HASHES || (typeof process !== 'undefined' ? process.env?.ROOT_ID_HASHES : null);
+
+  if (hmacKey && rootHashesRaw) {
+    const candidateHash = idHashSync(canonical, hmacKey);
+    const hashes = (typeof rootHashesRaw === 'string' ? rootHashesRaw.split(',') : rootHashesRaw)
+      .map(h => String(h).trim().toLowerCase());
+    return hashes.includes(candidateHash);
+  }
+
+  if (Array.isArray(fallbackList) && fallbackList.length > 0) {
+    const plainNorms = fallbackList.map(item => toCanonicalIdentity(item));
+    return plainNorms.includes(canonical);
+  }
+
+  return false;
+}
+
 export function isValidWindowsSid(sid) {
   return typeof sid === 'string' && VALID_WINDOWS_SID_REGEX.test(sid.trim());
 }
@@ -118,7 +196,7 @@ async function sha256Hex(input) {
  * Vyžaduje autentický Windows SID (/^S-1-5-21-\d+-\d+-\d+-\d+$/) a explicitný príznak
  * osTokenVerified === true zo systémového prístupového tokenu WindowsIdentity::GetCurrent().
  */
-export function inspectWindowsSession(sessionEnv = {}) {
+export function inspectWindowsSession(sessionEnv = {}, env = {}) {
   const rawUser = String(
     sessionEnv.username ??
     sessionEnv.windowsUser ??
@@ -131,7 +209,7 @@ export function inspectWindowsSession(sessionEnv = {}) {
   const sid = typeof sessionEnv.sid === 'string' ? sessionEnv.sid.trim() : null;
   const osTokenVerified = sessionEnv.osTokenVerified === true;
 
-  const isMatchedUser = ROOT_REGISTRY.windows_users.includes(rawUser);
+  const isMatchedUser = isAuthorizedRoot(rawUser, env, ROOT_REGISTRY.windows_users);
   const hasRealSid = isValidWindowsSid(sid);
 
   if (isMatchedUser && hasRealSid && osTokenVerified) {
@@ -168,18 +246,19 @@ export function inspectWindowsSession(sessionEnv = {}) {
  * 2. Univerzálny overovač prichádzajúcich požiadaviek (Omnichannel — Fail-Closed)
  * P0 BEZPEČNOSTNÉ PRAVIDLO:
  * Samotný textový reťazec (email, telefónne číslo alebo windowsUser) NIKDY nestačí na udelenie BASTERIX_ROOT!
- * Každý kanál vyžaduje kryptograficky alebo serverovo overený dôkaz:
+ * Každý kanál vyžaduje kryptograficky alebo serverovo overený dôkaz (2FA):
  *  - Google účet: vyžaduje `verifiedGoogleToken === true` (overený OAuth2 / JWT token)
  *  - Telefón / WhatsApp: vyžaduje `verifiedWebhookSignature === true` (overený HMAC podpis brány)
  *  - Windows relácia: vyžaduje `osTokenVerified === true` + skutočný Windows SID (`S-1-5-21-...`)
  */
-export function verifyTrinityIdentity(context = {}) {
+export function verifyTrinityIdentity(context = {}, env = {}) {
   const timestamp = new Date().toISOString();
+  const effectiveEnv = env || context.env || (typeof process !== 'undefined' ? process.env : {});
 
   // A. Kontrola podľa Google účtu
   const email = normalizeEmail(context.email);
   if (email) {
-    if (!ROOT_REGISTRY.google_accounts.includes(email)) {
+    if (!isAuthorizedRoot(email, effectiveEnv, ROOT_REGISTRY.google_accounts)) {
       return {
         isRoot: false,
         role: UserRole.GUEST_USER,
@@ -221,10 +300,8 @@ export function verifyTrinityIdentity(context = {}) {
   // B. Kontrola podľa telefónneho čísla (WhatsApp / SMS brána)
   const phone = normalizePhone(context.phone);
   if (phone) {
-    const incomingVariants = canonicalPhoneVariants(phone);
-    const isPhoneMatch = ROOT_REGISTRY.phone_numbers.some(entry =>
-      incomingVariants.includes(normalizePhone(entry))
-    );
+    const canonicalPhone = toCanonicalPhone(phone);
+    const isPhoneMatch = isAuthorizedRoot(canonicalPhone, effectiveEnv, ROOT_REGISTRY.phone_numbers);
     if (!isPhoneMatch) {
       return {
         isRoot: false,
@@ -267,7 +344,7 @@ export function verifyTrinityIdentity(context = {}) {
   // C. Kontrola podľa explicitne zadaného lokálneho Windows používateľa
   const winUser = String(context.windowsUser || '').toLowerCase().trim();
   if (winUser) {
-    if (!ROOT_REGISTRY.windows_users.includes(winUser)) {
+    if (!isAuthorizedRoot(winUser, effectiveEnv, ROOT_REGISTRY.windows_users)) {
       return {
         isRoot: false,
         role: UserRole.GUEST_USER,
@@ -311,7 +388,7 @@ export function verifyTrinityIdentity(context = {}) {
 
   // D. Ak nie je zadaný externý identifikátor, over aktívnu Windows reláciu zo systémového tokenu
   if (context.checkLocalWindows !== false && context.windowsSession) {
-    const localWin = inspectWindowsSession(context.windowsSession);
+    const localWin = inspectWindowsSession(context.windowsSession, effectiveEnv);
     if (localWin.authenticated) {
       return {
         isRoot: true,
@@ -343,12 +420,20 @@ export function verifyTrinityIdentity(context = {}) {
 }
 
 /**
+ * Asynchrónna verzia verifyTrinityIdentity podporujúca priame čítanie Worker secrets.
+ */
+export async function verifyTrinityIdentityAsync(context = {}, env = {}) {
+  return verifyTrinityIdentity(context, env);
+}
+
+/**
  * 3. Hlavná exekučná brána (Execution Interceptor)
  * Keď je operátor overený Basterix: koná okamžite a bez otázok.
  * Pre kohokoľvek iného (vrátane neoverených textových identít): vyhodí chybu a zapíše incident do Sovereign Ledgeru.
  */
 export async function executePrivileged(context = {}, actionMetadata = {}, actionCallback, options = {}) {
-  const auth = verifyTrinityIdentity(context);
+  const env = options.env || context.env || {};
+  const auth = verifyTrinityIdentity(context, env);
 
   if (auth.isRoot && auth.role === UserRole.BASTERIX_ROOT) {
     return await actionCallback(auth);

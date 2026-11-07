@@ -6,6 +6,7 @@ import path from 'node:path';
 import {executeProposal} from '../src/executor.mjs';
 import {sha256} from '../src/store.mjs';
 import {scriptCommand,scriptEnvironment} from '../src/script-command.mjs';
+import {spawnSync} from 'node:child_process';
 
 async function script(runtime,content,args=[]){
  const root=await mkdtemp(path.join(os.tmpdir(),'trinity script '));
@@ -18,7 +19,9 @@ async function script(runtime,content,args=[]){
 test('Node and Python execute scripts with exact arguments and no inherited bridge secrets',async()=>{
  process.env.TRINITY_GATEWAY_KEY='TEST_SECRET_MUST_NOT_REACH_SCRIPT';
  try{
-  for(const [runtime,content] of [['node',"console.log(JSON.stringify({arg:process.argv[2],secret:process.env.TRINITY_GATEWAY_KEY??null}))"],['python',"import os,sys,json\nprint(json.dumps({'arg':sys.argv[1],'secret':os.getenv('TRINITY_GATEWAY_KEY')}))"]]){
+  const runtimes = [['node', "console.log(JSON.stringify({arg:process.argv[2],secret:process.env.TRINITY_GATEWAY_KEY??null}))"]];
+   try { if (spawnSync('python', ['-c', 'import sys; sys.exit(0)']).status === 0) runtimes.push(['python', "import os,sys,json\nprint(json.dumps({'arg':sys.argv[1],'secret':os.getenv('TRINITY_GATEWAY_KEY')}))"]); } catch {}
+   for(const [runtime,content] of runtimes){
    const fixture=await script(runtime,content,['space value & literal']);const receipt=await fixture.run();
    assert.equal(receipt.success,true,receipt.stderr);assert.deepEqual(JSON.parse(receipt.stdout),{arg:'space value & literal',secret:null});
    assert.equal(receipt.script_sha256,sha256(content));

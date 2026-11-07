@@ -3,6 +3,10 @@ import {runAuraAi, parseAuraJson, safeDbRun} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
+    if (request.method === "GET" && new URL(request.url).pathname === "/health") {
+      return Response.json({ ok: true, service: "aura_memory", version: "10.3.0", status: "serving", bindings: { AI: !!env.AI, DB: !!env.DB } });
+    }
+
     if (request.method !== "POST") return Response.json({ ok: false, error: "Method not allowed" }, { status: 405 });
     let call;
     try { call = await request.json(); } catch { return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 }); }
@@ -40,7 +44,7 @@ export default {
         return Response.json({ ok: true, result: r.results, traceId, from: "aura-memory" });
       }
       if (call.action === "aura.status") {
-        return Response.json({ ok: true, result: { agent: "memory", role: "Konsoliduje pamäť, prepája D1 kontext a syntetizuje znalosti", status: "active", version: "10.2.0" }, traceId, from: "aura-memory" });
+        return Response.json({ ok: true, result: { agent: "memory", role: "Konsoliduje pamäť, prepája D1 kontext a syntetizuje znalosti", status: "active", version: "10.3.0" }, traceId, from: "aura-memory" });
       }
       const text = await runAuraAi(env, "Si AURA Memory. Asistuj pri organizácii pamäte.", d.prompt || call.action);
       return Response.json({ ok: true, result: { response: text }, traceId, from: "aura-memory" });

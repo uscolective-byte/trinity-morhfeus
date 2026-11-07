@@ -80,7 +80,7 @@ async function requestPublicJson(site,pathname,fetcher) {
   let response;
   try {
     response=await fetcher(url.toString(),{
-      method:'GET',redirect:'error',signal:AbortSignal.timeout(12000),
+      method:'GET',redirect:'manual',signal:AbortSignal.timeout(12000),
       headers:{Accept:'application/json','User-Agent':'Trinity-WordPress-ReadOnly/1.0'}
     });
   } catch {

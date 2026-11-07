@@ -1,0 +1,104 @@
+{
+  "branches": [
+    {
+      "branch": "codex/apply-release-20261102",
+      "sha": "4926ba6ec189c4e79b90d2ae86e06237ce92289b",
+      "remote": "backup/pre-reset-20261103/codex/apply-release-20261102",
+      "verified": true
+    },
+    {
+      "branch": "codex/bridge-auth-20261102",
+      "sha": "5e1117ca00bfa77a388ec491d4e9e7d7476f0925",
+      "remote": "backup/pre-reset-20261103/codex/bridge-auth-20261102",
+      "verified": true
+    },
+    {
+      "branch": "codex/omni12-foundation-20261101",
+      "sha": "554620b28fb0a7c586f47164fbb206b9a92251bd",
+      "remote": "backup/pre-reset-20261103/codex/omni12-foundation-20261101",
+      "verified": true
+    },
+    {
+      "branch": "codex/platform-configuration-20261101",
+      "sha": "3850a606a408dea85dea34c81bace276966888f3",
+      "remote": "backup/pre-reset-20261103/codex/platform-configuration-20261101",
+      "verified": true
+    },
+    {
+      "branch": "codex/trinity-runtime-truth-repair-20261102",
+      "sha": "b5fcae4ada70ae37a00d02e1c4d63d4c84c24e09",
+      "remote": "backup/pre-reset-20261103/codex/trinity-runtime-truth-repair-20261102",
+      "verified": true
+    },
+    {
+      "branch": "codex/truth-evidence-filter-20261101",
+      "sha": "2b31bb16a0fd81c842d20109e961b2613a4cba4d",
+      "remote": "backup/pre-reset-20261103/codex/truth-evidence-filter-20261101",
+      "verified": true
+    },
+    {
+      "branch": "codex/truth-runtime-gate-20261101",
+      "sha": "a6abf5f6c545e09bdf6f15e888ebdfc479a4dd77",
+      "remote": "backup/pre-reset-20261103/codex/truth-runtime-gate-20261101",
+      "verified": true
+    },
+    {
+      "branch": "main",
+      "sha": "bd9b6a40d4a1f61480156edf9a573b5cd781c32b",
+      "remote": "backup/pre-reset-20261103/main",
+      "verified": true
+    },
+    {
+      "branch": "uscolective-byte-complete-fix",
+      "sha": "64d219d49966a0983a13db7832e87284551ba94e",
+      "remote": "backup/pre-reset-20261103/uscolective-byte-complete-fix",
+      "verified": true
+    },
+    {
+      "branch": "uscolective-byte-stunning-train",
+      "sha": "a50c3e26fb8f8d725c39ffad3b234d66785dea3a",
+      "remote": "backup/pre-reset-20261103/uscolective-byte-stunning-train",
+      "verified": true
+    },
+    {
+      "branch": "uscolective-byte-trinity-repo-repair",
+      "sha": "a50c3e26fb8f8d725c39ffad3b234d66785dea3a",
+      "remote": "backup/pre-reset-20261103/uscolective-byte-trinity-repo-repair",
+      "verified": true
+    }
+  ],
+  "snapshots": [
+    {
+      "path": "C:\\Users\\saboi\\Trinity-antigravity",
+      "base": "bd9b6a40d4a1f61480156edf9a573b5cd781c32b",
+      "sha": "b889284b503caf2f669b29ab9f291e06c66f6fb7",
+      "remote": "backup/pre-reset-20261103/worktree-0",
+      "files": [
+        "TEAM-HANDOFF.md"
+      ],
+      "verified": true
+    },
+    {
+      "path": "C:\\Users\\saboi\\.copilot\\copilot-worktrees\\Trinity-antigravity\\uscolective-byte-fantastic-funicular",
+      "base": "64d219d49966a0983a13db7832e87284551ba94e",
+      "sha": "24dd67cab80b7200a039f8beeec3b8bffa81fd73",
+      "remote": "backup/pre-reset-20261103/worktree-2",
+      "files": [
+        "TEAM-HANDOFF.md",
+        "Trinity/src/secret-vault.js"
+      ],
+      "verified": true
+    },
+    {
+      "path": "C:\\Users\\saboi\\Documents\\Codex\\2026-11-01\\sk\\work\\release",
+      "base": "dee77b4342475c933bf9756c1f9ffa5183caf5f1",
+      "sha": "59fe60fea85173737a9d4a2661d6b9575a75401f",
+      "remote": "backup/pre-reset-20261103/worktree-8",
+      "files": [
+        "contracts/tetrakis/build/TetrakisToken.json"
+      ],
+      "verified": true
+    }
+  ],
+  "excluded": "Ignored files, credentials, local databases and untracked generated dist-audit-check are not backed up."
+}

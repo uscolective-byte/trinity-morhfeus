@@ -3,8 +3,9 @@
 Aktualizované: 31. októbra 2026. Tento dokument je **pracovná politika**
 a nie potvrdenie, že externý účet má platný token alebo že je klient pripojený.
 Kanonický zdroj: `uscolective-byte/Trinity-antigravity@main`.
-Produkcia: `auru.space`, Wrangler `trinity`.
-Staging: `auru.dev`, Wrangler `trinity-staging` (`--env staging`).
+Korekcia podľa konfigurácie 2. novembra 2026: `auru.space` aj `auru.dev` sú
+produkčné routes Workera `trinity`. Staging `trinity-staging` (`--env staging`)
+má samostatnú konfiguráciu bez týchto routes; doména `auru.dev` nie je dôkaz izolácie.
 
 ## Klienti a vykonávacia identita
 
@@ -13,6 +14,7 @@ Staging: `auru.dev`, Wrangler `trinity-staging` (`--env staging`).
 | Codex | lokálny IDE/CLI + GitHub/Trinity MCP | vlastné OAuth/GitHub App oprávnenie |
 | ChatGPT | autorizovaný GitHub konektor a Trinity MCP | používateľova schválená relácia / osobitný token |
 | Google Antigravity | IDE + Git + Trinity MCP | lokálne prihlásenie a scoped connector |
+| GitHub Copilot | VS Code / CLI / GitHub cloud agent + hostiteľské MCP | existujúca GitHub relácia a osobitne overený scope hostiteľa; actor `github-copilot` |
 | Gemini (API) | model cez Trinity Model Router | **nie je** administrátor ani GitHub identita |
 | Microsoft Copilot Studio | OAuth/Direct Line + vlastný REST/MCP nástroj | overený Entra/MSA účet + scoped token |
 | Ollama (lokálne/cloud) | lokálny gateway/Model Router | **nie je** automaticky oprávnený účastník GitHubu |
@@ -21,6 +23,14 @@ Prístup poskytuje overená **identita volajúceho a oprávnenie nástroja**, ni
 meno modelu, prompt, e-mail spomenutý v chate alebo prítomnosť API kľúča.
 Modely môžu navrhovať príkazy, ale konajú len prostredníctvom existujúceho
 autorizovaného hostiteľa, ktorý ich vykoná, zaloguje a vráti receipt.
+
+GitHub Copilot sa zapája cez [.github/copilot-instructions.md](../../.github/copilot-instructions.md),
+aktuálny [TEAM-HANDOFF.md](../../TEAM-HANDOFF.md) a
+[GITHUB-COPILOT-HANDOFF.md](../../GITHUB-COPILOT-HANDOFF.md). Copilot Studio aj
+interný `TrinityCopilotAgent` zostávajú samostatné integrácie. Tento zápis nemení
+runtime grants, GitHub oprávnenia ani prístup k PC. Aktuálny Copilot stav je
+`HOST_NOT_VERIFIED / PENDING_COPILOT_ACK`; spojenie možno potvrdiť až dôkazom
+initialize → tools/list → read-only status z konkrétneho Copilot hostiteľa.
 
 ## Maximálny pracovný režim bez zbytočných potvrdení
 
@@ -69,7 +79,7 @@ pracovný priestor. Administrátorsky otvorený PowerShell nie je dôkazom
 pripojenia Desktop Commander ani oprávnenia ďalšieho modelu. Nikdy nespúšťať
 nedôveryhodné skripty s tokenmi v prostredí.
 
-## Koordinácia šiestich klientov
+## Koordinácia účastníkov
 
 1. Prečítať `TEAM-HANDOFF.md` a relevantné inštrukcie.
 2. Zistiť kanonické HEAD/checkout, existujúce CLAIM a presné cieľové súbory.

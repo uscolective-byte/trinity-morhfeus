@@ -1,0 +1,243 @@
+{
+  "date": "2026-11-03",
+  "base": "bd9b6a40d4a1f61480156edf9a573b5cd781c32b",
+  "remote_before_cleanup": [
+    {
+      "sha": "4926ba6ec189c4e79b90d2ae86e06237ce92289b",
+      "ref": "refs/heads/backup/pre-reset-20261103/codex/apply-release-20261102",
+      "already_in_main_history": false,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "5e1117ca00bfa77a388ec491d4e9e7d7476f0925",
+      "ref": "refs/heads/backup/pre-reset-20261103/codex/bridge-auth-20261102",
+      "already_in_main_history": false,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "554620b28fb0a7c586f47164fbb206b9a92251bd",
+      "ref": "refs/heads/backup/pre-reset-20261103/codex/omni12-foundation-20261101",
+      "already_in_main_history": false,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "3850a606a408dea85dea34c81bace276966888f3",
+      "ref": "refs/heads/backup/pre-reset-20261103/codex/platform-configuration-20261101",
+      "already_in_main_history": false,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "b5fcae4ada70ae37a00d02e1c4d63d4c84c24e09",
+      "ref": "refs/heads/backup/pre-reset-20261103/codex/trinity-runtime-truth-repair-20261102",
+      "already_in_main_history": true,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "2b31bb16a0fd81c842d20109e961b2613a4cba4d",
+      "ref": "refs/heads/backup/pre-reset-20261103/codex/truth-evidence-filter-20261101",
+      "already_in_main_history": true,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "a6abf5f6c545e09bdf6f15e888ebdfc479a4dd77",
+      "ref": "refs/heads/backup/pre-reset-20261103/codex/truth-runtime-gate-20261101",
+      "already_in_main_history": false,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "bd9b6a40d4a1f61480156edf9a573b5cd781c32b",
+      "ref": "refs/heads/backup/pre-reset-20261103/main",
+      "already_in_main_history": true,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "64d219d49966a0983a13db7832e87284551ba94e",
+      "ref": "refs/heads/backup/pre-reset-20261103/uscolective-byte-complete-fix",
+      "already_in_main_history": true,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "a50c3e26fb8f8d725c39ffad3b234d66785dea3a",
+      "ref": "refs/heads/backup/pre-reset-20261103/uscolective-byte-stunning-train",
+      "already_in_main_history": true,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "a50c3e26fb8f8d725c39ffad3b234d66785dea3a",
+      "ref": "refs/heads/backup/pre-reset-20261103/uscolective-byte-trinity-repo-repair",
+      "already_in_main_history": true,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "b889284b503caf2f669b29ab9f291e06c66f6fb7",
+      "ref": "refs/heads/backup/pre-reset-20261103/worktree-0",
+      "already_in_main_history": false,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "24dd67cab80b7200a039f8beeec3b8bffa81fd73",
+      "ref": "refs/heads/backup/pre-reset-20261103/worktree-2",
+      "already_in_main_history": false,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "59fe60fea85173737a9d4a2661d6b9575a75401f",
+      "ref": "refs/heads/backup/pre-reset-20261103/worktree-8",
+      "already_in_main_history": false,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "4926ba6ec189c4e79b90d2ae86e06237ce92289b",
+      "ref": "refs/heads/codex/apply-release-20261102",
+      "already_in_main_history": false,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "3850a606a408dea85dea34c81bace276966888f3",
+      "ref": "refs/heads/codex/platform-configuration-20261101",
+      "already_in_main_history": false,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "2e530cc66c32abbd4f8059b3e085c5ce1f283402",
+      "ref": "refs/heads/codex/recovery-index-20261103",
+      "already_in_main_history": false,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "6bd09fbbf1bf6728ba48726e17690a6647ceb549",
+      "ref": "refs/heads/codex/truth-evidence-filter-20261101",
+      "already_in_main_history": true,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "4ec0cf58df08887237f16a4f1835464d20f82b20",
+      "ref": "refs/heads/dependabot/github_actions/actions/checkout-7",
+      "already_in_main_history": false,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "14584a61a7e1e322aeee586b617aa2bb95879e8a",
+      "ref": "refs/heads/dependabot/npm_and_yarn/PC-Bridge-Worker/wrangler-4.153.0",
+      "already_in_main_history": true,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "a7ece5b80d0e21146c78bc72f58f0038f060dc60",
+      "ref": "refs/heads/dependabot/npm_and_yarn/Trinity/cloudflare/workers-types-5.20261027.1",
+      "already_in_main_history": true,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "a50c3e26fb8f8d725c39ffad3b234d66785dea3a",
+      "ref": "refs/heads/fix/all-bugs-trinity-20261102",
+      "already_in_main_history": true,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "bd9b6a40d4a1f61480156edf9a573b5cd781c32b",
+      "ref": "refs/heads/main",
+      "already_in_main_history": true,
+      "disposition": "retain-main"
+    }
+  ],
+  "local_before_cleanup": [
+    {
+      "sha": "b889284b503caf2f669b29ab9f291e06c66f6fb7",
+      "ref": "refs/heads/backup/pre-reset-20261103/worktree-0",
+      "already_in_main_history": false,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "24dd67cab80b7200a039f8beeec3b8bffa81fd73",
+      "ref": "refs/heads/backup/pre-reset-20261103/worktree-2",
+      "already_in_main_history": false,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "59fe60fea85173737a9d4a2661d6b9575a75401f",
+      "ref": "refs/heads/backup/pre-reset-20261103/worktree-8",
+      "already_in_main_history": false,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "4926ba6ec189c4e79b90d2ae86e06237ce92289b",
+      "ref": "refs/heads/codex/apply-release-20261102",
+      "already_in_main_history": false,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "5e1117ca00bfa77a388ec491d4e9e7d7476f0925",
+      "ref": "refs/heads/codex/bridge-auth-20261102",
+      "already_in_main_history": false,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "062bf8589a81f5449715531729fa36374f834398",
+      "ref": "refs/heads/codex/consolidated-20261103",
+      "already_in_main_history": false,
+      "disposition": "retain-consolidated"
+    },
+    {
+      "sha": "554620b28fb0a7c586f47164fbb206b9a92251bd",
+      "ref": "refs/heads/codex/omni12-foundation-20261101",
+      "already_in_main_history": false,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "3850a606a408dea85dea34c81bace276966888f3",
+      "ref": "refs/heads/codex/platform-configuration-20261101",
+      "already_in_main_history": false,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "2e530cc66c32abbd4f8059b3e085c5ce1f283402",
+      "ref": "refs/heads/codex/recovery-index-20261103",
+      "already_in_main_history": false,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "b5fcae4ada70ae37a00d02e1c4d63d4c84c24e09",
+      "ref": "refs/heads/codex/trinity-runtime-truth-repair-20261102",
+      "already_in_main_history": true,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "2b31bb16a0fd81c842d20109e961b2613a4cba4d",
+      "ref": "refs/heads/codex/truth-evidence-filter-20261101",
+      "already_in_main_history": true,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "a6abf5f6c545e09bdf6f15e888ebdfc479a4dd77",
+      "ref": "refs/heads/codex/truth-runtime-gate-20261101",
+      "already_in_main_history": false,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "bd9b6a40d4a1f61480156edf9a573b5cd781c32b",
+      "ref": "refs/heads/main",
+      "already_in_main_history": true,
+      "disposition": "retain-main"
+    },
+    {
+      "sha": "64d219d49966a0983a13db7832e87284551ba94e",
+      "ref": "refs/heads/uscolective-byte-complete-fix",
+      "already_in_main_history": true,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "a50c3e26fb8f8d725c39ffad3b234d66785dea3a",
+      "ref": "refs/heads/uscolective-byte-stunning-train",
+      "already_in_main_history": true,
+      "disposition": "archive-history-before-branch-removal"
+    },
+    {
+      "sha": "a50c3e26fb8f8d725c39ffad3b234d66785dea3a",
+      "ref": "refs/heads/uscolective-byte-trinity-repo-repair",
+      "already_in_main_history": true,
+      "disposition": "archive-history-before-branch-removal"
+    }
+  ],
+  "policy": "Preserve every listed tip as an ancestor of the consolidated branch before deleting old remote branch names. Obsolete source trees are not applied over newer main."
+}

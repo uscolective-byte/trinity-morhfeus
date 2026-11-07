@@ -83,7 +83,7 @@ test('TrinityAgent DO: REST handlers for /mode, /memory, /reflect', async () => 
   const infoRes = await agent.fetch(infoReq);
   const info = await infoRes.json();
   assert.equal(info.service, 'Trinity Neural Brain DO');
-  assert.equal(info.version, '11.0.0');
+  assert.equal(info.version, '11.1.0');
   assert.equal(info.mode, 'creativity');
 
   // 2. POST /mode

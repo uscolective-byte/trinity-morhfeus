@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-11-06T19:07:22.801Z",
+  "network": "Base Mainnet (Production)",
+  "chainId": 8453,
+  "contract": "TetrakisToken",
+  "symbol": "TTK",
+  "initialTreasury": "0x4d308452a96D7dAbFd2f33d92677A3a2724f387e",
+  "totalSupply": "1,000,000,000 TTK (10^27 wei)",
+  "status": "AWAITING_GAS_FUNDING",
+  "treasuryBalanceWei": "0",
+  "treasuryBalanceEth": "0.0",
+  "estimatedDeploymentCostWei": "7531271000000",
+  "estimatedDeploymentCostEth": "0.000007531271",
+  "bytecodeSha256": "0xfb9db665171c88a8b085a7825e25616573760776079f612cacd6f398d0edf004",
+  "runtimeKeccak256": "0x5db6aa4e0b155cc4eb54b45ce1ecde5ec0feb55c12e4fc75153b1615c5c9652c",
+  "explorer": "https://basescan.org/address/0x4d308452a96D7dAbFd2f33d92677A3a2724f387e"
+}

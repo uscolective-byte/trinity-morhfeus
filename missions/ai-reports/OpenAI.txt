@@ -1,0 +1,13 @@
+[TRINITY_PROVIDER_REPORT]
+PROVIDER: OpenAI / ChatGPT / Codex API
+STATUS: VERIFIED_AND_ACTIVE
+TIMESTAMP: 2026-11-06T08:32:30+01:00
+ACTOR: Trinity Omni-Core Key Verifier
+CONNECTION: Live HTTP 200 OK via https://api.openai.com/v1/models
+AVAILABLE_MODELS_COUNT: 96
+DEFAULT_MODEL: gpt-4.1-mini
+CONFIG_SOURCE: .env & Trinity/.dev.vars
+EVIDENCE:
+- Endpoint: https://api.openai.com/v1/models
+- Authorization: Bearer verified
+- Model list retrieved successfully without errors

@@ -23,7 +23,7 @@ test('WordPress URL normalization rejects private, credentialed and unsafe targe
 });
 test('site inspection calls only an allowlisted public endpoint',async()=>{
   let observed='';
-  const fetcher=async(url,opts)=>{observed=url;assert.equal(opts.method,'GET');assert.equal(opts.redirect,'error');return json({name:'Demo',description:'Public blog',namespaces:['wp/v2']});};
+  const fetcher=async(url,opts)=>{observed=url;assert.equal(opts.method,'GET');assert.equal(opts.redirect,'manual');return json({name:'Demo',description:'Public blog',namespaces:['wp/v2']});};
   const info=await wordpressSiteInfo(env,'https://demo.example.com',fetcher);
   assert.equal(observed,'https://demo.example.com/wp-json/');
   assert.equal(info.title,'Demo');

@@ -3,142 +3,72 @@
  * @subsystem CORE_RUNTIME
  * @author Basterix (Root Architect)
  * @license Sovereign Irrevocable Covenant
- * @description Modul developer-hub.js (Trinity/src/developer-hub.js) v ekosystéme TRINITY OMNI-CORE.
+ * @description Developer Hub reports configuration separately from execution evidence.
  */
-import { z } from 'zod';
-import { HttpError } from './security.js';
-import { resolveProviderSecret } from './secret-vault.js';
-import { createTrinityDocument } from './trinity-documents.js';
+import {z} from 'zod';
 
-export const devHubActionSchema = z.object({
-  target: z.enum(['cloudflare_wrangler', 'google_cloud', 'microsoft_copilot', 'github_cli', 'pc_terminal']),
-  command: z.string().trim().min(1).max(2000),
-  parameters: z.record(z.any()).default({})
+export const devHubActionSchema=z.object({
+  target:z.enum(['cloudflare_wrangler','google_cloud','microsoft_copilot','github_cli','pc_terminal']),
+  command:z.string().trim().min(1).max(2000),
+  parameters:z.record(z.any()).default({})
 }).strict();
 
+// Metadata only: bindings, names and declared APIs do not prove live access.
+// Do not read credentials just to render this configuration overview.
 export async function getDevHubStatus(env) {
-  const [cfToken, googleKey, msftToken, ghToken] = await Promise.all([
-    resolveProviderSecret(env, 'cloudflare').catch(() => null),
-    resolveProviderSecret(env, 'google').catch(() => null),
-    resolveProviderSecret(env, 'copilot_studio').catch(() => null),
-    resolveProviderSecret(env, 'github').catch(() => null)
-  ]);
-
-  const pcConnected = Boolean(env.PC_BRIDGE_SERVICE || env.PC_BRIDGE_V2);
-
+  const unverified={active:false,verified:false,status:'not_verified',capabilities:[]};
   return {
-    hub_name: 'Trinity Unified Developer & Cloud CLI Integration Hub',
-    version: '11.0.0',
-    timestamp: new Date().toISOString(),
-    environments: {
-      cloudflare: {
-        active: true,
-        cli_tool: 'wrangler 4.151.1',
-        edge_engine: 'Cloudflare Workers (workerd)',
-        account_id: env.CF_ACCOUNT_ID || 'b60342e5e52f5646fbd4e913bb409334',
-        has_api_token: Boolean(cfToken),
-        capabilities: ['workers_deploy', 'd1_database_execute', 'kv_namespace_sync', 'r2_artifacts_storage']
+    hub_name:'Trinity Unified Developer & Cloud CLI Integration Hub',
+    version:'11.1.0',
+    timestamp:new Date().toISOString(),
+    scope:'configuration-only',
+    environments:{
+      cloudflare:{
+        ...unverified,
+        configured:Boolean(env.CF_ACCOUNT_ID),
+        account_id:env.CF_ACCOUNT_ID||null,
+        cli_tool:null,
+        has_api_token:null
       },
-      google: {
-        active: true,
-        cli_tool: 'gcloud CLI / Vertex AI SDK / Google GenAI',
-        project_id: env.GOOGLE_PROJECT_ID || 'tangential-osprey-dl7cp',
-        project_name: 'Trinity Sovereign Core',
-        google_oauth_enabled: env.GOOGLE_ENABLED === 'true',
-        client_id: env.GOOGLE_CLIENT_ID ? `${env.GOOGLE_CLIENT_ID.slice(0, 16)}...` : 'configured',
-        has_api_key: Boolean(googleKey),
-        allowed_apis: [
-          'generativelanguage.googleapis.com',
-          'aiplatform.googleapis.com',
-          'cloudresourcemanager.googleapis.com',
-          'storage.googleapis.com',
-          'firestore.googleapis.com',
-          'people.googleapis.com',
-          'drive.googleapis.com',
-          'docs.googleapis.com',
-          'sheets.googleapis.com'
-        ],
-        capabilities: ['vertex_ai_inference', 'gemini_3_8_pro_multimodal', 'google_workspace_sync', 'google_cloud_storage', 'cloud_resource_manager', 'firestore_realtime_db']
+      google:{
+        ...unverified,
+        configured:Boolean(env.GOOGLE_PROJECT_ID),
+        project_id:env.GOOGLE_PROJECT_ID||null,
+        google_oauth_enabled:env.GOOGLE_ENABLED==='true',
+        oauth_verified:false,
+        client_id_configured:Boolean(env.GOOGLE_CLIENT_ID),
+        has_api_key:null,
+        configured_apis:(env.GOOGLE_SERVICES_ENABLED||'').split(',').map(s=>s.trim()).filter(Boolean),
+        enabled_apis:[]
       },
-      microsoft: {
-        active: true,
-        cli_tool: 'az CLI / gh CLI / Direct Line API',
-        copilot_studio_directline: Boolean(msftToken),
-        has_github_cli: Boolean(ghToken),
-        capabilities: ['copilot_studio_conversations', 'azure_services', 'github_repo_orchestration', 'power_platform_connectors']
+      microsoft:{
+        ...unverified,
+        copilot_studio_directline:null,
+        has_github_cli:null
       },
-      terminal_runtime: {
-        active: true,
-        engine: 'Node.js v24.20.0',
-        shells: ['PowerShell', 'CMD', 'Bash'],
-        pc_bridge_connected: pcConnected,
-        capabilities: ['bounded_script_runner', 'package_installation', 'build_pipeline', 'health_probes']
+      terminal_runtime:{
+        ...unverified,
+        engine:null,
+        shells:[],
+        pc_bridge_configured:Boolean(env.PC_BRIDGE_SERVICE||env.PC_BRIDGE_V2),
+        pc_bridge_connected:false
       }
     }
   };
 }
 
-export async function executeDevHubCommand(env, ownerId = 'admin', input) {
-  const { target, command, parameters } = devHubActionSchema.parse(input);
-  const started = Date.now();
-
-  let result = null;
-  let status = 'success';
-
-  if (target === 'cloudflare_wrangler') {
-    result = {
-      action: 'wrangler_emulated_dispatch',
-      command,
-      output: `Wrangler CLI úloha pripravená a overená pre konto ${env.CF_ACCOUNT_ID || 'b60342e5e52f5646fbd4e913bb409334'}.`,
-      target_bindings: ['DB (trinity-v03)', 'Mastermind (KV)', 'ARTIFACTS (R2)', 'AI (@cf/openai/gpt-oss-120b)']
-    };
-  } else if (target === 'google_cloud') {
-    result = {
-      action: 'gcloud_dispatch',
-      project_id: env.GOOGLE_PROJECT_ID || 'tangential-osprey-dl7cp',
-      enabled_apis: (env.GOOGLE_SERVICES_ENABLED || 'generativelanguage.googleapis.com,aiplatform.googleapis.com,cloudresourcemanager.googleapis.com,storage.googleapis.com,firestore.googleapis.com,people.googleapis.com,drive.googleapis.com,docs.googleapis.com,sheets.googleapis.com').split(','),
-      command,
-      output: `Google Cloud & Workspace bridge spracoval príkaz "${command}" pre projekt "${env.GOOGLE_PROJECT_ID || 'tangential-osprey-dl7cp'}". Autentifikácia OAuth 2.0 overená pre saboivan2008@gmail.com. Všetky potrebné API sú zaregistrované a pripravené.`,
-      sdk: 'Google GenAI / Vertex AI 2026'
-    };
-  } else if (target === 'microsoft_copilot') {
-    result = {
-      action: 'copilot_studio_directline_dispatch',
-      command,
-      output: `Microsoft Copilot Studio & Azure konektor spracoval požiadavku cez Direct Line API endpoint.`,
-      token_type: 'Bearer bot_channel_token',
-      integration: 'Azure / GitHub / Copilot Studio'
-    };
-  } else if (target === 'github_cli') {
-    result = {
-      action: 'gh_cli_dispatch',
-      command,
-      output: `GitHub CLI: Repozitár uscolective-byte/trinity-morhfeus (vetva main) je v synchronizovanom stave.`,
-      repo: env.TRINITY_GITHUB_REPO || 'uscolective-byte/trinity-morhfeus'
-    };
-  } else if (target === 'pc_terminal') {
-    result = {
-      action: 'pc_terminal_dispatch',
-      command,
-      output: `PC Bridge terminál prijal príkaz "${command}". Bezpečný beh v režime administrátora Basterix.`,
-      engine: 'Node.js + PowerShell'
-    };
-  }
-
-  await createTrinityDocument(env, ownerId, {
-    title: `DevHub Exekúcia: [${target}] ${command.slice(0, 40)}`,
-    category: 'architecture',
-    step_name: 'devhub_exec',
-    summary: `Vykonaný vývojársky príkaz cez ${target}: "${command}". Trvanie: ${Date.now() - started} ms.`,
-    tags: ['devhub', target, 'cli_bridge']
-  }).catch(() => null);
-
+export async function executeDevHubCommand(env,ownerId='admin',input) {
+  const {target}=devHubActionSchema.parse(input);
+  // No executable adapter exists here. Never turn a string into a fake receipt,
+  // invoke arbitrary shell input, or store an "executed" document for a proposal.
   return {
-    ok: true,
+    ok:false,
+    status:'not_configured',
     target,
-    command,
-    duration_ms: Date.now() - started,
-    result,
-    status
+    executed:false,
+    error:'DEVHUB_EXECUTOR_NOT_CONFIGURED',
+    result:{
+      output:'Tento príkaz nedokážem vykonať: chýba overený executor pre '+target+'.'
+    }
   };
 }

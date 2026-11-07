@@ -1,3 +1,4 @@
+import {configuredBridgeToken,registeredBridgeTunnelUrl} from '../../packages/contracts/src/bridge-auth.js';
 /**
  * @module TRINITY_OMNI_CORE
  * @subsystem CORE_RUNTIME
@@ -130,18 +131,75 @@ export function extractGeminiInteractionText(result){
   const blocks=(result?.steps||[]).flatMap(step=>Array.isArray(step?.content)?step.content:Array.isArray(step?.output)?step.output:[]);
   return blocks.filter(block=>block?.type==='text'||typeof block?.text==='string').map(block=>block.text||'').join('\n').trim();
 }
+export function deduplicateRepeatedParagraphs(text) {
+  if (typeof text !== 'string' || !text.trim()) return text;
+  // Rozdelenie na odstavce (dva a viac nových riadkov)
+  const paragraphs = text.split(/\n{2,}/);
+  if (paragraphs.length <= 1) return text;
+  
+  const seen = new Set();
+  const cleaned = [];
+  for (const p of paragraphs) {
+    const normalized = p.trim().replace(/\s+/g, ' ');
+    if (normalized.length > 20) {
+      if (seen.has(normalized)) continue;
+      seen.add(normalized);
+    }
+    cleaned.push(p);
+  }
+  return cleaned.join('\n\n');
+}
+
+export function stripInternalToolsDump(text) {
+  if (typeof text !== 'string') return '';
+  return text
+    // Odstránenie celého bloku číslovaného zoznamu nástrojov (napr. 1. knowledge_search: ... až po koniec zoznamu)
+    .replace(/(?:Môj zoznam nástrojov|Zoznam nástrojov|Dostupné nástroje)[^\n]*\n+(?:\s*\d+\.\s+[a-z0-9_-]+:[^\n]*\n*)+/gi, '')
+    // Odstránenie vety o interných JSON volaniach
+    .replace(/Môj zoznam nástrojov je interný[^\n]*/gi, '')
+    .replace(/Nie je možné, aby ste si mali prístup k zoznamu nástrojov[^\n]*/gi, '')
+    .replace(/Nástroje sú určené výhradne na interné volania[^\n]*/gi, '')
+    .trim();
+}
+
+export function cleanModelResponse(text) {
+  if (typeof text !== 'string') return '';
+  let cleaned = stripInternalToolsDump(text);
+  if (/152\s+expertných\s+zručností|248\s+Copilot\s+skillov/i.test(cleaned)) {
+    cleaned = cleaned.replace(/Sabo Ivan, rád sa ti oznam[^\n]*\n*/gi, '')
+      .replace(/Mám 152 expertných zručností[^\n]*\n*/gi, '')
+      .replace(/Som založená na Cloudflare Edge a mám 29 servisných workerov[^\n]*\n*/gi, '')
+      .replace(/Môj primárny AI provider je Cloudflare Workers AI[^\n]*\n*/gi, '')
+      .replace(/Môj účel je slúžiť vám, Sabo Ivanovi[^\n]*\n*/gi, '')
+      .replace(/Môj jazyk je prirodzený a komunikujem s vámi[^\n]*\n*/gi, '');
+  }
+  return deduplicateRepeatedParagraphs(cleaned).trim();
+}
+
 export function usableModelText(text) {
   const compact = text.replace(/\s/g, '');
   if (!compact) return false;
   const repeated = compact.match(/(.)\1{79,}/gu) || [];
   return repeated.reduce((size, run) => size + run.length, 0) < compact.length * 0.8;
 }
-export async function callModel(env, provider, messages, maxTokens = 1200, customModel = null) {
+async function readModelResponse(response,provider) {
+  if(!response.ok){
+    await response.body?.cancel().catch(()=>{});
+    const reason=[401,403].includes(response.status)?'Poskytovateľ odmietol prístup.':
+      response.status===429?'Poskytovateľ oznámil limit požiadaviek.':
+      response.status>=500?'Služba poskytovateľa je dočasne nedostupná.':'Požiadavka zlyhala.';
+    throw new Error(`${provider} HTTP ${response.status}: ${reason}`);
+  }
+  try{return JSON.parse(await boundedText(response,250000));}
+  catch{throw new Error(`${provider} vrátil neplatnú odpoveď.`);}
+}
+
+export async function callModel(env, provider, messages, maxTokens = 8192, customModel = null) {
   if(provider==='local'){
     if(!env.TRINITY_GATEWAY_KEY)throw new Error('Lokálna brána nie je nakonfigurovaná.');
     const recent=messages.filter(message=>message.role!=='system').slice(-6).map(message=>({role:message.role,content:message.content.slice(0,5000)}));
     const localMessages=[{role:'system',content:'Si Trinity, súkromná lokálna AI asistentka. Odpovedaj prirodzene v jazyku používateľa. Nevymýšľaj vykonané akcie, prístup k súborom ani internet. Ak treba aktuálne dáta alebo externú akciu, jasne povedz, že sa má použiť cloudový režim Trinity.'},...recent];
-    const action=await createSystemAction(env,{action:'read',payload:{task:'local-inference',messages:localMessages,max_tokens:Math.min(maxTokens,320)},rationale:'Lokálna AI odpoveď na používateľovu požiadavku'},'provider:local');
+    const action=await createSystemAction(env,{action:'read',payload:{task:'local-inference',messages:localMessages,max_tokens:Math.min(maxTokens,4096)},rationale:'Lokálna AI odpoveď na používateľovu požiadavku'},'provider:local');
     for(let attempt=0;attempt<180;attempt++){
       await new Promise(resolve=>setTimeout(resolve,1000));const current=await getSystemAction(env,action.id);
       if(current?.status==='completed')return {text:current.receipt.response,model:current.receipt.model,provider:'local',usage:current.receipt.usage||null};
@@ -153,15 +211,15 @@ export async function callModel(env, provider, messages, maxTokens = 1200, custo
     let tunnelMeta=null;
     if(env.PC_STATE){try{tunnelMeta=JSON.parse(await env.PC_STATE.get('bridge:tunnel_meta')||'null');}catch{}}
     if(!tunnelMeta&&env.Mastermind){try{tunnelMeta=JSON.parse(await env.Mastermind.get('bridge:tunnel_meta')||'null');}catch{}}
-    const tunnelUrl=tunnelMeta?.tunnel_url;
-    if(tunnelUrl){
+    const tunnelUrl=registeredBridgeTunnelUrl(tunnelMeta);
+    const bridgeToken=configuredBridgeToken(env);
+    if(tunnelUrl&&bridgeToken){
       try {
-        const bridgeToken=env.TRINITY_BRIDGE_TOKEN||'b902cb066b2ccb940a470f06bf3b0fd5d6bf5259ddf8017ce2e41f9a2f5393f6';
         const res=await fetch(tunnelUrl+'/api/ollama/chat',{
           method:'POST',
           headers:{'Content-Type':'application/json','X-Trinity-Bridge-Token':bridgeToken},
           body:JSON.stringify({messages,max_tokens:maxTokens,model:customModel||env.OLLAMA_MODEL||'qwen3.5:4b'}),
-          signal:AbortSignal.timeout(120_000)
+          signal:AbortSignal.timeout(120_000),redirect:'manual'
         });
         if(res.ok){
           const data=await res.json();
@@ -175,7 +233,7 @@ export async function callModel(env, provider, messages, maxTokens = 1200, custo
       const response=await fetch('https://ollama.com/api/chat',{
         method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},
         body:JSON.stringify({model,messages,stream:false,options:{num_predict:maxTokens,temperature:0.25}}),
-        signal:AbortSignal.timeout(65000),redirect:'manual'
+        signal:AbortSignal.timeout(120000),redirect:'manual'
       });
       if(response.ok){
         const data=JSON.parse(await boundedText(response,100000));
@@ -194,8 +252,8 @@ export async function callModel(env, provider, messages, maxTokens = 1200, custo
     let response=await fetch('https://generativelanguage.googleapis.com/v1beta/interactions',{
       method:'POST',headers:{'x-goog-api-key':apiKey,'Content-Type':'application/json'},
       body:JSON.stringify({model:interactionModel,input,system_instruction:system||undefined,store:false,
-        generation_config:{max_output_tokens:Math.min(maxTokens,8192),temperature:0.25}}),
-      signal:AbortSignal.timeout(65000),redirect:'manual'
+        generation_config:{max_output_tokens:Math.min(maxTokens,16384),temperature:0.25}}),
+      signal:AbortSignal.timeout(120000),redirect:'manual'
     });
     let usedModel=model;
     if(!response.ok && (response.status===404 || response.status===400)){
@@ -207,7 +265,7 @@ export async function callModel(env, provider, messages, maxTokens = 1200, custo
       let models=[];
       try{
         const catalog=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000',{
-          headers:{'x-goog-api-key':apiKey},signal:AbortSignal.timeout(10000),redirect:'error'
+          headers:{'x-goog-api-key':apiKey},signal:AbortSignal.timeout(10000),redirect:'manual'
         });
         if(catalog.ok){
           const listing=await catalog.json();
@@ -227,37 +285,38 @@ export async function callModel(env, provider, messages, maxTokens = 1200, custo
           headers:{'Content-Type':'application/json','x-goog-api-key':apiKey},
           body:JSON.stringify({
             contents,
-            generationConfig:{maxOutputTokens:Math.min(maxTokens,8192),temperature:0.25}
+            generationConfig:{maxOutputTokens:Math.min(maxTokens,16384),temperature:0.25}
           }),
-          signal:AbortSignal.timeout(65000),
+          signal:AbortSignal.timeout(120000),
           redirect:'manual'
         });
+        response=fallbackResponse;
         if(fallbackResponse.ok){
-          response=fallbackResponse;
           usedModel=candidateModel;
           break;
         }
+        // Trying another model is only a compatibility fallback. It cannot
+        // repair rejected credentials, provider limits or a service outage.
+        if(![400,404].includes(fallbackResponse.status))break;
       }
     }
-    const data=JSON.parse(await boundedText(response,250000));
-    if(!response.ok)throw new Error(`Gemini HTTP ${response.status}: ${data.error?.message||'požiadavka zlyhala'}`);
+    const data=await readModelResponse(response,'Gemini');
     const text=extractGeminiInteractionText(data);
     if(!text)throw new Error('Gemini vrátilo prázdnu odpoveď.');
     return {text,model:usedModel,provider,usage:{input:data.usageMetadata?.promptTokenCount||0,output:data.usageMetadata?.candidatesTokenCount||0}};
   }
   if(provider==='openai') {
-    let apiKey=typeof env.OPENAI_API_KEY==='string'?sanitizeApiKey(env.OPENAI_API_KEY,/(?:sk-[A-Za-z0-9_-]{16,}|test-[A-Za-z0-9_-]{10,})/):'';
     const envModel=env.OPENAI_MODEL&&!/luna/i.test(env.OPENAI_MODEL)?env.OPENAI_MODEL.trim():'';
-    let model=customModel||envModel||'gpt-4.1-mini';
-    if(!apiKey){
-      try {
-        const vaultProvider=await getConfiguredAIProvider(env,'openai');
-        if(vaultProvider?.apiKey){
-          apiKey=sanitizeApiKey(vaultProvider.apiKey,/sk-[A-Za-z0-9_-]{16,}/);
-          if(vaultProvider.model)model=vaultProvider.model;
-        }
-      }catch{}
-    }
+    let apiKey='',model=customModel||'';
+    try {
+      const vaultProvider=await getConfiguredAIProvider(env,'openai');
+      if(vaultProvider?.apiKey){
+        apiKey=sanitizeApiKey(vaultProvider.apiKey,/sk-[A-Za-z0-9_-]{16,}/);
+        if(!model&&vaultProvider.model)model=vaultProvider.model;
+      }
+    }catch{}
+    if(!apiKey)apiKey=typeof env.OPENAI_API_KEY==='string'?sanitizeApiKey(env.OPENAI_API_KEY,/(?:sk-[A-Za-z0-9_-]{16,}|test-[A-Za-z0-9_-]{10,})/):'';
+    if(!model)model=envModel||'gpt-4.1-mini';
     if(!apiKey)throw new Error('OpenAI API nie je nakonfigurované.');
     const chatMessages=messages.slice(-16).map(message=>({
       role:message.role==='system'?'system':message.role,
@@ -265,8 +324,8 @@ export async function callModel(env, provider, messages, maxTokens = 1200, custo
     }));
     let response=await fetch('https://api.openai.com/v1/chat/completions',{
       method:'POST',headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},
-      body:JSON.stringify({model,messages:chatMessages,max_tokens:Math.min(maxTokens,4096),temperature:0.7}),
-      signal:AbortSignal.timeout(65000),redirect:'manual'
+      body:JSON.stringify({model,messages:chatMessages,max_tokens:Math.min(maxTokens,16384),temperature:0.7}),
+      signal:AbortSignal.timeout(120000),redirect:'manual'
     });
     if(response.status===404){
       const responsesInput=messages.slice(-16).map(message=>({
@@ -275,12 +334,11 @@ export async function callModel(env, provider, messages, maxTokens = 1200, custo
       }));
       response=await fetch('https://api.openai.com/v1/responses',{
         method:'POST',headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},
-        body:JSON.stringify({model,input:responsesInput,store:false,max_output_tokens:Math.min(maxTokens,8192)}),
-        signal:AbortSignal.timeout(65000),redirect:'manual'
+        body:JSON.stringify({model,input:responsesInput,store:false,max_output_tokens:Math.min(maxTokens,16384)}),
+        signal:AbortSignal.timeout(120000),redirect:'manual'
       });
     }
-    const data=JSON.parse(await boundedText(response,250000));
-    if(!response.ok)throw new Error(`OpenAI HTTP ${response.status}: ${String(data.error?.message||'požiadavka zlyhala').slice(0,400)}`);
+    const data=await readModelResponse(response,'OpenAI');
     const text=extractModelText(data);
     if(!text.trim())throw new Error('OpenAI vrátilo prázdnu odpoveď.');
     return {text,model:data.model||model,provider,usage:{input:data.usage?.prompt_tokens||data.usage?.input_tokens||0,output:data.usage?.completion_tokens||data.usage?.output_tokens||0}};
@@ -295,11 +353,10 @@ export async function callModel(env, provider, messages, maxTokens = 1200, custo
     const chatMessages=messages.map(m=>({role:m.role==='system'?'system':m.role,content:String(m.content).slice(0,40000)}));
     const response=await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},
-      body:JSON.stringify({model,messages:chatMessages,max_tokens:Math.min(maxTokens,4096),temperature:0.3}),
-      signal:AbortSignal.timeout(65000),redirect:'manual'
+      body:JSON.stringify({model,messages:chatMessages,max_tokens:Math.min(maxTokens,16384),temperature:0.3}),
+      signal:AbortSignal.timeout(120000),redirect:'manual'
     });
-    const data=JSON.parse(await boundedText(response,250000));
-    if(!response.ok)throw new Error(`Groq HTTP ${response.status}: ${data.error?.message||'požiadavka zlyhala'}`);
+    const data=await readModelResponse(response,'Groq');
     const text=extractModelText(data);
     if(!text.trim())throw new Error('Groq vrátil prázdnu odpoveď.');
     return {text,model:data.model||model,provider,usage:{input:data.usage?.prompt_tokens||0,output:data.usage?.completion_tokens||0}};
@@ -313,11 +370,10 @@ export async function callModel(env, provider, messages, maxTokens = 1200, custo
     const chatMessages=messages.map(m=>({role:m.role==='system'?'system':m.role,content:String(m.content).slice(0,40000)}));
     const response=await fetch('https://api.deepseek.com/chat/completions',{
       method:'POST',headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},
-      body:JSON.stringify({model,messages:chatMessages,max_tokens:Math.min(maxTokens,4096),temperature:0.3}),
-      signal:AbortSignal.timeout(65000),redirect:'manual'
+      body:JSON.stringify({model,messages:chatMessages,max_tokens:Math.min(maxTokens,16384),temperature:0.3}),
+      signal:AbortSignal.timeout(120000),redirect:'manual'
     });
-    const data=JSON.parse(await boundedText(response,250000));
-    if(!response.ok)throw new Error(`DeepSeek HTTP ${response.status}: ${data.error?.message||'požiadavka zlyhala'}`);
+    const data=await readModelResponse(response,'DeepSeek');
     const text=extractModelText(data);
     if(!text.trim())throw new Error('DeepSeek vrátil prázdnu odpoveď.');
     return {text,model:data.model||model,provider,usage:{input:data.usage?.prompt_tokens||0,output:data.usage?.completion_tokens||0}};
@@ -332,11 +388,10 @@ export async function callModel(env, provider, messages, maxTokens = 1200, custo
     const chatMessages=messages.filter(m=>m.role!=='system').map(m=>({role:m.role==='assistant'?'assistant':'user',content:String(m.content).slice(0,40000)}));
     const response=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',headers:{'x-api-key':apiKey,'anthropic-version':'2023-06-01','Content-Type':'application/json'},
-      body:JSON.stringify({model,messages:chatMessages,system:system||undefined,max_tokens:Math.min(maxTokens,4096),temperature:0.3}),
-      signal:AbortSignal.timeout(65000),redirect:'manual'
+      body:JSON.stringify({model,messages:chatMessages,system:system||undefined,max_tokens:Math.min(maxTokens,8192),temperature:0.3}),
+      signal:AbortSignal.timeout(120000),redirect:'manual'
     });
-    const data=JSON.parse(await boundedText(response,250000));
-    if(!response.ok)throw new Error(`Anthropic HTTP ${response.status}: ${data.error?.message||'požiadavka zlyhala'}`);
+    const data=await readModelResponse(response,'Anthropic');
     const text=data.content?.[0]?.text||'';
     if(!text.trim())throw new Error('Anthropic Claude vrátil prázdnu odpoveď.');
     return {text,model:data.model||model,provider,usage:{input:data.usage?.input_tokens||0,output:data.usage?.output_tokens||0}};
@@ -350,11 +405,10 @@ export async function callModel(env, provider, messages, maxTokens = 1200, custo
     const chatMessages=messages.map(m=>({role:m.role==='system'?'system':m.role,content:String(m.content).slice(0,40000)}));
     const response=await fetch('https://api.mistral.ai/v1/chat/completions',{
       method:'POST',headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},
-      body:JSON.stringify({model,messages:chatMessages,max_tokens:Math.min(maxTokens,4096),temperature:0.3}),
-      signal:AbortSignal.timeout(65000),redirect:'manual'
+      body:JSON.stringify({model,messages:chatMessages,max_tokens:Math.min(maxTokens,16384),temperature:0.3}),
+      signal:AbortSignal.timeout(120000),redirect:'manual'
     });
-    const data=JSON.parse(await boundedText(response,250000));
-    if(!response.ok)throw new Error(`Mistral HTTP ${response.status}: ${data.error?.message||'požiadavka zlyhala'}`);
+    const data=await readModelResponse(response,'Mistral');
     const text=extractModelText(data);
     if(!text.trim())throw new Error('Mistral AI vrátil prázdnu odpoveď.');
     return {text,model:data.model||model,provider,usage:{input:data.usage?.prompt_tokens||0,output:data.usage?.completion_tokens||0}};
@@ -368,18 +422,17 @@ export async function callModel(env, provider, messages, maxTokens = 1200, custo
     const chatMessages=messages.map(m=>({role:m.role==='system'?'system':m.role,content:String(m.content).slice(0,40000)}));
     const response=await fetch('https://openrouter.ai/api/v1/chat/completions',{
       method:'POST',headers:{Authorization:`Bearer ${apiKey}`,'HTTP-Referer':'https://auru.space','X-Title':'Trinity AI','Content-Type':'application/json'},
-      body:JSON.stringify({model,messages:chatMessages,max_tokens:Math.min(maxTokens,4096),temperature:0.3}),
-      signal:AbortSignal.timeout(65000),redirect:'manual'
+      body:JSON.stringify({model,messages:chatMessages,max_tokens:Math.min(maxTokens,16384),temperature:0.3}),
+      signal:AbortSignal.timeout(120000),redirect:'manual'
     });
-    const data=JSON.parse(await boundedText(response,250000));
-    if(!response.ok)throw new Error(`OpenRouter HTTP ${response.status}: ${data.error?.message||'požiadavka zlyhala'}`);
+    const data=await readModelResponse(response,'OpenRouter');
     const text=extractModelText(data);
     if(!text.trim())throw new Error('OpenRouter vrátil prázdnu odpoveď.');
     return {text,model:data.model||model,provider,usage:{input:data.usage?.prompt_tokens||0,output:data.usage?.completion_tokens||0}};
   }
 
   if(['auto','deepseek-r1','llama','qwen','workers-ai','fast','cloud'].includes(provider)){
-    if(!env.AI)throw new Error('Cloudflare Workers AI nie je pripojené.');
+    if(!env.AI && !env.CHAT_INFERENCE_SERVICE)throw new Error('Cloudflare Workers AI nie je pripojené.');
     const defaultModel=provider==='deepseek-r1'?'@cf/deepseek-ai/deepseek-r1-distill-qwen-32b'
       :provider==='llama'?"@cf/meta/llama-3.3-70b-instruct-fp8-fast"
       :provider==='qwen'?'@cf/qwen/qwen2.5-72b-instruct'
@@ -387,7 +440,8 @@ export async function callModel(env, provider, messages, maxTokens = 1200, custo
       :(env.AI_MODEL || '@cf/openai/gpt-oss-120b');
     const model=customModel || defaultModel;
     const invoke = async selectedModel => {
-      if(provider==='fast'&&env.CHAT_INFERENCE_SERVICE){
+      if(env.CHAT_INFERENCE_SERVICE){
+        // Route through dedicated chat inference worker (trinity-chat-inference)
         try{
           const response=await env.CHAT_INFERENCE_SERVICE.fetch('https://chat-inference.internal/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:selectedModel,messages,max_tokens:Math.min(maxTokens,600)}),signal:AbortSignal.timeout(20000)});
           if(response.ok)return JSON.parse(await boundedText(response,100000));
@@ -395,14 +449,14 @@ export async function callModel(env, provider, messages, maxTokens = 1200, custo
         // Binding failure falls back to the already authorized Workers AI binding.
       }
       let timer;
-      try { return await Promise.race([env.AI.run(selectedModel,{messages,max_tokens:Math.min(maxTokens,2048),temperature:0.2}),
-        new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Workers AI timeout')),provider==='fast'?20000:65000);})]); }
+      try { return await Promise.race([env.AI.run(selectedModel,{messages,max_tokens:Math.min(maxTokens,8192),temperature:0.5,top_p:0.9,repetition_penalty:1.15}),
+        new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Workers AI timeout')),provider==='fast'?30000:120000);})]); }
       finally {clearTimeout(timer);}
     };
     let result,fallbackReason='invalid-output';
     try{result=await invoke(model);}catch{result={};fallbackReason='provider-error';}
     const text = extractModelText(result);
-    if (usableModelText(text)) return {text,model,provider:'workers-ai',usage:result.usage||null};
+    if (usableModelText(text)) return {text:cleanModelResponse(text),model,provider:'workers-ai',usage:result.usage||null};
     // A successful HTTP response can still contain a broken generation (e.g. thousands of "!").
     // Retry once on a different bound model; never persist that output as a completed answer.
     const fallbackModel = (provider==='fast'?env.AI_FAST_FALLBACK_MODEL:env.AI_FALLBACK_MODEL) || "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
@@ -410,7 +464,7 @@ export async function callModel(env, provider, messages, maxTokens = 1200, custo
     const fallback = await invoke(fallbackModel);
     const fallbackText = extractModelText(fallback);
     if (!usableModelText(fallbackText)) throw new Error('Ani záložný model nevrátil použiteľnú odpoveď. Skús požiadavku znova.');
-    return {text:fallbackText,model:fallbackModel,provider:'workers-ai',usage:fallback.usage||null,
+    return {text:cleanModelResponse(fallbackText),model:fallbackModel,provider:'workers-ai',usage:fallback.usage||null,
       model_fallback:{from:model,to:fallbackModel,reason:fallbackReason}};
   }
   throw new Error('Unknown provider');

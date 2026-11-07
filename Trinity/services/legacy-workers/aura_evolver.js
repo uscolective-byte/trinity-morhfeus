@@ -3,6 +3,10 @@ import {runAuraAi, parseAuraJson, safeDbRun} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
+    if (request.method === "GET" && new URL(request.url).pathname === "/health") {
+      return Response.json({ ok: true, service: "aura_evolver", version: "10.3.0", status: "serving", bindings: { AI: !!env.AI, DB: !!env.DB } });
+    }
+
     if (request.method !== "POST") return Response.json({ ok: false, error: "Method not allowed" }, { status: 405 });
     let call;
     try { call = await request.json(); } catch { return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 }); }
@@ -12,7 +16,7 @@ export default {
       if (call.action === "evolve.propose") {
         const text = await runAuraAi(env,
           "Si AURA Evolver. Navrhni 3 konkrétne, vysoko hodnotné vylepšenia systému Trinity. Pre každé uveď popis, očakávaný dopad a úroveň rizika. Odpovedz VÝHRADNE ako validný JSON: {\"proposals\":[{\"title\":\"...\",\"description\":\"...\",\"impact\":\"high|medium|low\",\"risk\":\"low|medium|high\",\"area\":\"...\"}]}",
-          "Oblasť: " + (d.area || "system") + " Súčasný stav: " + (d.current_state || "v10.2.0")
+          "Oblasť: " + (d.area || "system") + " Súčasný stav: " + (d.current_state || "v10.3.0")
         );
         const proposals = parseAuraJson(text);
         const id = crypto.randomUUID();
@@ -29,7 +33,7 @@ export default {
         return Response.json({ ok: true, result: r.results, traceId, from: "aura-evolver" });
       }
       if (call.action === "aura.status") {
-        return Response.json({ ok: true, result: { agent: "evolver", role: "Navrhuje a testuje evolučné vylepšenia systému Trinity", status: "active", version: "10.2.0" }, traceId, from: "aura-evolver" });
+        return Response.json({ ok: true, result: { agent: "evolver", role: "Navrhuje a testuje evolučné vylepšenia systému Trinity", status: "active", version: "10.3.0" }, traceId, from: "aura-evolver" });
       }
       const text = await runAuraAi(env, "Si AURA Evolver. Navrhni evolučné vylepšenia a sebareflexiu.", d.prompt || call.action);
       return Response.json({ ok: true, result: { response: text }, traceId, from: "aura-evolver" });

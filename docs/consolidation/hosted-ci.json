@@ -1,0 +1,15 @@
+{
+  "tested_head": "740e3e39b117cfe2bdacb8b2e9920bf33d1fc19e",
+  "trinity_ci": [
+    {
+      "name": "Cloudflare build, tests, dependency and AI policy",
+      "conclusion": "failure",
+      "steps": 0,
+      "runner_name": "",
+      "annotations": [
+        "The job was not started because your account is locked due to a billing issue."
+      ]
+    }
+  ],
+  "vercel_preview_statuses_at_tested_head": "4 project statuses SUCCESS; reported by GitHub status API, not independent browser acceptance"
+}

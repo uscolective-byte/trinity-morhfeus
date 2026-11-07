@@ -7,10 +7,10 @@ const html=readFileSync(new URL('../public/assistant/chat.html',import.meta.url)
 function setup(){
  const ids=new Set([...html.matchAll(/id="([^"]+)"/g)].map(m=>m[1]));
  const elements=new Map();
- function node(){return {hidden:false,value:'',checked:false,disabled:false,textContent:'',innerHTML:'',dataset:{},style:{},classList:{add(){},remove(){},toggle(){}},addEventListener(){},querySelector(){return node();},querySelectorAll(){return [];},append(){},replaceChildren(){},focus(){},setAttribute(){},getAttribute(){return null;},removeAttribute(){}};}
+ function node(){return {children:[],hidden:false,value:'',checked:false,disabled:false,textContent:'',innerHTML:'',dataset:{},style:{},classList:{add(){},remove(){},toggle(){}},addEventListener(){},querySelector(){return node();},querySelectorAll(){return [];},append(...items){this.children.push(...items);},replaceChildren(...items){this.children=items;},focus(){},setAttribute(){},getAttribute(){return null;},removeAttribute(){}};}
  for(const id of ids)elements.set(id,node());
  const storage=new Map(),calls=[];let bootstrap;
- const context={console,URL,URLSearchParams,TextDecoder,AbortController,AbortSignal,Response,crypto,Intl,Date,setTimeout,clearTimeout,setInterval,clearInterval,
+ const context={console,URL,URLSearchParams,TextDecoder,AbortController,AbortSignal,Response,DOMException,crypto,Intl,Date,setTimeout,clearTimeout,setInterval,clearInterval,
  MutationObserver:class {observe(){} disconnect(){}},
  document:{getElementById:id=>elements.get(id)||null,querySelector:()=>null,querySelectorAll:()=>[],createElement:node,documentElement:node(),body:node(),addEventListener(){}},
  localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},
@@ -92,4 +92,66 @@ test('chat timeout is recoverable and releases the send button',async()=>{
  assert.match(s.elements.get('notice').textContent,/časovom limite/);
  assert.equal(s.elements.get('send').disabled,false);
  assert.equal(s.elements.get('stop').hidden,true);
+});
+
+test('failed send preserves the next draft being typed',async()=>{
+ const s=setup();s.elements.get('message').value='Pôvodná správa';
+ let fail;s.context.fetch=()=>new Promise((resolve,reject)=>{fail=reject;});
+ const sending=s.elements.get('chat-form').onsubmit({preventDefault(){}});
+ s.elements.get('message').value='Ďalšia rozpísaná správa';fail(new Error('Prerušené spojenie'));
+ await sending;assert.equal(s.elements.get('message').value,'Ďalšia rozpísaná správa');
+ assert.ok(s.elements.get('messages').children.at(-1).children.some(n=>n.textContent==='Obnoviť pôvodnú správu'));
+});
+
+test('IME Enter and Shift Enter do not submit the composer',()=>{
+ const s=setup();let count=0;s.elements.get('chat-form').requestSubmit=()=>count++;
+ const handler=s.elements.get('message').onkeydown;
+ handler({key:'Enter',isComposing:true,preventDefault(){throw Error('IME blocked');}});
+ handler({key:'Enter',shiftKey:true,preventDefault(){throw Error('newline blocked');}});
+ handler({key:'Enter',preventDefault(){}});assert.equal(count,1);
+});
+
+test('stream decoder consumes final event without a trailing newline',async()=>{
+ const s=setup();s.context.response=new Response('{"type":"delta","text":"Ahoj"}\n{"type":"delta","text":" Ivan"}');
+ s.context.events=[];await s.run('readChatStream(response,event=>events.push(event))');
+ assert.equal(s.context.events.map(x=>x.text).join(''),'Ahoj Ivan');
+});
+
+test('empty stream is recoverable instead of leaving a thinking bubble',async()=>{
+ const s=setup();s.elements.get('message').value='Otázka';s.context.fetch=async()=>new Response('',{headers:{'Content-Type':'application/x-ndjson'}});
+ await s.elements.get('chat-form').onsubmit({preventDefault(){}});
+ assert.equal(s.elements.get('message').value,'Otázka');assert.match(s.elements.get('notice').textContent,/Neprišla žiadna odpoveď/);
+});
+
+test('stale request cannot restore text into a new conversation',async()=>{
+ const s=setup();s.elements.get('message').value='Starý rozhovor';let fail;
+ s.context.fetch=()=>new Promise((resolve,reject)=>{fail=reject;});
+ const sending=s.elements.get('chat-form').onsubmit({preventDefault(){}});
+ s.run('chatGeneration++');s.elements.get('message').value='Nový rozhovor';fail(new Error('Network error'));await sending;
+ assert.equal(s.elements.get('message').value,'Nový rozhovor');assert.equal(s.elements.get('notice').textContent,'');
+});
+
+test('repository result is readable without claiming unconfirmed authentication',()=>{
+ const s=setup();s.context.raw=JSON.stringify({success:true,repo:'owner/repo',authenticated:false,details:{default_branch:'main',visibility:'public'}});
+ const rendered=s.run('readableReply(raw)');assert.match(rendered.text,/owner\/repo/);assert.match(rendered.text,/nebol potvrdený/);assert.ok(rendered.details);
+});
+
+test('reading old messages opts out of automatic follow',()=>{
+ const s=setup(),area=s.elements.get('chat-area');area.scrollTop=50;area.scrollHeight=1000;
+ s.run('chatFollowLatest=false;bottom()');assert.equal(area.scrollTop,50);
+ s.run('bottom(true)');assert.equal(area.scrollTop,1000);
+});
+
+test('late history cannot replace messages sent while history was loading',async()=>{
+ const s=setup();let resolveHistory;
+ s.context.fetch=async path=>path.includes('/history')?new Promise(resolve=>{resolveHistory=resolve;}):new Response('Bad gateway',{status:502});
+ const loading=s.run('loadHistory()');
+ s.elements.get('message').value='Nová správa počas načítavania';
+ await s.elements.get('chat-form').onsubmit({preventDefault(){}});
+ const bubbles=s.elements.get('messages').children.slice();
+ assert.equal(bubbles.length,2);
+ resolveHistory(Response.json([{role:'assistant',content:'Stará história'}]));
+ await loading;
+ assert.deepEqual(s.elements.get('messages').children,bubbles);
+ assert.equal(bubbles[0].children[1].textContent,'Nová správa počas načítavania');
 });

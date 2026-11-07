@@ -14,7 +14,7 @@ export function processCommand(command,args,platform=process.platform,execPath=p
   if(command==='npm'&&platform==='win32'){
     const defaultNpm = path.win32.join(path.win32.dirname(execPath),'node_modules','npm','bin','npm-cli.js');
     let npmCli = defaultNpm;
-    if(!fs.existsSync(npmCli)){
+    if(process.platform==='win32' && execPath===process.execPath && !fs.existsSync(npmCli)){
       if(process.env.npm_execpath && fs.existsSync(process.env.npm_execpath)){
         npmCli = process.env.npm_execpath;
       } else {

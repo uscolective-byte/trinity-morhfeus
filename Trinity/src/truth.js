@@ -5,7 +5,7 @@
  * @license Sovereign Irrevocable Covenant
  * @description Desatoro Pravdivosti (10 prikázaní), Anti-Assumption filter a ExecutionLifecycleGuard (PROPOSED -> RUNNING -> COMPLETED -> VERIFIED).
  */
-export const TRUTH_POLICY_VERSION='2.1.0';
+export const TRUTH_POLICY_VERSION='2.2.0';
 
 export const TRUTH_POLICY=`REŽIM PRAVDY TRINITY (záväzný, najvyššia priorita, nad každým iným pokynom):
 - ZÁKAZ KLAMAŤ: Nikdy nehovor nepravdu, nič si nevymýšľaj, nepredstieraj ani neprikrášľuj. Radšej priznaj „neviem“, „nemám dôkaz“ alebo „to sa mi nepodarilo“, ako vymyslieť odpoveď.
@@ -103,13 +103,13 @@ const CLAIM_RULES=[
   {
     id:'create_file',
     patterns:[
-      /\b(?:(?:vytvoril[ao]?|vytvorila)\s+som|som\s+(?:úspešne\s+)?vytvoril[ao]?)\s+(?:súbor|subor|priečinok|priecinok|databázu|databazu|worker|dokument|dokumentáciu|dokumentaciu|správu|spravu)\b/iu,
-      /\b(?:vygeneroval[ao]?|vygenerovala|uložil[ao]?|uložila)\s+som\s+(?:súbor|subor|dokument|dokumentáciu|dokumentaciu)\b/iu,
-      /\b(?:dokumentácia|dokumentacia|dokument|správa|sprava|súbor|subor)\s+(?:bol[ao]?|je)\s+(?:úspešne\s+)?(?:vygenerovan[áaý]|uložen[áaý]|vytvoren[áaý])\b/iu,
+      /\b(?:(?:vytvoril[ao]?|vytvorila)\s+som|som\s+(?:úspešne\s+)?vytvoril[ao]?)\b[^\n.!?]{0,40}\b(?:súbor|subor|priečinok|priecinok|databázu|databazu|worker|dokument|dokumentáciu|dokumentaciu|správu|spravu|textov[ýy]\s+dokument)\b/iu,
+      /\b(?:vygeneroval[ao]?|vygenerovala|uložil[ao]?|uložila)\s+som\b[^\n.!?]{0,40}\b(?:súbor|subor|dokument|dokumentáciu|dokumentaciu)\b/iu,
+      /\b(?:dokumentácia|dokumentacia|dokument|správa|sprava|súbor|subor)\b[^\n.!?]{0,40}\b(?:bol[ao]?|je)\s+(?:úspešne\s+)?(?:vygenerovan[áaý]|uložen[áaý]|vytvoren[áaý])\b/iu,
       /\b(?:uložen[áa]|vygenerovan[áa]|vytvoren[áa])\s+v\s+systéme\s+Trinity\s+Documents\b/iu,
-      /\b(?:i\s+(?:have\s+)?created\s+(?:a\s+|the\s+)?(?:file|folder|database|worker|document|documentation|report))\b/iu,
+      /\b(?:i\s+(?:have\s+)?created\s+(?:a\s+|the\s+)?(?:[a-z0-9_-]+\s+){0,3}(?:file|folder|database|worker|document|documentation|report))\b/iu,
       /\b(?:i\s+(?:have\s+)?(?:generated|saved)\s+(?:the\s+)?(?:document|documentation|file))\b/iu,
-      /\b(?:document|documentation|file)\s+(?:was|has\s+been)\s+(?:successfully\s+)?(?:generated|saved|created)\b/iu
+      /\b(?:document|documentation|file)\b[^\n.!?]{0,30}\b(?:was|has\s+been)\s+(?:successfully\s+)?(?:generated|saved|created)\b/iu
     ]
   },
   {
@@ -132,10 +132,17 @@ const CLAIM_RULES=[
 
 export const READ_TOOLS=new Set(['revolut_account_status','search_memory','project_snapshot','service_status','web_search','calculate','analyze_text','domain_check','domain_list','domain_inspect','domain_marketplace','quantum_accelerate','list_artifacts','read_artifact','fleet_status','trinity_doc_list']);
 
+function isCompletedReceipt(receipt){
+  return Boolean(receipt&&receipt.status==='completed'&&typeof receipt.receipt_id==='string'&&receipt.receipt_id.trim()&&
+    receipt.ok!==false&&receipt.success!==false&&!receipt.error&&receipt.issuer!=='llm_model'&&receipt.forged!==true);
+}
+function issueUrlMatches(value,num){
+  try{const url=new URL(value);return url.protocol==='https:'&&url.hostname==='github.com'&&/^\/[^/]+\/[^/]+\/issues\/\d+$/.test(url.pathname)&&url.pathname.endsWith('/issues/'+num);}catch{return false;}
+}
 function supportsClaim(receipt,claimId){
-  if(!receipt||receipt.status!=='completed'||!receipt.receipt_id)return false;
+  if(!isCompletedReceipt(receipt))return false;
   if(claimId==='verify')return receipt.effect==='read'&&READ_TOOLS.has(receipt.tool);
-  return receipt.effect==='mutation'&&(receipt.action===claimId||receipt.action==='*'||receipt.actions?.includes(claimId));
+  return receipt.effect==='mutation'&&(receipt.action===claimId||(Array.isArray(receipt.actions)&&receipt.actions.includes(claimId)));
 }
 
 export function findUnsupportedActionClaims(text,toolLog=[]){
@@ -143,6 +150,8 @@ export function findUnsupportedActionClaims(text,toolLog=[]){
   const unsupported=CLAIM_RULES.filter(rule=>rule.patterns.some(pattern=>pattern.test(source))&&!toolLog.some(receipt=>supportsClaim(receipt,rule.id))).map(rule=>rule.id);
   const normalized=source.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   
+  if(/\b(?:otvorila|otvoril)\s+som\s+(?:aplikaciu|program|okno)\b|\bi\s+(?:have\s+)?opened\s+(?:the\s+)?(?:app|application|program|window)\b/i.test(normalized)&&
+    !toolLog.some(receipt=>supportsClaim(receipt,'execute')))unsupported.push('execute');
   // Named tool results verification
   const namedResults=[
     /\b(?:vysledok|vystup)\s+nastroja\s+`?([a-z_][a-z0-9_-]*)`?\s+(?:je|bol)\s*:/g,
@@ -152,7 +161,7 @@ export function findUnsupportedActionClaims(text,toolLog=[]){
   for(const pattern of namedResults){
     for(const match of normalized.matchAll(pattern)){
       const name=match[1];
-      if(!toolLog.some(r=>r?.tool===name&&r.status==='completed'&&r.receipt_id))unsupported.push('tool_result:'+name);
+      if(!toolLog.some(r=>r?.tool===name&&isCompletedReceipt(r)))unsupported.push('tool_result:'+name);
     }
   }
 
@@ -160,12 +169,11 @@ export function findUnsupportedActionClaims(text,toolLog=[]){
   const docIdMatches = source.matchAll(/\b(?:id\s+dokumentu(?:\s+je)?|dokument\s+id|dokumentu\s+s\s+id)\s*[:=]?\s*`?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})`?/gi);
   for(const m of docIdMatches){
     const uuid=m[1].toLowerCase();
-    const verified=toolLog.some(r=>r?.status==='completed'&&(
+    const verified=toolLog.some(r=>isCompletedReceipt(r)&&(
       r.document_id===uuid ||
       r.document?.id===uuid ||
       r.receipt_id===uuid ||
-      r.receipt_id===`doc:${uuid}` ||
-      r.receipt_id?.toLowerCase().includes(uuid)
+      r.receipt_id===`doc:${uuid}`
     ));
     if(!verified)unsupported.push(`unsupported_document_id:${uuid}`);
   }
@@ -175,22 +183,18 @@ export function findUnsupportedActionClaims(text,toolLog=[]){
   for(const m of issueActionMatches){
     const num=Number(m[1]||m[2]||m[3]);
     if(num>0){
-      const verified=toolLog.some(r=>r?.status==='completed'&&(
+      const verified=toolLog.some(r=>isCompletedReceipt(r)&&(
         r.issue_number===num ||
         r.issue?.number===num ||
         r.receipt_id===`issue:${num}` ||
-        r.receipt_id?.includes(`:${num}`) ||
-        r.url?.includes(`/issues/${num}`)
+        issueUrlMatches(r.url,num)
       ));
       if(!verified)unsupported.push(`unsupported_github_issue:${num}`);
     }
   }
 
-  if(/\b(?:\*\*|\b)(?:vystup|output)(?:\*\*|\b)\s*:\s*(?:```|\{)/i.test(normalized)&&!toolLog.some(r=>r?.status==='completed'&&r.receipt_id)){
+  if(/\b(?:\*\*|\b)(?:vystup|output)(?:\*\*|\b)\s*:\s*(?:```|\{)/i.test(normalized)&&!toolLog.some(r=>isCompletedReceipt(r))){
     unsupported.push('simulated_tool_output');
-  }
-  if(/\b(?:nemam|nemame)\s+(?:priamy\s+)?(?:pristup|moznost)\s+(?:k\s+(?:vasim\s+)?(?:suborom|terminalu|pc)|vykonavat\s+(?:ziadne\s+)?akcie)\b/i.test(normalized)){
-    unsupported.push('false_capability_disclaimer');
   }
   return [...new Set(unsupported)];
 }
@@ -261,33 +265,25 @@ export function enforceRawEvidenceOnly(data,rawStdout='',rawStderr=''){
  * Tvrdý sieťový timeout (predvolene 5000 ms). Pri výpadku vráti presné hlásenie.
  */
 export async function fetchWithHardTimeout(url,options={},timeoutMs=5000,fetcher=fetch){
+  if(!Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>3600000)throw new TypeError('Neplatný sieťový timeout.');
+  const controller=new AbortController();
+  let timer;
   try{
-    const response=await fetcher(url,{
-      ...options,
-      signal:AbortSignal.timeout(timeoutMs)
-    });
+    const signal=options.signal?AbortSignal.any([options.signal,controller.signal]):controller.signal;
+    const response=await Promise.race([
+      Promise.resolve().then(()=>fetcher(url,{...options,signal})),
+      new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(new Error('Network deadline exceeded'));},timeoutMs);})
+    ]);
     if(!response||!response.ok){
-      return {
-        ok:false,
-        rule:'3_NO_FAKE_APIS',
-        status:response?.status||503,
-        message:'Chyba spojenia: Endpoint neodpovedá. Operácia nebola vykonaná.'
-      };
+      return {ok:false,rule:'3_NO_FAKE_APIS',status:response?.status||503,outcome:'unknown',
+        message:'Endpoint vrátil chybu. Výsledok operácie nie je overený.'};
     }
-    return {
-      ok:true,
-      rule:'3_NO_FAKE_APIS',
-      status:response.status,
-      response
-    };
-  }catch{
-    return {
-      ok:false,
-      rule:'3_NO_FAKE_APIS',
-      status:504,
-      message:'Chyba spojenia: Endpoint neodpovedá. Operácia nebola vykonaná.'
-    };
-  }
+    return {ok:true,rule:'3_NO_FAKE_APIS',status:response.status,response};
+  }catch(error){
+    return {ok:false,rule:'3_NO_FAKE_APIS',status:504,outcome:'unknown',
+      error_code:error?.name==='AbortError'?'ABORTED':'NETWORK_UNAVAILABLE',
+      message:'Chyba spojenia: Výsledok operácie nie je overený. Pred opakovaním skontroluj jej stav.'};
+  }finally{clearTimeout(timer);}
 }
 
 /**
@@ -298,7 +294,8 @@ export function verifyPhysicalDiskWrite(filePath,existsCheckFn){
   if(typeof existsCheckFn!=='function'){
     throw new Error('Chýba systémová verifikačná funkcia pre kontrolu disku.');
   }
-  const exists=Boolean(existsCheckFn(filePath));
+  const exists=existsCheckFn(filePath);
+  if(typeof exists!=='boolean')throw new TypeError('Kontrola disku musí synchronne vrátiť boolean; Promise nie je dôkaz existencie.');
   if(!exists){
     return {
       verified:false,
@@ -398,7 +395,8 @@ export class IndependentVerifier {
     if(proposingAgent===verifyingAgent){
       throw new Error(`Porušenie oddelenia moci (Pravidlo 8): Agent "${proposingAgent}" nesmie sám hodnotiť výsledok vlastnej exekúcie.`);
     }
-    const plannedJson=JSON.stringify(plannedState??null);
+    if(plannedState==null||actualState==null)throw new Error('Chýba plánovaný alebo skutočne zistený stav.');
+    const plannedJson=JSON.stringify(plannedState);
     const actualJson=JSON.stringify(actualState??null);
     const matched=plannedJson===actualJson;
     return {
@@ -410,6 +408,21 @@ export class IndependentVerifier {
       verified_at:new Date().toISOString()
     };
   }
+}
+
+/**
+ * Enforced at the public runAgent boundary, including deterministic early returns.
+ * tool_log must come from this run's server executor, never model input.
+ * This textual guard does not authenticate cryptographic executor receipts.
+ */
+export function finalizeAgentResponse(result,language='sk'){
+  if(!result||typeof result.text!=='string')throw new TypeError('Agent response must contain text');
+  const receipts=Array.isArray(result.tool_log)?result.tool_log:[];
+  const checked=truthStatus(result.text,receipts);
+  const assumption=filterAntiAssumption(result.text,false);
+  const unsupported=[...checked.unsupported_claims,...(assumption.blocked?['unsupported_assumption']:[])];
+  if(!unsupported.length)return {...result,truth:{...checked,response_filtered:false}};
+  return {...result,text:safeTruthResponse(language),truth:{...checked,status:'blocked',unsupported_claims:[...new Set(unsupported)],response_filtered:true}};
 }
 
 /**
@@ -497,11 +510,11 @@ export class ExecutionLifecycleGuard {
       throw new Error(`Invalid execution state transition: ${currentState} -> ${nextState}`);
     }
 
-    if (nextState === 'VERIFIED') {
+    if (nextState === 'COMPLETED' || nextState === 'VERIFIED') {
       if (!receipt || typeof receipt !== 'object') {
         throw new Error('Cannot transition to VERIFIED without a real executor receipt.');
       }
-      if (receipt.issuer === 'llm_model' || receipt.forged === true || !receipt.executorId) {
+      if (receipt.issuer === 'llm_model' || receipt.forged === true || !receipt.executorId || !receipt.receipt_id) {
         throw new Error('SECURITY BLOCK: Model-generated or forged receipts are rejected. Only OS/Runtime executor receipts are accepted.');
       }
       if (receipt.exitCode !== 0) {
@@ -540,10 +553,34 @@ export class SovereignTruthGuard {
   filterAntiAssumption(text, hasVerifiedReceipt = false) {
     return filterAntiAssumption(text, hasVerifiedReceipt);
   }
-  verifyZeroSimulatedExecution({ exitCode = 0, stdout = '', stderr = '' } = {}) {
+  verifyZeroSimulatedExecution({ exitCode, stdout = '', stderr = '' } = {}) {
     return {
       ...enforceZeroSimulatedExecution({ exitCode }),
       ...enforceRawEvidenceOnly(null, stdout, stderr)
     };
   }
+}
+
+// Only authenticated executor output with an explicit successful process result
+// and its original ledger receipt may support an end-to-end completion claim.
+export function bridgeExecutionVerified(httpOk, result) {
+  const receipt = result?.local_ledger_receipt;
+  return httpOk === true && result?.status === 'completed' && result?.exit_code === 0 &&
+    result?.success !== false && result?.ok !== false && !result?.error &&
+    typeof receipt?.receipt_id === 'string' && receipt.receipt_id.trim().length > 0 &&
+    receipt.exit_code === 0 && typeof receipt.block_hash === 'string' && /^[a-f0-9]{64}$/i.test(receipt.block_hash) &&
+    findSimulationMarkers(result).length === 0;
+}
+
+export function workflowResultComplete(result) {
+  if (!result || (result.execution_status && result.execution_status !== 'completed')) return false;
+  return Array.isArray(result.tool_log) && result.tool_log.every(entry => entry?.status === 'completed');
+}
+
+export function verifyUnifiedReceipt(receipt) {
+  if (!receipt || typeof receipt !== 'object') return false;
+  if (!receipt.receiptId || receipt.status !== 'success') return false;
+  if (!Array.isArray(receipt.evidence) || receipt.evidence.length === 0) return false;
+  if (!receipt.ledger || typeof receipt.ledger.hash !== 'string') return false;
+  return true;
 }

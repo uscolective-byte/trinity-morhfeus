@@ -177,7 +177,8 @@
               "dispatch_task",
               "get_task",
               "trinity_memory_sync",
-              "dispatch_to_agent"
+              "dispatch_to_agent",
+              "diagnostic_ping"
             ],
             "example": "trinity_status"
           },

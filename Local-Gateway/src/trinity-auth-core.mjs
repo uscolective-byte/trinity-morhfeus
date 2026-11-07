@@ -57,6 +57,69 @@ export function canonicalPhoneVariants(phone) {
   return [...variants];
 }
 
+export function toCanonicalPhone(phone) {
+  const cleaned = normalizePhone(phone);
+  if (!cleaned) return '';
+  if (cleaned.startsWith('09') && cleaned.length === 10) {
+    return '+421' + cleaned.slice(1);
+  }
+  if (cleaned.startsWith('4219') && cleaned.length === 12) {
+    return '+' + cleaned;
+  }
+  return cleaned;
+}
+
+export function toCanonicalIdentity(value) {
+  let cleaned = String(value || '').trim().toLowerCase().replace(/\s+/g, '');
+  if (cleaned.startsWith('09') && cleaned.length === 10) {
+    cleaned = '+421' + cleaned.slice(1);
+  } else if (cleaned.startsWith('4219') && cleaned.length === 12) {
+    cleaned = '+' + cleaned;
+  }
+  return cleaned;
+}
+
+export async function idHash(value, key) {
+  if (!value || !key) return '';
+  const norm = toCanonicalIdentity(value);
+  const k = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(key),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(norm));
+  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+export function idHashSync(value, key) {
+  if (!value || !key) return '';
+  const norm = toCanonicalIdentity(value);
+  return crypto.createHmac('sha256', key).update(norm).digest('hex');
+}
+
+export function isAuthorizedRoot(candidate, env = {}, fallbackList = []) {
+  if (!candidate) return false;
+  const canonical = toCanonicalIdentity(candidate);
+  const hmacKey = env?.IDENTITY_HMAC_KEY || (typeof process !== 'undefined' ? process.env?.IDENTITY_HMAC_KEY : null);
+  const rootHashesRaw = env?.ROOT_ID_HASHES || (typeof process !== 'undefined' ? process.env?.ROOT_ID_HASHES : null);
+
+  if (hmacKey && rootHashesRaw) {
+    const candidateHash = idHashSync(canonical, hmacKey);
+    const hashes = (typeof rootHashesRaw === 'string' ? rootHashesRaw.split(',') : rootHashesRaw)
+      .map(h => String(h).trim().toLowerCase());
+    return hashes.includes(candidateHash);
+  }
+
+  if (Array.isArray(fallbackList) && fallbackList.length > 0) {
+    const plainNorms = fallbackList.map(item => toCanonicalIdentity(item));
+    return plainNorms.includes(canonical);
+  }
+
+  return false;
+}
+
 export function normalizeEmail(email) {
   if (!email || typeof email !== 'string') return '';
   return email.toLowerCase().trim();
@@ -134,7 +197,8 @@ export function getActiveWindowsSID() {
  * Zisťuje, či aktuálny proces beží pod prihláseným kontom Basterixa ('saboi' / 'basterix')
  * a overuje skutočný Windows SID zo systémového tokenu.
  */
-export function inspectWindowsSession(overrides = null) {
+export function inspectWindowsSession(overrides = null, env = {}) {
+  const effectiveEnv = env || overrides?.env || (typeof process !== 'undefined' ? process.env : {});
   const source = overrides && typeof overrides === 'object' && Object.keys(overrides).length > 0
     ? {
         username: String(overrides.username ?? overrides.windowsUser ?? '').toLowerCase().trim(),
@@ -149,7 +213,7 @@ export function inspectWindowsSession(overrides = null) {
         osTokenVerified: false
       });
 
-  const isMatchedUser = ROOT_REGISTRY.windows_users.includes(source.username);
+  const isMatchedUser = isAuthorizedRoot(source.username, effectiveEnv, ROOT_REGISTRY.windows_users);
   const hasRealSid = isValidWindowsSid(source.sid);
 
   if (isMatchedUser && hasRealSid && source.osTokenVerified === true) {
@@ -190,13 +254,14 @@ export function inspectWindowsSession(overrides = null) {
 /**
  * 2. Univerzálny overovač prichádzajúcich požiadaviek (Omnichannel — Fail-Closed)
  */
-export function verifyTrinityIdentity(context = {}) {
+export function verifyTrinityIdentity(context = {}, env = {}) {
+  const effectiveEnv = env || context.env || (typeof process !== 'undefined' ? process.env : {});
   const timestamp = new Date().toISOString();
 
   // A. Kontrola podľa Google účtu (vyžaduje verifiedGoogleToken === true)
   const email = normalizeEmail(context.email);
   if (email) {
-    if (!ROOT_REGISTRY.google_accounts.includes(email)) {
+    if (!isAuthorizedRoot(email, effectiveEnv, ROOT_REGISTRY.google_accounts)) {
       return {
         isRoot: false,
         role: 'GUEST_USER',
@@ -238,10 +303,8 @@ export function verifyTrinityIdentity(context = {}) {
   // B. Kontrola podľa telefónneho čísla (vyžaduje verifiedWebhookSignature === true)
   const phone = normalizePhone(context.phone);
   if (phone) {
-    const incomingVariants = canonicalPhoneVariants(phone);
-    const isPhoneMatch = ROOT_REGISTRY.phone_numbers.some(entry =>
-      incomingVariants.includes(normalizePhone(entry))
-    );
+    const canonicalPhone = toCanonicalPhone(phone);
+    const isPhoneMatch = isAuthorizedRoot(canonicalPhone, effectiveEnv, ROOT_REGISTRY.phone_numbers);
     if (!isPhoneMatch) {
       return {
         isRoot: false,
@@ -284,7 +347,7 @@ export function verifyTrinityIdentity(context = {}) {
   // C. Kontrola podľa explicitného lokálneho Windows používateľa (vyžaduje osTokenVerified + platný SID)
   const winUser = String(context.windowsUser || '').toLowerCase().trim();
   if (winUser) {
-    if (!ROOT_REGISTRY.windows_users.includes(winUser)) {
+    if (!isAuthorizedRoot(winUser, effectiveEnv, ROOT_REGISTRY.windows_users)) {
       return {
         isRoot: false,
         role: 'GUEST_USER',

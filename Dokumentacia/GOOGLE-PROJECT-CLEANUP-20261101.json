@@ -1,0 +1,138 @@
+{
+  "recorded_at": "2026-11-01T03:35:17.034097+00:00",
+  "authorization": "Owner requested only old Google projects; preserve Trinity",
+  "selection": "Default name My First Project, older than 30 days, no custom inventoried assets, no API keys or repository references",
+  "deleted_project_results": [
+    {
+      "project_id": "eco-sector-508114-b7",
+      "delete_exit_code": 0,
+      "confirmed_state": "DELETE_REQUESTED",
+      "confirmation_exit_code": 0
+    },
+    {
+      "project_id": "linen-fort-507900-h9",
+      "delete_exit_code": 0,
+      "confirmed_state": "DELETE_REQUESTED",
+      "confirmation_exit_code": 0
+    },
+    {
+      "project_id": "alpine-fin-506917-g6",
+      "delete_exit_code": 0,
+      "confirmed_state": "DELETE_REQUESTED",
+      "confirmation_exit_code": 0
+    },
+    {
+      "project_id": "subtle-cubist-506405-s2",
+      "delete_exit_code": 0,
+      "confirmed_state": "DELETE_REQUESTED",
+      "confirmation_exit_code": 0
+    },
+    {
+      "project_id": "driven-torus-506400-j9",
+      "delete_exit_code": 0,
+      "confirmed_state": "DELETE_REQUESTED",
+      "confirmation_exit_code": 0
+    },
+    {
+      "project_id": "magnetic-tenure-506400-d5",
+      "delete_exit_code": 0,
+      "confirmed_state": "DELETE_REQUESTED",
+      "confirmation_exit_code": 0
+    },
+    {
+      "project_id": "active-thunder-505816-k9",
+      "delete_exit_code": 0,
+      "confirmed_state": "DELETE_REQUESTED",
+      "confirmation_exit_code": 0
+    },
+    {
+      "project_id": "modified-shape-505816-g7",
+      "delete_exit_code": 0,
+      "confirmed_state": "DELETE_REQUESTED",
+      "confirmation_exit_code": 0
+    },
+    {
+      "project_id": "instant-bonfire-505813-q4",
+      "delete_exit_code": 0,
+      "confirmed_state": "DELETE_REQUESTED",
+      "confirmation_exit_code": 0
+    },
+    {
+      "project_id": "project-b662f715-1799-4004-84b",
+      "delete_exit_code": 0,
+      "confirmed_state": "DELETE_REQUESTED",
+      "confirmation_exit_code": 0
+    },
+    {
+      "project_id": "project-9d88fc55-9a6c-41f9-a33",
+      "delete_exit_code": 0,
+      "confirmed_state": "DELETE_REQUESTED",
+      "confirmation_exit_code": 0
+    },
+    {
+      "project_id": "project-93d55731-a861-49ae-861",
+      "delete_exit_code": 0,
+      "confirmed_state": "DELETE_REQUESTED",
+      "confirmation_exit_code": 0
+    },
+    {
+      "project_id": "project-04fbb22f-f12a-45f0-906",
+      "delete_exit_code": 0,
+      "confirmed_state": "DELETE_REQUESTED",
+      "confirmation_exit_code": 0
+    }
+  ],
+  "preserved_candidates": [
+    {
+      "project_id": "fair-backbone-510323-f7",
+      "created_at": "2026-09-30T23:03:31.543Z",
+      "eligible": false,
+      "asset_count": 29,
+      "api_key_count": 0,
+      "custom_asset_types": [
+        "logging.googleapis.com/RecentQuery"
+      ],
+      "reason": "CUSTOM_ASSETS_OR_API_KEYS"
+    },
+    {
+      "project_id": "big-guild-505813-n7",
+      "created_at": "2026-08-17T13:48:07.731Z",
+      "eligible": false,
+      "asset_count": 35,
+      "api_key_count": 3,
+      "custom_asset_types": [
+        "apikeys.googleapis.com/Key",
+        "iam.googleapis.com/ServiceAccount"
+      ],
+      "reason": "CUSTOM_ASSETS_OR_API_KEYS"
+    }
+  ],
+  "protected_projects": [
+    "aurutrinity",
+    "trinity-8a5f4",
+    "tangential-osprey-dl7cp"
+  ],
+  "google_developer_project": "aurutrinity",
+  "api_enable_operation_confirmed": true,
+  "enabled_apis": [
+    "cloudasset.googleapis.com",
+    "generativelanguage.googleapis.com",
+    "cloudresourcemanager.googleapis.com",
+    "people.googleapis.com",
+    "drive.googleapis.com",
+    "docs.googleapis.com",
+    "sheets.googleapis.com",
+    "firebase.googleapis.com",
+    "apikeys.googleapis.com"
+  ],
+  "new_project_created": false,
+  "production": {
+    "origin": "https://auru.space",
+    "verified": true,
+    "commit": "66730eb1b0d8889f4c7d056dd424d6a36dd62b5e",
+    "version_id": "a2f13df4-9e97-425f-acb0-5dfbd9857380"
+  },
+  "microsoft": "interactive_auth_pending",
+  "meta": "oauth_not_verified",
+  "firebase_cli": "logged_out"
+}

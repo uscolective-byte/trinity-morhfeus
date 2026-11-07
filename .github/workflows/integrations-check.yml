@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'Trinity/**'
+      - 'packages/contracts/**'
       - 'Knowledge-Worker/**'
       - 'Trinity/wrangler.integrations.jsonc'
       - 'Trinity/tests/integration-providers.test.mjs'
@@ -13,6 +14,7 @@ on:
     branches: [main]
     paths:
       - 'Trinity/**'
+      - 'packages/contracts/**'
       - 'Knowledge-Worker/**'
       - 'Integrations-Worker/**'
       - '.github/workflows/integrations-check.yml'
@@ -26,13 +28,17 @@ jobs:
       run:
         working-directory: Trinity
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: Trinity/package-lock.json
+      - name: Install TAP contracts dependencies
+        working-directory: packages/contracts
+        run: npm ci --ignore-scripts
       - run: npm ci
+      - run: node scripts/build-mcp-app.mjs
       - run: node --test tests/integration-providers.test.mjs
       - run: npx wrangler deploy --config wrangler.integrations.jsonc --dry-run --outdir dist-integrations
       - run: npm ci --prefix ../Integrations-Worker

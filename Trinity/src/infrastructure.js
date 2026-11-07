@@ -14,7 +14,7 @@ export const cloudflareAccount=env=>env.CF_ACCOUNT_ID||env.CLOUDFLARE_ACCOUNT_ID
 export async function cloudflareRequest(env,path,method='GET',body){
   if(!cloudflareToken(env)||!cloudflareAccount(env))throw new HttpError(503,'Chýba Cloudflare API token alebo account ID vo Worker Secrets.');
   const multipart=body instanceof FormData;
-  const r=await fetch('https://api.cloudflare.com/client/v4'+path,{method,headers:{Authorization:`Bearer ${cloudflareToken(env)}`,...(multipart?{}:{'Content-Type':'application/json'})},body:body===undefined?undefined:multipart?body:JSON.stringify(body),signal:AbortSignal.timeout(20000),redirect:'error'});
+  const r=await fetch('https://api.cloudflare.com/client/v4'+path,{method,headers:{Authorization:`Bearer ${cloudflareToken(env)}`,...(multipart?{}:{'Content-Type':'application/json'})},body:body===undefined?undefined:multipart?body:JSON.stringify(body),signal:AbortSignal.timeout(20000),redirect:'manual'});
   let data;try{data=JSON.parse(await boundedText(r,1000000));}catch{throw new HttpError(502,'Cloudflare nevrátil platnú API odpoveď.');}
   if(!r.ok||!data.success)throw new HttpError(502,`Cloudflare API HTTP ${r.status}: ${data.errors?.[0]?.code||'request_failed'}`);
   return data;
@@ -45,11 +45,11 @@ return new Response(html,{headers:{'Content-Type':'text/html; charset=utf-8','X-
   const subdomain=(await cloudflareRequest(env,`${base}/subdomain`)).result.subdomain;
   const receipt={id,worker:name,project_id:project.id,project_version:project.version,visibility:data.publish?'public':'private',url:`https://${name}.${subdomain}.workers.dev`,deployment_id:upload.result?.deployment_id||upload.result?.id||null,status:'uploaded',authentication:data.publish?'none':'Authorization: Bearer <TRINITY_HOSTING_ACCESS_KEY>',created_at:new Date().toISOString()};
   try {
-  const probe=await fetch(receipt.url,{headers:key?{Authorization:`Bearer ${key}`}:{},signal:AbortSignal.timeout(15000),redirect:'error'});
+  const probe=await fetch(receipt.url,{headers:key?{Authorization:`Bearer ${key}`}:{},signal:AbortSignal.timeout(15000),redirect:'manual'});
   const page=await boundedText(probe,200000);
   receipt.status=probe.ok&&page===project.html?'verified':'verification_pending';
   if(key&&receipt.status==='verified'){
-    const denied=await fetch(receipt.url,{signal:AbortSignal.timeout(10000),redirect:'error'});
+    const denied=await fetch(receipt.url,{signal:AbortSignal.timeout(10000),redirect:'manual'});
     await denied.body?.cancel();
     if(denied.status!==401)throw new HttpError(502,'Súkromný hosting neprešiel kontrolou prístupu.');
   }

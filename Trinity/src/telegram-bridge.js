@@ -87,7 +87,7 @@ export async function clearChatHistory(env, chatId) {
 }
 
 export async function buildSystemGroundingContext(env, userQuestion = '') {
-  let context = '\n[AKTUÁLNY STAV A VEDOMOSTI TRINITY 11.0]:\n';
+  let context = '\n[AKTUÁLNY STAV A VEDOMOSTI TRINITY 11.1]:\n';
   context += '• Majiteľ a suverénny architekt: Sabo Ivan (Basterix).\n';
   context += '• Cloudflare Edge domény: https://auru.space (produkcia) a https://auru.dev (vývoj).\n';
   context += '• Flotila workerov: 35 prepojených Cloudflare Workerov (10× AURA špecialisti, 8× Core, 8× RPC, 6× Rozšírené).\n';
@@ -119,7 +119,7 @@ export async function buildSystemGroundingContext(env, userQuestion = '') {
   return context;
 }
 
-export async function callResilientBrain(env, provider, messages, maxTokens = 850) {
+export async function callResilientBrain(env, provider, messages, maxTokens = 2048) {
   const candidates = [provider, 'gemini', 'openai', 'groq'].filter((v, i, a) => a.indexOf(v) === i);
   let lastErr = null;
   for (const prov of candidates) {
@@ -149,7 +149,7 @@ export function parseCommand(input, env) {
   if (/^\/(start|help)(?:@[a-z0-9_]+)?$/i.test(text)) {
     return {
       answer:
-        '🤖 Trinity Telegram AI (v11.0)\n\n' +
+        '🤖 Trinity Telegram AI (v11.1)\n\n' +
         'Dostupné príkazy:\n' +
         '• /status — Prehľad stavu ekosystému Trinity, databáz a AI\n' +
         '• /pc — Stav pripojenia lokálneho PC (PC Bridge & Gateway)\n' +
@@ -197,8 +197,8 @@ export async function executeStatus(env) {
   const cfgDesc = status.bot_token && status.webhook_secret && status.allowed_users ? 'nakonfigurované' : 'neúplná konfigurácia';
   return (
     `Trinity Telegram: ${cfgDesc}.\n\n` +
-    '🛡️ TRINITY 11.0 SOVEREIGN ECOSYSTEM\n' +
-    '• Verzia: 11.0.0 Sovereign Edition\n' +
+    '🛡️ TRINITY 11.1 SOVEREIGN ECOSYSTEM\n' +
+    '• Verzia: 11.1.0 Sovereign Edition\n' +
     '• Produkčné domény: https://auru.space | https://auru.dev\n' +
     '• Flotila: deklarované Service Bindings (živé pripojenie neoverené)\n' +
     '• Úložiská: D1, KV a R2 podľa konfigurácie (dostupnosť sa tu netestuje)\n' +
@@ -357,7 +357,7 @@ export async function processTelegramUpdate(env, update) {
       const history = await getChatHistory(env, message.chat.id);
       const grounding = await buildSystemGroundingContext(env, parsed.question);
       const system =
-        'Si Trinity_Telegram, vysoko inteligentná, suverénna AI asistentka ekosystému Trinity 11.0 v súkromnom Telegram chate s majiteľom Sabom Ivanom (Basterixom).\n' +
+        'Si Trinity_Telegram, vysoko inteligentná, suverénna AI asistentka ekosystému Trinity 11.1 v súkromnom Telegram chate s majiteľom Sabom Ivanom (Basterixom).\n' +
         'Odpovedaj prirodzene, bystro, slovensky, s rešpektom a vtipom kde sa hodí, ale striktne pravdivo.\n' +
         'Tento kanál slúži na reporting, konzultácie, analýzy a riadenie ekosystému. Nemáš oprávnenie spúšťať deštruktívne shell príkazy na PC ani vykonávať platby. Dodržiavaj Truth Policy 2.0 Hardcore – nikdy netvrď, že si niečo vykonala, ak to nie je overené.\n' +
         grounding;

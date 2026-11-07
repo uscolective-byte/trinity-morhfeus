@@ -17,7 +17,7 @@ export function publicWebUrl(raw){
 }
 async function checkPublicDns(host){
   const answers=await Promise.all(['A','AAAA'].map(async type=>{
-    const r=await fetch('https://cloudflare-dns.com/dns-query?name='+encodeURIComponent(host)+'&type='+type,{headers:{Accept:'application/dns-json'},signal:AbortSignal.timeout(5000),redirect:'error'});
+    const r=await fetch('https://cloudflare-dns.com/dns-query?name='+encodeURIComponent(host)+'&type='+type,{headers:{Accept:'application/dns-json'},signal:AbortSignal.timeout(5000),redirect:'manual'});
     if(!r.ok)throw new HttpError(502,'DNS overenie webovej adresy zlyhalo.');
     return (await r.json()).Answer||[];
   }));

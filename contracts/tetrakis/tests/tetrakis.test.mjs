@@ -22,7 +22,10 @@ describe('Tetrakis ($TTK) ERC-20 Specification & EVM Verification Suite', () => 
   let artifact;
 
   const EXPECTED_TREASURY = '0x4d308452a96D7dAbFd2f33d92677A3a2724f387e';
-  const EXPECTED_SUPPLY = 1_000_000_000n * 10n ** 18n; // 1 Billion * 10^18
+  const BASTERIX_WALLET = '0x7e17f9072cfCbc7fE45973De0F11eC8db99281e4';
+  const EXPECTED_SUPPLY = 1_000_000_000n * 10n ** 18n;
+  const BASTERIX_ALLOCATION = 1_000_000n * 10n ** 18n;
+  const TREASURY_ALLOCATION = 999_000_000n * 10n ** 18n;
   const MAX_UINT256 = ethers.MaxUint256;
 
   before(async () => {
@@ -65,12 +68,17 @@ describe('Tetrakis ($TTK) ERC-20 Specification & EVM Verification Suite', () => 
     assert.equal(await tokenContract.decimals(), 18n);
   });
 
-  test('Initial Allocation: 100% of supply minted to Official Treasury', async () => {
+  test('Initial Allocation: 1M TTK minted to Basterix Sovereign Wallet, 999M TTK to Treasury', async () => {
     const totalSupply = await tokenContract.totalSupply();
     assert.equal(totalSupply, EXPECTED_SUPPLY);
 
+    const basterixBal = await tokenContract.balanceOf(BASTERIX_WALLET);
+    assert.equal(basterixBal, BASTERIX_ALLOCATION);
+
     const treasuryBal = await tokenContract.balanceOf(EXPECTED_TREASURY);
-    assert.equal(treasuryBal, EXPECTED_SUPPLY);
+    assert.equal(treasuryBal, TREASURY_ALLOCATION);
+
+    assert.equal(basterixBal + treasuryBal, EXPECTED_SUPPLY);
 
     const deployerBal = await tokenContract.balanceOf(deployer.address);
     assert.equal(deployerBal, 0n);
@@ -104,7 +112,7 @@ describe('Tetrakis ($TTK) ERC-20 Specification & EVM Verification Suite', () => 
     assert.equal(transferLogs[0].args[2], transferAmount);
 
     assert.equal(await tokenContract.balanceOf(user1.address), transferAmount);
-    assert.equal(await tokenContract.balanceOf(EXPECTED_TREASURY), EXPECTED_SUPPLY - transferAmount);
+    assert.equal(await tokenContract.balanceOf(EXPECTED_TREASURY), TREASURY_ALLOCATION - transferAmount);
   });
 
   test('Edge Case: Zero-value transfer succeeds and emits event', async () => {

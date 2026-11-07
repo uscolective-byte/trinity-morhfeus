@@ -19,6 +19,7 @@ import {executeGraphOperation,checkMicrosoftHealth} from './modules/microsoft-gr
 import {ProposalStore} from '../Local-Gateway/src/store.mjs';
 import {startCloudLink} from '../Local-Gateway/src/cloud-link.mjs';
 import {startBridgeHeartbeat} from '../Local-Gateway/src/bridge-heartbeat.mjs';
+import {DesktopTrinityAgent} from './modules/trinity-agent.mjs';
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const VERSION='2.0.0';
@@ -47,13 +48,14 @@ async function requestBody(request){
 }
 function send(response,status,value){response.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});response.end(JSON.stringify(value));}
 
-export async function createLocalApp({dataDir=path.join(root,'Data'),workspace=path.join(root,'Workspace'),ollamaPort=11434,token=randomBytes(32).toString('hex'),vault=new WindowsVault(dataDir),externalFetch=fetch}={}){
+export async function createLocalApp({dataDir=path.join(root,'Data'),workspace=path.join(root,'Workspace'),ollamaPort=11434,token=randomBytes(32).toString('hex'),vault=new WindowsVault(dataDir),externalFetch=fetch,trinityAgent}={}){
   if(!Number.isInteger(ollamaPort)||ollamaPort<1||ollamaPort>65535)throw new Error('Invalid Ollama port');
   await mkdir(dataDir,{recursive:true});await mkdir(workspace,{recursive:true});
   workspace=await realpath(workspace);
   const settingsFile=path.join(dataDir,'settings.json'),notesFile=path.join(dataDir,'notes.json');
   const settings=await jsonFile(settingsFile,{model:'qwen3:4b',num_ctx:4096,num_predict:768});
   settings.provider||='ollama';settings.environment||='development';
+  const agent=trinityAgent||new DesktopTrinityAgent({dataDir:path.join(dataDir,'trinity-agent')});
   const cloud=()=>new TrinityCloud({environment:settings.environment==='dual-sync'?'development':settings.environment,getToken:async()=>(await vault.get('cloud-'+(settings.environment==='dual-sync'?'development':settings.environment)))||(await vault.get('cloud-development'))||(await vault.get('cloud-production')),fetcher:externalFetch});
   let syncState={status:'not-checked'},gatewayState={status:'disabled'},stopGateway=()=>{},stopHeartbeat=()=>{};
   const tasksFile=path.join(dataDir,'tasks.json');let tasks=await jsonFile(tasksFile,[]);
@@ -69,7 +71,9 @@ export async function createLocalApp({dataDir=path.join(root,'Data'),workspace=p
   });}
   async function connectionStatus(){
     const configured={};for(const name of ['gemini','copilot-studio','microsoft-tenant','microsoft-personal','cloud-'+settings.environment,'gateway-'+settings.environment])configured[name]=!!await vault.get(name);
-    return {provider:settings.provider,environment:settings.environment,gemini_model:settings.gemini_model||'',configured,sync:syncState,gateway:gatewayState,cloud_sync:settings.cloud_sync===true,mcp_writes:settings.mcp_writes===true};
+    const agentState=settings.provider==='trinity'?await agent.configuration():null;
+    configured.trinity=agentState?.api_key_configured===true;
+    return {provider:settings.provider,environment:settings.environment,gemini_model:settings.gemini_model||'',configured,trinity_agent:agentState,sync:syncState,gateway:gatewayState,cloud_sync:settings.cloud_sync===true,mcp_writes:settings.mcp_writes===true};
   }
   async function queueCloudTask(input){return mutate(async()=>{
     if(typeof input.task!=='string'||!input.task.trim()||input.task.length>12000)throw fail(400,'Neplatná úloha.');
@@ -160,7 +164,7 @@ export async function createLocalApp({dataDir=path.join(root,'Data'),workspace=p
     if(name==='add_note')return addNote(args.text);
     throw fail(400,'Neznámy nástroj.');
   }
-  async function chat(input){
+  async function chat(input,{onEvent}={}){
     if(busy)throw fail(409,'Trinity práve spracúva inú otázku.');
     if(typeof input.message!=='string'||!input.message.trim()||input.message.length>12000)throw fail(400,'Správa musí obsahovať 1 až 12000 znakov.');
     const id=input.session_id||randomUUID();if(typeof id!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))throw fail(400,'Neplatná relácia.');
@@ -168,7 +172,11 @@ export async function createLocalApp({dataDir=path.join(root,'Data'),workspace=p
     try{
       const file=path.join(dataDir,'chats',id+'.json');const history=await jsonFile(file,[]);
       const messages=[{role:'system',content:SYSTEM},...history.slice(-16),{role:'user',content:input.message}];
-      const receipts=[];let answer='';
+      const receipts=[];let answer='',agentResult;
+      if(settings.provider==='trinity'){
+        agentResult=await agent.chat({session_id:id,message:input.message,onEvent});
+        answer=agentResult.content;receipts.push(...agentResult.receipts);
+      }
       if(settings.provider==='copilot-studio'){
         const result=await copilotStudioChat({secret:await vault.get('copilot-studio'),query:input.message,fetcher:externalFetch});answer=result.message.content;
       }
@@ -195,7 +203,7 @@ export async function createLocalApp({dataDir=path.join(root,'Data'),workspace=p
       const turns=[...history,{role:'user',content:input.message},{role:'assistant',content:answer}].slice(-100);
       await atomic(file,JSON.stringify(turns,null,2));
       await atomic(path.join(dataDir,'last-receipt.json'),JSON.stringify({at:new Date().toISOString(),session_id:id,receipts},null,2));
-      return {session_id:id,content:answer,provider:settings.provider,model:settings.provider==='gemini'?settings.gemini_model:settings.model,receipts};
+      return {session_id:id,content:answer,provider:settings.provider,model:agentResult?.model||(settings.provider==='gemini'?settings.gemini_model:settings.model),receipts,...(agentResult?{remote_session_id:agentResult.remote_session_id,run_id:agentResult.run_id,operation_status:agentResult.operation_status,output_verified:false}:{})};
     }finally{busy=false;}
   }
   const server=http.createServer(async(request,response)=>{
@@ -266,7 +274,7 @@ export async function createLocalApp({dataDir=path.join(root,'Data'),workspace=p
             if(!names[input.credential]||typeof input.value!=='string')throw fail(400,'Neplatné poverenie.');
             await vault.set(names[input.credential],input.value);
           }
-          if(input.provider!==undefined){if(!['ollama','gemini','copilot-studio','cloud'].includes(input.provider))throw fail(400,'Neplatný provider.');settings.provider=input.provider;}
+          if(input.provider!==undefined){if(!['ollama','gemini','copilot-studio','cloud','trinity'].includes(input.provider))throw fail(400,'Neplatný provider.');settings.provider=input.provider;}
           if(input.gemini_model!==undefined){if(!/^[a-zA-Z0-9._-]{1,100}$/.test(input.gemini_model))throw fail(400,'Neplatný model.');settings.gemini_model=input.gemini_model;}
           if(input.cloud_sync!==undefined){if(typeof input.cloud_sync!=='boolean')throw fail(400,'Neplatná synchronizácia.');settings.cloud_sync=input.cloud_sync;}
           if(input.mcp_writes!==undefined){if(typeof input.mcp_writes!=='boolean')throw fail(400,'Neplatné oprávnenie MCP.');settings.mcp_writes=input.mcp_writes;}
@@ -302,6 +310,15 @@ export async function createLocalApp({dataDir=path.join(root,'Data'),workspace=p
           try{if(!item.cloud_id){const result=await cloud().call('dispatch_task',{task:item.task,idempotency_key:item.idempotency_key,language:'sk'});item.cloud_id=result.id;}
             const remote=await cloud().call('get_task',{id:item.cloud_id});item.status=remote.status;item.result=remote.result;item.error=remote.error||null;}catch(error){item.error=error.message;}
         }await atomic(tasksFile,JSON.stringify(tasks,null,2));return {tasks};}));
+        if(url.pathname==='/api/chat/stream'){
+          if(settings.provider!=='trinity')throw fail(409,'Stream je dostupný pre providera Trinity.');
+          response.writeHead(200,{'Content-Type':'text/event-stream; charset=utf-8','Cache-Control':'no-store','X-Accel-Buffering':'no'});response.flushHeaders();
+          const emit=value=>{if(!response.destroyed)response.write('data: '+JSON.stringify(value)+'\n\n');};
+          const heartbeat=setInterval(()=>{if(!response.destroyed)response.write(': heartbeat\n\n');},15000);
+          try{emit({type:'trinity.chat.result',result:await chat(input,{onEvent:emit})});}
+          catch(error){emit({type:'trinity.chat.error',error:error.message});}
+          finally{clearInterval(heartbeat);if(!response.destroyed)response.end();}return;
+        }
         if(url.pathname==='/api/chat')return send(response,200,await chat(input));
         if(url.pathname==='/api/file')return send(response,200,await saveWorkspace(input.path,input.content,input.expected_sha256));
         if(url.pathname==='/api/notes')return send(response,201,{note:await addNote(input.text)});

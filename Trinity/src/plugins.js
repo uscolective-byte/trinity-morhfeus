@@ -48,7 +48,7 @@ const CORE_PLUGINS=[
  ,{id:'html-text',name:'HTML na text',icon:'</>',description:'Odstráni HTML, skripty a štýly a vytvorí čistý čitateľný text.',tools:['html_to_text'],dependency:'Worker runtime',version:'1.0.0'}
  ,{id:'business-math',name:'Obchod a rast',icon:'%',description:'Počíta ekonomiku služby, hľadá a hodnotí verejné príležitosti, pripravuje neodoslané ponuky, spravuje Revolut Pro / PayPal platobné odkazy a plánuje riadené zlepšenia.',tools:['business_math','prospect_queries','prospect_score','outreach_draft','revenue_model','improvement_plan','commerce_status','commerce_add_offer','monetization_blueprint'],dependency:'Worker runtime',version:'1.2.0'}
  ,{id:'geometry',name:'Geometria',icon:'△',description:'Počíta obsah a obvod základných geometrických tvarov.',tools:['geometry'],dependency:'Worker runtime',version:'1.0.0'}
- ,{id:'computer-control',name:'Ovládanie počítača',icon:'⌨',description:'Adminovi umožňuje screenshot, systémové informácie, notifikácie a ovládanie povolených aplikácií cez zabezpečený PC Bridge.',tools:['pc_screenshot','pc_open_app','pc_app_control','pc_notify','pc_system_info'],dependency:'Trinity PC Bridge 2.0',version:'1.0.0',required:true}
+ ,{id:'computer-control',name:'Ovládanie počítača',icon:'⌨',description:'Adminovi umožňuje screenshot, systémové informácie, notifikácie a ovládanie povolených aplikácií cez zabezpečený PC Bridge.',tools:['pc_screenshot','pc_open_app','pc_open_url','pc_open_file','pc_app_control','pc_notify','pc_system_info'],dependency:'Trinity PC Bridge 2.0',version:'1.0.0',required:true}
  ,{id:'workspace-files',name:'Súbory a pracovný priestor',icon:'▣',description:'Adminovi umožňuje čítať, vytvárať, dopĺňať a upravovať súbory alebo priečinky v povolenom workspace.',tools:['pc_file_read','pc_file_write','pc_file_append','pc_file_edit','pc_directory_create','pc_download'],dependency:'Trinity PC Bridge 2.0',version:'1.0.0',required:true}
  ,{id:'internet-operator',name:'Internetový operátor',icon:'◌',description:'Bezpečne načítava a spracúva verejné HTTP/HTTPS zdroje; blokuje lokálne siete a obmedzuje veľkosť odpovedí.',tools:['pc_web_fetch','pc_scrape'],dependency:'Trinity PC Bridge 2.0 + voliteľný Firecrawl',version:'1.0.0',required:true}
  ,{id:'developer-operator',name:'Vývoj a Git',icon:'</>',description:'Adminovi umožňuje spúšťať príkazy, testy, Git commit a pull request cez auditovaný lokálny Bridge.',tools:['pc_run_script','pc_run','pc_git_commit','pc_git_pr'],dependency:'Trinity PC Bridge 2.0 + Git',version:'1.0.0',required:true}
@@ -61,11 +61,50 @@ export async function listPlugins(env){
  const rows=(await env.DB.prepare('SELECT id,version,installed,enabled,source,installed_at,updated_at FROM ops_plugins').all()).results;
  return PLUGINS.map(p=>{const state=rows.find(r=>r.id===p.id);return {...p,version:state?.version||p.version,installed:state?.installed===1,enabled:state?.installed===1&&state?.enabled===1,source:state?.source||null,installed_at:state?.installed_at||null,updated_at:state?.updated_at||null};});
 }
+export function checkPluginAvailability(env = {}, plugin) {
+  if (!plugin) return 'UNAVAILABLE';
+  const readyInternal = ['json-data','checksums','units','entities','text-format','date-math','timezone-converter','statistics','csv-inspector','csv-json','text-diff','list-cleaner','table-transform','geometry','calculator','clock','text'];
+  if (readyInternal.includes(plugin.id)) return 'READY';
+  if (['artifacts','truth','skills','capabilities'].includes(plugin.id)) return env?.DB ? 'READY' : 'INSTALLED';
+  if (['computer-control','workspace-files','internet-operator','developer-operator'].includes(plugin.id)) {
+    return 'CONNECTED_STANDBY';
+  }
+  if (plugin.id === 'facebook-connector') {
+    return (env?.META_ACCESS_TOKEN || env?.FACEBOOK_ACCESS_TOKEN) ? 'CONNECTED' : 'AWAITING_AUTH';
+  }
+  if (plugin.id === 'firebase') {
+    return (env?.FIREBASE_PROJECT_ID && env?.FIREBASE_SERVICE_ACCOUNT) ? 'CONNECTED' : 'AWAITING_CONFIG';
+  }
+  if (plugin.id === 'firecrawl') {
+    return env?.FIRECRAWL_API_KEY ? 'CONNECTED' : 'AWAITING_CONFIG';
+  }
+  return 'INSTALLED';
+}
 export async function installPlugin(env,id){
+ if (id === 'all' || id === '*') {
+  const res = await installAllPlugins(env);
+  const pluginsWithStatus = PLUGINS.map(p => ({
+    id: p.id,
+    name: p.name,
+    status: checkPluginAvailability(env, p)
+  }));
+  const readyCount = pluginsWithStatus.filter(p => p.status === 'READY' || p.status === 'CONNECTED' || p.status === 'CONNECTED_STANDBY').length;
+  return {
+    id: 'all',
+    name: 'Všetky dôveryhodné pluginy Trinity',
+    installed: true,
+    enabled: true,
+    count: res.installed,
+    ready_count: readyCount,
+    plugins: pluginsWithStatus,
+    status: 'INSTALLED',
+    source: 'trinity-core'
+  };
+ }
  const plugin=PLUGINS.find(item=>item.id===id);if(!plugin)throw new Error('Plugin nie je v dôveryhodnom katalógu Trinity.');
  await env.DB.prepare("INSERT INTO ops_plugins(id,version,installed,enabled,source,installed_at,updated_at) VALUES(?,?,1,1,'trinity-core',datetime('now'),datetime('now')) ON CONFLICT(id) DO UPDATE SET version=excluded.version,installed=1,enabled=1,source='trinity-core',installed_at=coalesce(ops_plugins.installed_at,datetime('now')),updated_at=datetime('now')").bind(plugin.id,plugin.version).run();
  await env.DB.prepare("INSERT INTO ops_events(action,details) VALUES('plugin_installed',?)").bind(JSON.stringify({plugin:plugin.id,source:'trinity-core'})).run();
- return {id:plugin.id,name:plugin.name,version:plugin.version,installed:true,enabled:true,source:'trinity-core'};
+ return {id:plugin.id,name:plugin.name,version:plugin.version,installed:true,enabled:true,status:checkPluginAvailability(env,plugin),source:'trinity-core'};
 }
 export async function installAllPlugins(env){
  const now="datetime('now')";

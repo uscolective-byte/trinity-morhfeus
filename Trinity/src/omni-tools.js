@@ -378,6 +378,15 @@ export async function pcFsPatch(env, { path, target, replacement }) {
   }, 'admin:omni-dev', { adminAuthorized: true });
 }
 
+export async function pcOpenUrl(env, { url }) {
+  if (!url) return { ok: false, error: 'Chýba URL adresa.' };
+  return createSystemAction(env, {
+    action: 'open_url',
+    payload: { url },
+    rationale: 'pc_open_url: ' + url.slice(0, 100) 
+  }, 'admin:omni-dev', { adminAuthorized: true });
+}
+
 export async function pcShellExec(env, { command, shell = 'powershell', cwd = 'C:\\Users\\saboi\\Trinity-antigravity', timeout = 30000 }) {
   if (!command) return { ok: false, error: 'Chýba príkaz na vykonanie.' };
   return createSystemAction(env, {

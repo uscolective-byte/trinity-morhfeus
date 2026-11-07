@@ -5,6 +5,7 @@ aura.dev / auru.dev
 
 import secrets
 import datetime
+from html import escape
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse, HTMLResponse
@@ -15,11 +16,12 @@ from infrastructure.database import get_db
 from domain.models import ShortenedLink
 from domain.schemas import ShortenRequestSchema
 from core.config import domain_settings
+from core.admin_auth import require_admin
 
 router = APIRouter(tags=["Domain Link & Content Router"])
 
 
-@router.post("/api/v1/links/shorten")
+@router.post("/api/v1/links/shorten", dependencies=[Depends(require_admin)])
 async def create_short_link(payload: ShortenRequestSchema, db: AsyncSession = Depends(get_db)):
     code = payload.custom_code or secrets.token_urlsafe(4)[:6].lower()
 
@@ -66,6 +68,7 @@ async def redirect_short_link(code: str, db: AsyncSession = Depends(get_db)):
 
 @router.get("/p/{slug}", response_class=HTMLResponse)
 async def dynamic_landing_page(slug: str):
+    slug = escape(slug)
     return f"""<!DOCTYPE html>
 <html lang="sk">
 <head>

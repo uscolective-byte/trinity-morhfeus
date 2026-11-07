@@ -3,6 +3,10 @@ import {runAuraAi, parseAuraJson, safeDbRun} from './aura_helpers.js';
 
 export default {
   async fetch(request, env) {
+    if (request.method === "GET" && new URL(request.url).pathname === "/health") {
+      return Response.json({ ok: true, service: "aura_planner", version: "10.3.0", status: "serving", bindings: { AI: !!env.AI, DB: !!env.DB } });
+    }
+
     if (request.method !== "POST") return Response.json({ ok: false, error: "Method not allowed" }, { status: 405 });
     let call;
     try { call = await request.json(); } catch { return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 }); }
@@ -73,7 +77,7 @@ export default {
         return Response.json({ ok: true, result: r.results, traceId, from: "aura-planner" });
       }
       if (call.action === "aura.status") {
-        return Response.json({ ok: true, result: { agent: "planner", role: "Dekomponuje ciele, plánuje projekty, šprinty a časové osi", status: "active", version: "10.2.0" }, traceId, from: "aura-planner" });
+        return Response.json({ ok: true, result: { agent: "planner", role: "Dekomponuje ciele, plánuje projekty, šprinty a časové osi", status: "active", version: "10.3.0" }, traceId, from: "aura-planner" });
       }
       const text = await runAuraAi(env, "Si AURA Planner. Plánuj ciele a koordinuj tím.", d.prompt || call.action);
       return Response.json({ ok: true, result: { response: text }, traceId, from: "aura-planner" });

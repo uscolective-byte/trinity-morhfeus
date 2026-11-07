@@ -19,7 +19,7 @@ export async function verifyCloudflareToken(token,accountId,{fetcher=fetch}={}){
   for(const [scope,url] of endpoints){
     let response;
     try{
-      response=await fetcher(url,{headers,redirect:'error',signal:AbortSignal.timeout(15000)});
+      response=await fetcher(url,{headers,redirect:'manual',signal:AbortSignal.timeout(15000)});
       lastHttp=response.status;
       const data=await response.json().catch(()=>({}));
       if(response.ok&&data?.success===true&&data?.result?.status==='active')
