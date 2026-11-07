@@ -716,5 +716,38 @@ test('Module 11: Tetrakis ($TTK) Base L2 Smart Contract, Hardhat Config & Worker
   assert.equal(pipelineBody.pipeline[0].id, 'base_l2_contract');
   assert.equal(pipelineBody.pipeline[2].id, 'lp_lock_uncx');
   assert.equal(pipelineBody.pipeline[4].id, 'cex_listing_tiers');
+
+  // Verify ABI & Manifesto & Lore Drops & Logo SHA-256 on Worker #24
+  const abiRes = await treasuryWorker.fetch(new Request('https://auru.space/api/treasury/abi'), treasuryWrangler.vars);
+  assert.equal(abiRes.status, 200);
+  const abiBody = await abiRes.json();
+  assert.equal(abiBody.bytecodeSha256, '0x51783e809cffb8b5318402e27f9bd181ea0578404feffcc17dcf9d1c236aef93');
+  assert.ok(Array.isArray(abiBody.abi) && abiBody.abi.length >= 10);
+
+  const manifestoRes = await treasuryWorker.fetch(new Request('https://auru.space/api/treasury/manifesto'), treasuryWrangler.vars);
+  assert.equal(manifestoRes.status, 200);
+  const manifestoBody = await manifestoRes.json();
+  assert.equal(manifestoBody.slogan, 'Tetrakis ($TTK) – Fuel of the Autonomous Edge.');
+  assert.equal(manifestoBody.tetrahedronPillars.length, 4);
+  assert.equal(manifestoBody.logo.sha256, 'b22b0981bdcd1e50442dc98932c43ef5f0f35a6662a275975b4565bf7bb31496');
+
+  const loreRes = await treasuryWorker.fetch(new Request('https://auru.space/api/treasury/lore-drops'), treasuryWrangler.vars);
+  assert.equal(loreRes.status, 200);
+  const loreBody = await loreRes.json();
+  assert.equal(loreBody.loreDrops.length, 5);
+
+  // Verify Jericho >15% price manipulation guard
+  const { detectPriceManipulation } = await import('../../services/jericho123/src/index.js');
+  const normalCheck = detectPriceManipulation([92000, 92500], 92200, 0.15);
+  assert.equal(normalCheck.manipulated, false);
+  const manipulatedCheck = detectPriceManipulation([92000, 115000], 92000, 0.15);
+  assert.equal(manipulatedCheck.manipulated, true);
+
+  // Verify Fast-Chat Tetrakis Manifesto matcher
+  const { matchFastChatEdge } = await import('../src/fast-chat.js');
+  const fastManifesto = matchFastChatEdge('manifest tetrakis');
+  assert.equal(fastManifesto.matched, true);
+  assert.equal(fastManifesto.category, 'tetrakis_manifesto');
+  assert.equal(fastManifesto.pillars.length, 4);
 });
 

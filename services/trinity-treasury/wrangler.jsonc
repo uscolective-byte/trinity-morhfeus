@@ -12,6 +12,8 @@
     "BASE_RPC_URL": "https://mainnet.base.org",
     "BASE_SEPOLIA_CHAIN_ID": "84532",
     "BASE_SEPOLIA_RPC_URL": "https://sepolia.base.org",
+    "POLYGON_CHAIN_ID": "137",
+    "POLYGON_RPC_URL": "https://polygon-rpc.com",
     "TTK_HARD_CAP": "10000000",
     "TTK_INITIAL_SUPPLY": "2000000"
   },
@@ -19,13 +21,20 @@
     {
       "binding": "DB",
       "database_name": "trinity-v03",
-      "database_id": "ca8ea24e-f7db-431e-b8bf-97f713ae4533"
+      "database_id": "ca8ea24e-f7db-431e-b8bf-97f713ae4533",
+      "migrations_dir": "migrations"
     }
   ],
   "kv_namespaces": [
     {
       "binding": "TRINITY_KV",
       "id": "0b92ed2717d742daa860f1827797297f"
+    }
+  ],
+  "services": [
+    {
+      "binding": "JERICHO_SERVICE",
+      "service": "jericho123"
     }
   ],
   "env": {
@@ -38,6 +47,10 @@
         "TTK_CONTRACT_ADDRESS": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
         "BASE_CHAIN_ID": "84532",
         "BASE_RPC_URL": "https://sepolia.base.org",
+        "BASE_SEPOLIA_CHAIN_ID": "84532",
+        "BASE_SEPOLIA_RPC_URL": "https://sepolia.base.org",
+        "POLYGON_CHAIN_ID": "137",
+        "POLYGON_RPC_URL": "https://polygon-rpc.com",
         "TTK_HARD_CAP": "10000000",
         "TTK_INITIAL_SUPPLY": "2000000"
       },
@@ -45,13 +58,20 @@
         {
           "binding": "DB",
           "database_name": "trinity-development",
-          "database_id": "1cce5249-e044-4c93-868c-0df534a778b5"
+          "database_id": "1cce5249-e044-4c93-868c-0df534a778b5",
+          "migrations_dir": "migrations"
         }
       ],
       "kv_namespaces": [
         {
           "binding": "TRINITY_KV",
           "id": "759143cfa6fb44d6a0f4c8e4951945c8"
+        }
+      ],
+      "services": [
+        {
+          "binding": "JERICHO_SERVICE",
+          "service": "jericho123"
         }
       ]
     }

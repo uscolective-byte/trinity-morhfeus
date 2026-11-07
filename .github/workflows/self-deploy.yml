@@ -120,7 +120,9 @@ jobs:
           done
           npx wrangler d1 migrations apply DB --remote --config ../trinity-profile/wrangler.toml --env staging || echo "::warning::trinity-profile staging migration already applied"
           npx wrangler deploy --config ../trinity-profile/wrangler.toml --env staging --tag "$GITHUB_SHA" || echo "::warning::trinity-profile-staging deploy warning"
+          npx wrangler d1 migrations apply DB --remote --config ../services/trinity-treasury/wrangler.jsonc --env staging || echo "::warning::trinity-treasury staging migration already applied"
           npx wrangler deploy --config ../services/trinity-treasury/wrangler.jsonc --env staging --tag "$GITHUB_SHA" || echo "::warning::trinity-treasury-staging deploy warning"
+          npx wrangler d1 migrations apply DB --remote --config ../services/trinity-treasury/wrangler.jsonc || echo "::warning::trinity-treasury production migration already applied"
           npx wrangler deploy --config ../services/trinity-treasury/wrangler.jsonc --tag "$GITHUB_SHA" || echo "::warning::trinity-treasury deploy warning"
           node scripts/build-mcp-app.mjs
           node ../scripts/deploy-all-workers.mjs --deploy --confirm-production --skip-source-check --continue-on-error
