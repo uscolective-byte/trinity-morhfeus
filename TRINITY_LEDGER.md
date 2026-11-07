@@ -44,3 +44,28 @@
 | **`trinity-profile-staging` (Worker #47)** | Staging (`trinity-development`) | `0001_user_profiles.sql` ✅ (`trinity-development`) | `7d3b29b3-c251-486f-9f7c-6589940b50ad` |
 | **`jericho123` (Worker #26)** | Production (`preview_urls = false`) | Multi-source consensus + >15% manipulation guard | `ecbcc523-087e-4cb3-a6ea-0239705f4959` |
 
+---
+
+## 4. COMPLETE BRANCH UNIFICATION & FLEET SYNC RECEIPT (Ring 0 Directive)
+
+Všetky vývojové a dependabot vetvy boli úspešne a bezpečne zlúčené do `main`. Žiadna vetva nezostala neintegrovaná (`git branch -r --no-merged main` vracia 0).
+
+| Branch / PR | Typ integrácie | Stav & Verifikácia |
+|---|---|---|
+| **`origin/codex/provider-connections-20261106`** | 3-way Merge (`c614b3c`) | Permanentné read-write provider connections, OpenAPI & UI trezor pre OpenAI a Gemini. |
+| **`origin/codex/chat-communication-20261103`** | 3-way Merge (`6b749be`) | Stream dekodér bez koncového newline, záchrana draftov pri zlyhaní siete, ochrana pred prepísaním históriou. |
+| **`origin/codex/trinity-local-stdio-20261103` (PR #35)** | Port & Merge (`06f7ed0`) | MCP stdio lokálny startup bez HTTP tokenu, `Restart-Bridge.ps1` try/finally čistenie `MCP_STDIO`. PR #35 uzavreté. |
+| **`origin/uscolective-byte-desktop-commander-mcp` (PR #37)** | Selective Port (`a8fb1d0`) + Strategy Ours (`82496c8`) | Integrovaný Desktop Commander MCP server endpoint v `.vscode/mcp.json`. Izolácia moderných 47 workerov zachovaná pred historickými deleciami. PR #37 uzavreté. |
+| **PR #42 (`PC-Bridge-Worker/wrangler-4.157.0`)** | Ort Merge (`1184fc9`) | Upgrade `wrangler` 4.153.0 -> 4.157.0 v `PC-Bridge-Worker`. PR #42 uzavreté. |
+| **PR #43 (`Trinity/wrangler-4.157.0`)** | Ort Merge (`ec02a72`) | Upgrade `wrangler` 4.154.0 -> 4.157.0 v `Trinity`. PR #43 uzavreté. |
+| **PR #44 (`Trinity/workers-types-5.20261103.1`)** | Ort Merge (`d48f68b`) | Upgrade `@cloudflare/workers-types` 5.20261029.1 -> 5.20261104.1 v `Trinity`. PR #44 uzavreté. |
+| **PR #45 (`Trinity/agents-0.33.0`)** | Ort Merge (`c243dae`) | Upgrade `agents` 0.31.0 -> 0.33.0 v `Trinity`. PR #45 uzavreté. |
+
+### Testovacie pokrytie po zjednotení vetiev:
+- `npm test`: **940 / 940 PASS** (0 failures)
+- `npm run test:crypto`: **42 / 42 PASS** (0 failures: 8 verify-tetrakis, 12 Jericho, 15 tetrakis-token, 7 crypto-core EVM)
+- `node --test Trinity/tests/omni-core-v11-2.test.mjs`: **10 / 10 PASS** (0 failures)
+- `node --test Trinity/tests/assistant-login.integration.test.mjs`: **19 / 19 PASS** (0 failures)
+- `node --test scripts/trinity-mcp-bridge/test/stdio.test.mjs`: **1 / 1 PASS** (0 failures)
+
+

@@ -18,7 +18,19 @@ $logDir = Join-Path $bridgeDir 'logs'
 New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 $env:TRINITY_WORKSPACE = Split-Path -Parent $bridgeDir
 $env:TRINITY_PORT = [string]$port
-$p = Start-Process -FilePath 'node.exe' -ArgumentList 'server.mjs' -WorkingDirectory $bridgeDir -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $logDir 'bridge.out.log') -RedirectStandardError (Join-Path $logDir 'bridge.err.log')
+# The HTTP launcher must not inherit an stdio transport switch from its parent.
+$mcpStdioWasSet = Test-Path -LiteralPath 'Env:\MCP_STDIO'
+$previousMcpStdio = $env:MCP_STDIO
+try {
+  Remove-Item Env:MCP_STDIO -ErrorAction SilentlyContinue
+  $p = Start-Process -FilePath 'node.exe' -ArgumentList 'server.mjs' -WorkingDirectory $bridgeDir -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $logDir 'bridge.out.log') -RedirectStandardError (Join-Path $logDir 'bridge.err.log')
+} finally {
+  if ($mcpStdioWasSet) {
+    $env:MCP_STDIO = $previousMcpStdio
+  } else {
+    Remove-Item Env:MCP_STDIO -ErrorAction SilentlyContinue
+  }
+}
 $healthy = $false
 for ($i=0; $i -lt 20; $i++) {
   Start-Sleep -Milliseconds 350

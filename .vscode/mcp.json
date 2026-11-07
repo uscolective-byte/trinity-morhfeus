@@ -8,6 +8,10 @@
     }
   ],
   "servers": {
+    "desktop-commander": {
+      "type": "http",
+      "url": "https://mcp.desktopcommander.app/mcp"
+    },
     "trinity": {
       "type": "http",
       "url": "https://auru.space/mcp",

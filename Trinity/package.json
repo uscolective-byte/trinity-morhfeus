@@ -31,15 +31,15 @@
     "@modelcontextprotocol/server": "2.3.1",
     "@noble/curves": "2.4.0",
     "@noble/hashes": "2.4.0",
-    "agents": "0.31.0",
+    "agents": "0.33.0",
     "qrcode-generator": "2.0.4",
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "5.20261029.1",
+    "@cloudflare/workers-types": "5.20261104.1",
     "esbuild": "0.28.2",
     "miniflare": "5.20261006.1-alpha",
-    "wrangler": "4.154.0"
+    "wrangler": "4.157.0"
   },
   "overrides": {
     "@puppeteer/browsers": "3.2.6",
