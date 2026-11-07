@@ -1,0 +1,18 @@
+{
+  "name": "@trinity/crypto-core",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "compile": "node scripts/compile.cjs",
+    "test": "node scripts/compile.cjs && node scripts/run-tests.cjs",
+    "deploy:sepolia": "HARDHAT_NETWORK=baseSepolia node scripts/deploy.cjs --network baseSepolia",
+    "deploy:mainnet": "HARDHAT_NETWORK=baseMainnet node scripts/deploy.cjs --network baseMainnet",
+    "verify:sepolia": "HARDHAT_NETWORK=baseSepolia node scripts/verify.cjs --network baseSepolia",
+    "verify:mainnet": "HARDHAT_NETWORK=baseMainnet node scripts/verify.cjs --network baseMainnet"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.22.0"
+  }
+}

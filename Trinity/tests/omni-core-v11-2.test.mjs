@@ -682,6 +682,39 @@ test('Module 10: Sovereign Monolith Tool Engine (execute_d1_sql, cloudflare_flee
   assert.match(text, /Kaskáda s nástrojmi úspešná/);
 });
 
+test('Module 11: Tetrakis ($TTK) Base L2 Smart Contract, Hardhat Config & Worker #24 (trinity-treasury)', async () => {
+  const repoRoot = path.resolve(__dirname, '../..');
+  const rootSol = fs.readFileSync(path.join(repoRoot, 'contracts/TetrakisToken.sol'), 'utf8');
+  const pkgSol = fs.readFileSync(path.join(repoRoot, 'packages/crypto-core/contracts/TetrakisToken.sol'), 'utf8');
+  assert.equal(rootSol, pkgSol);
+  assert.match(rootSol, /uint256 public constant HARD_CAP = 10_000_000 \* 10\*\*18/);
 
+  const artifact = JSON.parse(fs.readFileSync(path.join(repoRoot, 'packages/crypto-core/build/TetrakisToken.json'), 'utf8'));
+  assert.equal(artifact.contractName, 'TetrakisToken');
+  assert.equal(artifact.bytecodeSha256, '0x51783e809cffb8b5318402e27f9bd181ea0578404feffcc17dcf9d1c236aef93');
+  assert.equal(artifact.runtimeKeccak256, '0x6130b013de4971ca4102f4d330144fbfc72fd8316a6f17c842a47d3a2260eb84');
 
+  const treasuryWrangler = JSON.parse(fs.readFileSync(path.join(repoRoot, 'services/trinity-treasury/wrangler.jsonc'), 'utf8'));
+  assert.equal(treasuryWrangler.name, 'trinity-treasury');
+  assert.equal(treasuryWrangler.vars.BASE_CHAIN_ID, '8453');
+  assert.equal(treasuryWrangler.vars.BASE_RPC_URL, 'https://mainnet.base.org');
+  assert.equal(treasuryWrangler.env.staging.vars.BASE_CHAIN_ID, '84532');
+
+  const treasuryWorker = (await import('../../services/trinity-treasury/src/index.js')).default;
+  const healthRes = await treasuryWorker.fetch(new Request('https://auru.space/health'), treasuryWrangler.vars);
+  assert.equal(healthRes.status, 200);
+  const healthBody = await healthRes.json();
+  assert.equal(healthBody.service, 'trinity-treasury');
+  assert.equal(healthBody.workerId, 24);
+  assert.equal(healthBody.token.symbol, 'TTK');
+  assert.equal(healthBody.token.hardCapTokens, 10000000);
+
+  const pipelineRes = await treasuryWorker.fetch(new Request('https://auru.space/api/treasury/listing-pipeline'), treasuryWrangler.vars);
+  assert.equal(pipelineRes.status, 200);
+  const pipelineBody = await pipelineRes.json();
+  assert.equal(pipelineBody.pipeline.length, 5);
+  assert.equal(pipelineBody.pipeline[0].id, 'base_l2_contract');
+  assert.equal(pipelineBody.pipeline[2].id, 'lp_lock_uncx');
+  assert.equal(pipelineBody.pipeline[4].id, 'cex_listing_tiers');
+});
 
