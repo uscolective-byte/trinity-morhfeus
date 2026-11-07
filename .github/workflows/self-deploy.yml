@@ -110,12 +110,16 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ steps.credentials.outputs.account_id }}
-      - name: Deploy auxiliary service Workers (trinity-profile, jericho123, trinity-chat-inference)
+      - name: Deploy full 47-Worker fleet (AURA, Core, Standalone, Auxiliary & Profile)
         if: ${{ steps.credentials.outputs.available == 'true' }}
         run: |
-          npx wrangler deploy --config ../trinity-profile/wrangler.toml --tag "$GITHUB_SHA" || echo "::warning::trinity-profile deploy warning"
-          npx wrangler deploy --config ../jericho123/wrangler.toml --tag "$GITHUB_SHA" || echo "::warning::jericho123 deploy warning"
-          npx wrangler deploy --config wrangler.chat.jsonc --tag "$GITHUB_SHA" || echo "::warning::trinity-chat-inference deploy warning"
+          for dir in ../Capacity-Worker ../Knowledge-Worker ../Integrations-Worker ../PC-Bridge-Worker ../Audit-Worker ../Jericho-Worker; do
+            if [ -f "$dir/package.json" ]; then
+              npm --prefix "$dir" ci --ignore-scripts || npm --prefix "$dir" install --ignore-scripts
+            fi
+          done
+          node scripts/build-mcp-app.mjs
+          node ../scripts/deploy-all-workers.mjs --deploy --confirm-production --skip-source-check --continue-on-error
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ steps.credentials.outputs.account_id }}

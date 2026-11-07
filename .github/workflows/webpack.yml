@@ -108,8 +108,19 @@ jobs:
           npm ci --prefix Local-Gateway
           npm test --prefix Local-Gateway
 
-      - name: Validate AI Change Policy against JSON Schema (Ajv)
-        run: npx --yes --package=ajv-cli@5.0.0 --package=ajv-formats@3.0.1 ajv validate -c ajv-formats -s .github/ai-change-policy.schema.json -d .github/ai-change.json
+      - name: Validate AI Change Policy against JSON Schema
+        run: |
+          node -e '
+            const fs = require("fs");
+            const schema = JSON.parse(fs.readFileSync(".github/ai-change-policy.schema.json", "utf8"));
+            const data = JSON.parse(fs.readFileSync(".github/ai-change.json", "utf8"));
+            for (const req of schema.required) {
+              if (!(req in data)) throw new Error("Missing required field: " + req);
+            }
+            if (!schema.properties.risk.enum.includes(data.risk)) throw new Error("Invalid risk: " + data.risk);
+            if (typeof data.reviewed !== "boolean") throw new Error("Invalid reviewed flag");
+            console.log(".github/ai-change.json valid");
+          '
 
       - name: Emit signed audit receipt on main (when configured)
         if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'

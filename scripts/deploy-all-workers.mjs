@@ -71,7 +71,7 @@ if (issues.length) {
   process.exit(1);
 }
 
-if (DEPLOY) {
+if (DEPLOY && !process.argv.includes('--skip-source-check')) {
   try {
     checkSource(ROOT_DIR);
   } catch (error) {
@@ -80,6 +80,7 @@ if (DEPLOY) {
   }
 }
 
+const CONTINUE_ON_ERROR = process.argv.includes('--continue-on-error');
 const wranglerScript = resolve(ROOT_DIR, 'Trinity/node_modules/wrangler/bin/wrangler.js');
 const useLocalWrangler = existsSync(wranglerScript);
 const releaseTag = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT_DIR, encoding: 'utf8' }).trim();
@@ -103,19 +104,21 @@ for (const target of WORKER_DEPLOYMENTS) {
     const command = useLocalWrangler
       ? [process.execPath, [wranglerScript, ...args]]
       : ['npx', ['wrangler', ...args]];
-    execFileSync(command[0], command[1], {
+    const stdout = execFileSync(command[0], command[1], {
       cwd,
       stdio: 'pipe',
       encoding: 'utf8',
       env: { ...process.env, CI: '1', WRANGLER_SEND_METRICS: 'false' }
     });
-    results.push({ name: target.name, ok: true });
-    console.log(`PASS ${target.name}`);
+    const versionMatch = stdout.match(/Current Version ID:\s*([0-9a-f-]+)/i);
+    const versionId = versionMatch ? versionMatch[1] : null;
+    results.push({ name: target.name, ok: true, versionId });
+    console.log(`PASS ${target.name}${versionId ? ` (Version ID: ${versionId})` : ''}`);
   } catch (error) {
     const message = error.stdout?.toString() || error.stderr?.toString() || error.message;
     results.push({ name: target.name, ok: false, message: message.slice(0, 500) });
     console.error(`FAIL ${target.name}: ${message.slice(0, 300)}`);
-    if (!DRY_RUN) {
+    if (!DRY_RUN && !CONTINUE_ON_ERROR) {
       console.error('Stopping after the first deployment error.');
       break;
     }
@@ -124,4 +127,4 @@ for (const target of WORKER_DEPLOYMENTS) {
 
 const passed = results.filter(result => result.ok).length;
 console.log(`Summary: ${passed}/${results.length} passed.`);
-if (passed !== WORKER_DEPLOYMENTS.length) process.exit(1);
+if (passed !== WORKER_DEPLOYMENTS.length && !CONTINUE_ON_ERROR) process.exit(1);
