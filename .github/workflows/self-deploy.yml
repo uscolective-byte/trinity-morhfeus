@@ -118,6 +118,8 @@ jobs:
               npm --prefix "$dir" ci --ignore-scripts || npm --prefix "$dir" install --ignore-scripts
             fi
           done
+          npx wrangler d1 migrations apply DB --remote --config ../trinity-profile/wrangler.toml --env staging || echo "::warning::trinity-profile staging migration already applied"
+          npx wrangler deploy --config ../trinity-profile/wrangler.toml --env staging --tag "$GITHUB_SHA" || echo "::warning::trinity-profile-staging deploy warning"
           node scripts/build-mcp-app.mjs
           node ../scripts/deploy-all-workers.mjs --deploy --confirm-production --skip-source-check --continue-on-error
         env:

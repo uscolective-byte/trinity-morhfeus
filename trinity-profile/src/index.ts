@@ -273,6 +273,77 @@ async function verifyAdminAuthorization(request: Request, body: any, env: Env, s
   return false;
 }
 
+type ProfilePrincipal = { id: string; email: string };
+
+function normalizePreferences(input: unknown, base: UserPreferences = DEFAULT_PREFERENCES): UserPreferences | null {
+  if (input === undefined) return { ...base };
+  if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+
+  const source = input as Record<string, unknown>;
+  const result: UserPreferences = { ...base };
+  const stringFields: Array<[keyof Pick<UserPreferences, "preferredModel" | "fastFallbackModel">, number]> = [
+    ["preferredModel", 120], ["fastFallbackModel", 120]
+  ];
+  for (const [key, max] of stringFields) {
+    const value = source[key];
+    if (value !== undefined) {
+      if (typeof value !== "string" || value.trim().length === 0 || value.length > max) return null;
+      result[key] = value.trim();
+    }
+  }
+  if (source.temperature !== undefined) {
+    if (typeof source.temperature !== "number" || !Number.isFinite(source.temperature) || source.temperature < 0 || source.temperature > 2) return null;
+    result.temperature = source.temperature;
+  }
+  if (source.maxTokens !== undefined) {
+    if (typeof source.maxTokens !== "number" || !Number.isInteger(source.maxTokens) || source.maxTokens < 1 || source.maxTokens > 8192) return null;
+    result.maxTokens = source.maxTokens;
+  }
+  if (source.customSystemPrompt !== undefined) {
+    if (typeof source.customSystemPrompt !== "string" || source.customSystemPrompt.length > 4000) return null;
+    result.customSystemPrompt = source.customSystemPrompt;
+  }
+  if (source.theme !== undefined) {
+    if (!(["aura", "matrix", "dark", "cyberpunk", "minimal"] as unknown[]).includes(source.theme)) return null;
+    result.theme = source.theme as UserPreferences["theme"];
+  }
+  for (const key of ["streamResponse", "developerMode"] as const) {
+    if (source[key] !== undefined) {
+      if (typeof source[key] !== "boolean") return null;
+      result[key] = source[key];
+    }
+  }
+  return result;
+}
+
+async function resolveProfilePrincipal(request: Request, env: Env, salt: string): Promise<ProfilePrincipal | null> {
+  if (!env.DB) return null;
+  const match = /^Bearer\s+(trk_[a-z0-9_-]{24,128})$/i.exec(request.headers.get("Authorization")?.trim() || "");
+  if (!match) return null;
+
+  const apiKey = match[1];
+  const hashes = [await CryptoEngine.hash(apiKey, salt), await CryptoEngine.hash(apiKey, "")];
+  let row: { id: string; email: string; status: string; api_key_hash: string | null } | null = null;
+  if (env.TRINITY_KV) {
+    for (const hash of hashes) {
+      const profileId = await env.TRINITY_KV.get(`api_key_lookup:${hash}`);
+      if (profileId) {
+        row = await env.DB.prepare(
+          "SELECT id, email, status, api_key_hash FROM user_profiles WHERE id = ?"
+        ).bind(profileId).first<{ id: string; email: string; status: string; api_key_hash: string | null }>();
+        if (row) break;
+      }
+    }
+  }
+  if (!row) {
+    row = await env.DB.prepare(
+      "SELECT id, email, status, api_key_hash FROM user_profiles WHERE api_key_hash = ? OR api_key_hash = ? LIMIT 1"
+    ).bind(hashes[0], hashes[1]).first<{ id: string; email: string; status: string; api_key_hash: string | null }>();
+  }
+  if (!row || row.status !== "ACTIVE" || !row.email || !row.id || !hashes.includes(row.api_key_hash || "")) return null;
+  return { id: row.id, email: row.email };
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     if (request.method === "OPTIONS") {
@@ -304,7 +375,16 @@ export default {
 
       // 1. Inicializácia rozšírenej databázovej schémy
       if (pathname === "/init-schema" || pathname === "/api/profile/init-schema") {
-        if (env.DB) {
+        if (request.method !== "POST") {
+          return Response.json({ error: "METHOD_NOT_ALLOWED" }, { status: 405, headers: CORS_HEADERS });
+        }
+        if (!await verifyAdminAuthorization(request, null, env, salt)) {
+          return Response.json({ error: "ADMIN_AUTH_REQUIRED" }, { status: 401, headers: CORS_HEADERS });
+        }
+        if (!env.DB) {
+          return Response.json({ error: "DATABASE_UNAVAILABLE" }, { status: 503, headers: CORS_HEADERS });
+        }
+        {
           await env.DB.prepare(`
             CREATE TABLE IF NOT EXISTS user_profiles (
               id TEXT PRIMARY KEY,
@@ -339,13 +419,29 @@ export default {
 
       // 2. Vytvorenie alebo Registrácia nového profilu
       if (request.method === "POST" && (pathname === "/api/profile/create" || pathname === "/api/profile/register")) {
-        const body = await request.json() as any;
-        if (!body.email || !body.displayName) {
+        let body: any;
+        try { body = await request.json(); }
+        catch { return Response.json({ error: "INVALID_JSON_BODY" }, { status: 400, headers: CORS_HEADERS }); }
+        if (!body || typeof body !== "object" || Array.isArray(body) ||
+            typeof body.email !== "string" || typeof body.displayName !== "string") {
           return Response.json({ error: "Missing required fields: email, displayName" }, { status: 400, headers: CORS_HEADERS });
         }
 
-        const emailClean = body.email.toLowerCase().trim();
-        const profileId = body.id || `usr_${crypto.randomUUID().slice(0, 12)}`;
+        const emailClean = body.email.trim().toLowerCase();
+        const displayName = body.displayName.trim();
+        if (emailClean.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailClean) ||
+            displayName.length < 1 || displayName.length > 120) {
+          return Response.json({ error: "INVALID_PROFILE_INPUT" }, { status: 400, headers: CORS_HEADERS });
+        }
+        if (!env.DB || !env.TRINITY_KV) {
+          return Response.json({ error: "PROFILE_STORAGE_UNAVAILABLE" }, { status: 503, headers: CORS_HEADERS });
+        }
+        const mergedPrefs = normalizePreferences(body.preferences);
+        if (!mergedPrefs) {
+          return Response.json({ error: "INVALID_PREFERENCES" }, { status: 400, headers: CORS_HEADERS });
+        }
+
+        const profileId = `usr_${crypto.randomUUID().slice(0, 12)}`;
         const now = Date.now();
 
         // Hardened cryptographic and store-backed admin role authorization
@@ -356,24 +452,19 @@ export default {
           role = isAdminAuthorized ? body.role : "user";
         }
 
-        const mergedPrefs: UserPreferences = {
-          ...DEFAULT_PREFERENCES,
-          ...(body.preferences || {})
-        };
-
         const newApiKey = `trk_${crypto.randomUUID().replace(/-/g, "")}`;
         const apiKeyHash = await CryptoEngine.hash(newApiKey, salt);
 
         const profile: UserProfile = {
           id: profileId,
           email: emailClean,
-          displayName: body.displayName.trim(),
-          alias: body.alias || (role === "superadmin" ? "SovereignNode" : undefined),
-          avatarUrl: body.avatarUrl || "",
+          displayName,
+          alias: typeof body.alias === "string" && body.alias.length <= 64 ? body.alias.trim() || undefined : undefined,
+          avatarUrl: typeof body.avatarUrl === "string" && body.avatarUrl.length <= 2048 ? body.avatarUrl : "",
           role,
-          organization: body.organization || (role === "superadmin" ? "Trinity Sovereign Core" : "AURA"),
-          walletAddress: body.walletAddress || "",
-          ttkBalance: body.ttkBalance || 0,
+          organization: typeof body.organization === "string" && body.organization.length <= 120 ? body.organization : (role === "superadmin" ? "Trinity Sovereign Core" : "AURA"),
+          walletAddress: typeof body.walletAddress === "string" && body.walletAddress.length <= 256 ? body.walletAddress : "",
+          ttkBalance: isAdminAuthorized && typeof body.ttkBalance === "number" && Number.isFinite(body.ttkBalance) && body.ttkBalance >= 0 ? body.ttkBalance : 0,
           preferences: mergedPrefs,
           apiKeyHash,
           status: "ACTIVE",
@@ -382,12 +473,12 @@ export default {
           lastLoginAt: now
         };
 
-        // Zápis do D1
-        if (env.DB) {
-          await env.DB.prepare(`
-            INSERT OR REPLACE INTO user_profiles 
+        // Do not replace an existing email row: public registration must never take over an account.
+        const insertResult = await env.DB.prepare(`
+            INSERT INTO user_profiles
             (id, email, display_name, alias, avatar_url, role, organization, wallet_address, ttk_balance, preferences_json, api_key_hash, status, created_at, updated_at, last_login_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(email) DO NOTHING
           `).bind(
             profile.id, profile.email, profile.displayName, profile.alias || null,
             profile.avatarUrl || null, profile.role, profile.organization || null,
@@ -395,13 +486,23 @@ export default {
             JSON.stringify(profile.preferences), profile.apiKeyHash, profile.status,
             profile.createdAt, profile.updatedAt, profile.lastLoginAt
           ).run();
+        if (insertResult.meta.changes === 0) {
+          return Response.json({ error: "PROFILE_ALREADY_EXISTS" }, { status: 409, headers: CORS_HEADERS });
         }
 
         // Zápis do KV cache
-        if (env.TRINITY_KV) {
+        try {
           await env.TRINITY_KV.put(`profile:${profile.id}`, JSON.stringify(profile), { expirationTtl: 86400 * 30 });
           await env.TRINITY_KV.put(`profile_by_email:${profile.email}`, profile.id, { expirationTtl: 86400 * 30 });
           await env.TRINITY_KV.put(`api_key_lookup:${apiKeyHash}`, profile.id, { expirationTtl: 86400 * 30 });
+        } catch (error) {
+          await Promise.allSettled([
+            env.TRINITY_KV.delete(`profile:${profile.id}`),
+            env.TRINITY_KV.delete(`profile_by_email:${profile.email}`),
+            env.TRINITY_KV.delete(`api_key_lookup:${apiKeyHash}`)
+          ]);
+          await env.DB.prepare("DELETE FROM user_profiles WHERE id = ?").bind(profile.id).run().catch(() => undefined);
+          throw error;
         }
 
         // Audit log cez Service Binding
@@ -415,64 +516,59 @@ export default {
           );
         }
 
+        const { apiKeyHash: _apiKeyHash, ...safeProfile } = profile;
         return Response.json({
           status: "CREATED",
-          profile,
+          profile: safeProfile,
           secretApiKey: newApiKey
-        }, { status: 201, headers: CORS_HEADERS });
+        }, { status: 201, headers: { ...CORS_HEADERS, "Cache-Control": "no-store" } });
       }
 
       // 3. Získanie profilu (/api/profile/me alebo podľa ID/Emailu)
       if (request.method === "GET" && (pathname.startsWith("/api/profile/") || pathname === "/api/profile")) {
         const queryId = url.searchParams.get("id") || (pathname !== "/api/profile" && pathname !== "/api/profile/me" ? pathname.split("/").pop() : null);
         const queryEmail = url.searchParams.get("email");
-        const authHeader = request.headers.get("Authorization");
+        const isAdminAuthorized = await verifyAdminAuthorization(request, null, env, salt);
+        const principal = isAdminAuthorized ? null : await resolveProfilePrincipal(request, env, salt);
+        if (!isAdminAuthorized && !principal) {
+          return Response.json({ error: "AUTHENTICATION_REQUIRED" }, { status: 401, headers: CORS_HEADERS });
+        }
 
         let targetId = queryId;
-
-        // Ak ide o /me s Bearer API kľúčom
-        if (!targetId && authHeader && authHeader.startsWith("Bearer trk_")) {
-          const rawKey = authHeader.replace("Bearer ", "").trim();
-          const keyHash = await CryptoEngine.hash(rawKey, salt);
-          if (env.TRINITY_KV) {
-            targetId = await env.TRINITY_KV.get(`api_key_lookup:${keyHash}`);
-          }
+        if (!targetId && principal) targetId = principal.id;
+        if (targetId && principal && targetId !== principal.id) {
+          return Response.json({ error: "PROFILE_ACCESS_DENIED" }, { status: 403, headers: CORS_HEADERS });
+        }
+        if (queryEmail && principal && queryEmail.trim().toLowerCase() !== principal.email.toLowerCase()) {
+          return Response.json({ error: "PROFILE_ACCESS_DENIED" }, { status: 403, headers: CORS_HEADERS });
+        }
+        if (!targetId && !queryEmail) {
+          return Response.json({ error: "PROFILE_ID_REQUIRED" }, { status: 400, headers: CORS_HEADERS });
         }
 
-        let profile: UserProfile | null = null;
-
-        if (targetId && env.TRINITY_KV) {
-          const cached = await env.TRINITY_KV.get(`profile:${targetId}`);
-          if (cached) profile = JSON.parse(cached);
+        if (!env.DB) {
+          return Response.json({ error: "DATABASE_UNAVAILABLE" }, { status: 503, headers: CORS_HEADERS });
         }
-
-        if (!profile && env.DB) {
-          let row: any = null;
-          if (targetId) {
-            row = await env.DB.prepare("SELECT * FROM user_profiles WHERE id = ?").bind(targetId).first();
-          } else if (queryEmail) {
-            row = await env.DB.prepare("SELECT * FROM user_profiles WHERE email = ?").bind(queryEmail.toLowerCase().trim()).first();
-          }
-
-          if (row) {
-            profile = {
-              id: row.id,
-              email: row.email,
-              displayName: row.display_name,
-              alias: row.alias,
-              avatarUrl: row.avatar_url,
-              role: row.role,
-              organization: row.organization,
-              walletAddress: row.wallet_address,
-              ttkBalance: row.ttk_balance,
-              preferences: JSON.parse(row.preferences_json || "{}"),
-              status: row.status,
-              createdAt: row.created_at,
-              updatedAt: row.updated_at,
-              lastLoginAt: row.last_login_at
-            };
-          }
-        }
+        const row: any = targetId
+          ? await env.DB.prepare("SELECT * FROM user_profiles WHERE id = ?").bind(targetId).first()
+          : await env.DB.prepare("SELECT * FROM user_profiles WHERE email = ?").bind(queryEmail!.trim().toLowerCase()).first();
+        const profile: UserProfile | null = row ? {
+          id: row.id,
+          email: row.email,
+          displayName: row.display_name,
+          alias: row.alias,
+          avatarUrl: row.avatar_url,
+          role: row.role,
+          organization: row.organization,
+          walletAddress: row.wallet_address,
+          ttkBalance: row.ttk_balance,
+          preferences: normalizePreferences(JSON.parse(row.preferences_json || "{}")) || { ...DEFAULT_PREFERENCES },
+          apiKeyHash: row.api_key_hash,
+          status: row.status,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+          lastLoginAt: row.last_login_at
+        } : null;
 
         if (!profile) {
           return Response.json({ error: "Profile not found" }, { status: 404, headers: CORS_HEADERS });
@@ -480,102 +576,115 @@ export default {
 
         // Skryjeme hash API kľúča
         const { apiKeyHash, ...safeProfile } = profile;
-        return Response.json(safeProfile, { headers: CORS_HEADERS });
+        return Response.json(safeProfile, { headers: { ...CORS_HEADERS, "Cache-Control": "no-store" } });
       }
 
       // 4. Aktualizácia profilu a inferenčných preferencií
       if ((request.method === "PUT" || request.method === "POST") && pathname === "/api/profile/update") {
-        const body = await request.json() as any;
-        if (!body.id) {
-          return Response.json({ error: "Missing required 'id' attribute" }, { status: 400, headers: CORS_HEADERS });
+        let body: any;
+        try { body = await request.json(); }
+        catch { return Response.json({ error: "INVALID_JSON_BODY" }, { status: 400, headers: CORS_HEADERS }); }
+        if (!body || typeof body !== "object" || Array.isArray(body) || typeof body.id !== "string" || body.id.length > 100) {
+          return Response.json({ error: "INVALID_PROFILE_ID" }, { status: 400, headers: CORS_HEADERS });
+        }
+
+        const isAdminAuthorized = await verifyAdminAuthorization(request, body, env, salt);
+        const principal = isAdminAuthorized ? null : await resolveProfilePrincipal(request, env, salt);
+        if (!isAdminAuthorized && !principal) {
+          return Response.json({ error: "AUTHENTICATION_REQUIRED" }, { status: 401, headers: CORS_HEADERS });
+        }
+        if (principal && principal.id !== body.id) {
+          return Response.json({ error: "PROFILE_ACCESS_DENIED" }, { status: 403, headers: CORS_HEADERS });
+        }
+        if (!isAdminAuthorized && ["role", "status", "email", "apiKeyHash", "ttkBalance", "createdAt"].some(key => body[key] !== undefined)) {
+          return Response.json({ error: "ADMIN_AUTH_REQUIRED_FOR_PROTECTED_FIELDS" }, { status: 403, headers: CORS_HEADERS });
+        }
+        if (!env.DB || !env.TRINITY_KV) {
+          return Response.json({ error: "PROFILE_STORAGE_UNAVAILABLE" }, { status: 503, headers: CORS_HEADERS });
+        }
+
+        const current: any = await env.DB.prepare("SELECT * FROM user_profiles WHERE id = ?").bind(body.id).first();
+        if (!current) return Response.json({ error: "PROFILE_NOT_FOUND" }, { status: 404, headers: CORS_HEADERS });
+
+        const safeBody: Partial<UserProfile> = {};
+        const textFields: Array<[keyof Pick<UserProfile, "displayName" | "alias" | "avatarUrl" | "organization" | "walletAddress">, number]> = [
+          ["displayName", 120], ["alias", 64], ["avatarUrl", 2048], ["organization", 120], ["walletAddress", 256]
+        ];
+        for (const [key, max] of textFields) {
+          const value = body[key];
+          if (value !== undefined) {
+            if (typeof value !== "string" || value.length > max || (key === "displayName" && value.trim().length === 0)) {
+              return Response.json({ error: "INVALID_PROFILE_INPUT" }, { status: 400, headers: CORS_HEADERS });
+            }
+            (safeBody as any)[key] = value.trim();
+          }
+        }
+
+        const existingPreferences = normalizePreferences(JSON.parse(current.preferences_json || "{}")) || { ...DEFAULT_PREFERENCES };
+        const nextPreferences = body.preferences === undefined ? existingPreferences : normalizePreferences(body.preferences, existingPreferences);
+        if (!nextPreferences) return Response.json({ error: "INVALID_PREFERENCES" }, { status: 400, headers: CORS_HEADERS });
+        if (body.preferences !== undefined) safeBody.preferences = nextPreferences;
+
+        const allowedRoles: UserRole[] = ["superadmin", "admin", "operator", "user", "trinity_agent"];
+        const allowedStatuses: UserProfile["status"][] = ["ACTIVE", "SUSPENDED", "PENDING_VERIFICATION"];
+        if (isAdminAuthorized && body.role !== undefined && !allowedRoles.includes(body.role)) {
+          return Response.json({ error: "INVALID_ROLE" }, { status: 400, headers: CORS_HEADERS });
+        }
+        if (isAdminAuthorized && body.status !== undefined && !allowedStatuses.includes(body.status)) {
+          return Response.json({ error: "INVALID_STATUS" }, { status: 400, headers: CORS_HEADERS });
         }
 
         const now = Date.now();
-        const isAdminAuthorized = await verifyAdminAuthorization(request, body, env, salt);
+        const update = await env.DB.prepare(`
+          UPDATE user_profiles
+          SET display_name = COALESCE(?, display_name),
+              alias = COALESCE(?, alias),
+              avatar_url = COALESCE(?, avatar_url),
+              role = COALESCE(?, role),
+              status = COALESCE(?, status),
+              organization = COALESCE(?, organization),
+              wallet_address = COALESCE(?, wallet_address),
+              preferences_json = COALESCE(?, preferences_json),
+              updated_at = ?
+          WHERE id = ?
+        `).bind(
+          safeBody.displayName ?? null,
+          safeBody.alias ?? null,
+          safeBody.avatarUrl ?? null,
+          isAdminAuthorized ? body.role ?? null : null,
+          isAdminAuthorized ? body.status ?? null : null,
+          safeBody.organization ?? null,
+          safeBody.walletAddress ?? null,
+          body.preferences !== undefined ? JSON.stringify(nextPreferences) : null,
+          now,
+          body.id
+        ).run();
+        if (update.meta.changes === 0) return Response.json({ error: "PROFILE_NOT_FOUND" }, { status: 404, headers: CORS_HEADERS });
 
-        // Sanitize input fields:
-        const safeBody = { ...body };
-        if (!isAdminAuthorized) {
-          delete safeBody.role;
-          delete safeBody.apiKeyHash;
-          delete safeBody.email;
-          delete safeBody.status;
-          delete safeBody.ttkBalance;
-          delete safeBody.createdAt;
+        const updated: UserProfile = {
+          id: current.id,
+          email: current.email,
+          displayName: safeBody.displayName ?? current.display_name,
+          alias: safeBody.alias ?? current.alias ?? undefined,
+          avatarUrl: safeBody.avatarUrl ?? current.avatar_url ?? "",
+          role: isAdminAuthorized && body.role !== undefined ? body.role : current.role,
+          organization: safeBody.organization ?? current.organization ?? undefined,
+          walletAddress: safeBody.walletAddress ?? current.wallet_address ?? "",
+          ttkBalance: current.ttk_balance ?? 0,
+          preferences: nextPreferences,
+          apiKeyHash: current.api_key_hash ?? undefined,
+          status: isAdminAuthorized && body.status !== undefined ? body.status : current.status,
+          createdAt: current.created_at,
+          updatedAt: now,
+          lastLoginAt: current.last_login_at
+        };
+        try {
+          await env.TRINITY_KV.put(`profile:${body.id}`, JSON.stringify(updated), { expirationTtl: 86400 * 30 });
+        } catch {
+          await env.TRINITY_KV.delete(`profile:${body.id}`).catch(() => undefined);
         }
 
-        if (env.DB) {
-          if (isAdminAuthorized && (body.role || body.status)) {
-            await env.DB.prepare(`
-              UPDATE user_profiles 
-              SET display_name = COALESCE(?, display_name),
-                  alias = COALESCE(?, alias),
-                  avatar_url = COALESCE(?, avatar_url),
-                  role = COALESCE(?, role),
-                  status = COALESCE(?, status),
-                  organization = COALESCE(?, organization),
-                  wallet_address = COALESCE(?, wallet_address),
-                  preferences_json = COALESCE(?, preferences_json),
-                  updated_at = ?
-              WHERE id = ?
-            `).bind(
-              safeBody.displayName || null,
-              safeBody.alias || null,
-              safeBody.avatarUrl || null,
-              body.role || null,
-              body.status || null,
-              safeBody.organization || null,
-              safeBody.walletAddress || null,
-              safeBody.preferences ? JSON.stringify(safeBody.preferences) : null,
-              now,
-              body.id
-            ).run();
-          } else {
-            await env.DB.prepare(`
-              UPDATE user_profiles 
-              SET display_name = COALESCE(?, display_name),
-                  alias = COALESCE(?, alias),
-                  avatar_url = COALESCE(?, avatar_url),
-                  organization = COALESCE(?, organization),
-                  wallet_address = COALESCE(?, wallet_address),
-                  preferences_json = COALESCE(?, preferences_json),
-                  updated_at = ?
-              WHERE id = ?
-            `).bind(
-              safeBody.displayName || null,
-              safeBody.alias || null,
-              safeBody.avatarUrl || null,
-              safeBody.organization || null,
-              safeBody.walletAddress || null,
-              safeBody.preferences ? JSON.stringify(safeBody.preferences) : null,
-              now,
-              body.id
-            ).run();
-          }
-        }
-
-        if (env.TRINITY_KV) {
-          const cached = await env.TRINITY_KV.get(`profile:${body.id}`);
-          if (cached) {
-            const current = JSON.parse(cached);
-            const updated = {
-              ...current,
-              ...safeBody,
-              role: isAdminAuthorized && body.role ? body.role : current.role,
-              status: isAdminAuthorized && body.status ? body.status : current.status,
-              email: current.email,
-              apiKeyHash: current.apiKeyHash,
-              ttkBalance: current.ttkBalance,
-              createdAt: current.createdAt,
-              id: current.id,
-              preferences: { ...(current.preferences || {}), ...(safeBody.preferences || {}) },
-              updatedAt: now
-            };
-            await env.TRINITY_KV.put(`profile:${body.id}`, JSON.stringify(updated), { expirationTtl: 86400 * 30 });
-          }
-        }
-
-        return Response.json({ status: "UPDATED", userId: body.id, updatedAt: now }, { headers: CORS_HEADERS });
+        return Response.json({ status: "UPDATED", userId: body.id, updatedAt: now }, { headers: { ...CORS_HEADERS, "Cache-Control": "no-store" } });
       }
 
       // 5. Defaultný health / metadata endpoint
@@ -597,8 +706,8 @@ export default {
         ]
       }, { headers: CORS_HEADERS });
 
-    } catch (err: any) {
-      return Response.json({ error: err.message, status: "INTERNAL_ERROR" }, { status: 500, headers: CORS_HEADERS });
+    } catch {
+      return Response.json({ error: "INTERNAL_ERROR" }, { status: 500, headers: CORS_HEADERS });
     }
   }
 };

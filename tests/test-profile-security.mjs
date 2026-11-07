@@ -55,8 +55,7 @@ await buildFn({
   outfile: bundleOut,
   platform: 'neutral',
   target: 'es2022',
-  format: 'esm',
-  packages: 'external'
+  format: 'esm'
 });
 
 const mod = await import(`file://${bundleOut.replace(/\\/g, '/')}?t=${Date.now()}`);
@@ -75,7 +74,11 @@ function createMockDB() {
         bind(...args) {
           return {
             async run() {
-              if (query.includes('INSERT OR REPLACE INTO user_profiles')) {
+              if (query.includes('INSERT') && query.includes('INTO user_profiles')) {
+                const email = args[1];
+                if (query.includes('ON CONFLICT') && Array.from(mockDB.profiles.values()).some(p => p.email === email)) {
+                  return { success: true, meta: { changes: 0 } };
+                }
                 const id = args[0];
                 mockDB.profiles.set(id, {
                   id: args[0], email: args[1], display_name: args[2], alias: args[3],
@@ -84,6 +87,7 @@ function createMockDB() {
                   api_key_hash: args[10], status: args[11], created_at: args[12],
                   updated_at: args[13], last_login_at: args[14]
                 });
+                return { success: true, meta: { changes: 1 } };
               } else if (query.includes('UPDATE user_profiles')) {
                 const id = args[args.length - 1];
                 const p = mockDB.profiles.get(id);
@@ -107,9 +111,10 @@ function createMockDB() {
                     if (args[5] !== null) p.preferences_json = args[5];
                     p.updated_at = args[6];
                   }
+                  return { success: true, meta: { changes: 1 } };
                 }
               }
-              return { success: true };
+              return { success: true, meta: { changes: 1 } };
             },
             async first() {
               if (query.includes('SELECT') && query.includes('WHERE id = ?')) {
@@ -126,11 +131,17 @@ function createMockDB() {
                 }
                 return null;
               }
+              if (query.includes('SELECT') && query.includes('WHERE api_key_hash = ?')) {
+                for (const p of mockDB.profiles.values()) {
+                  if (p.api_key_hash === args[0] || p.api_key_hash === args[1]) return p;
+                }
+                return null;
+              }
               return null;
             }
           };
         },
-        async run() { return { success: true }; }
+        async run() { return { success: true, meta: { changes: 1 } }; }
       };
     }
   };
@@ -328,7 +339,7 @@ let victimApiKey;
     })
   }), env, ctx);
 
-  if (updateRes.status === 403 || updateRes.status === 400) {
+  if (updateRes.status === 401 || updateRes.status === 403 || updateRes.status === 400) {
     console.log(`✅ TEST 7 PASS: Unprivileged update rejected with HTTP ${updateRes.status}.`);
   } else if (updateRes.status === 200) {
     const kvCached = JSON.parse(await mockKV.get(`profile:${victimUser.id}`));

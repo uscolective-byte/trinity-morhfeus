@@ -30,13 +30,36 @@ test('context trimming preserves the system prompt even when it exceeds the budg
   assert.equal(result.length, 1);
 });
 
+function makeMockProfileStorage() {
+  const kv = new Map();
+  return {
+    DB: {
+      prepare() {
+        return {
+          bind() {
+            return {
+              async run() { return { meta: { changes: 1 } }; },
+              async first() { return null; }
+            };
+          }
+        };
+      }
+    },
+    TRINITY_KV: {
+      async get(key) { return kv.get(key) ?? null; },
+      async put(key, value) { kv.set(key, value); },
+      async delete(key) { kv.delete(key); }
+    }
+  };
+}
+
 test('profile admin elevation rejects unverified bearer and Access client ID headers', async () => {
   const request = new Request('https://profile.test/api/profile/create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer trn_live_attacker', 'CF-Access-Client-Id': 'spoofed-client' },
     body: JSON.stringify({ email: 'attacker@example.com', displayName: 'Attacker', role: 'admin' })
   });
-  const response = await profileWorker.fetch(request, { TOKEN_SALT: 'not-an-admin-secret' }, { waitUntil() {} });
+  const response = await profileWorker.fetch(request, { ...makeMockProfileStorage(), TOKEN_SALT: 'not-an-admin-secret' }, { waitUntil() {} });
   assert.equal(response.status, 201);
   assert.equal((await response.json()).profile.role, 'user');
 });
@@ -62,9 +85,11 @@ test('profile admin elevation accepts only a valid Access JWT for an allowlisted
     body: JSON.stringify({ email: 'admin@example.com', displayName: 'Admin', role: 'admin' })
   });
   const response = await profileWorker.fetch(request, {
+    ...makeMockProfileStorage(),
     CF_ACCESS_TEAM_DOMAIN: 'trinity-team.cloudflareaccess.com', CF_ACCESS_AUD: 'expected-app-aud', CF_ACCESS_ADMIN_EMAILS: 'admin@example.com'
   }, { waitUntil() {} });
   assert.equal(response.status, 201);
   assert.equal((await response.json()).profile.role, 'admin');
 });
+
 
