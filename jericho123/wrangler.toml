@@ -1,10 +1,20 @@
-﻿name = "jericho123"
+name = "jericho123"
 main = "src/index.ts"
-compatibility_date = "2026-11-01"
+account_id = "b60342e5e52f5646fbd4e913bb409334"
+compatibility_date = "2026-10-11"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
 ENVIRONMENT = "production"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "trinity-v03"
+database_id = "ca8ea24e-f7db-431e-b8bf-97f713ae4533"
+
+[[kv_namespaces]]
+binding = "TRINITY_KV"
+id = "0b92ed2717d742daa860f1827797297f"
 
 [[services]]
 binding = "TRINITY_SENTINEL"
