@@ -975,6 +975,27 @@ async function route(request,env,ctx){
     const id=uuid.parse(audioRoute[1]),object=await env.ARTIFACTS.get(`media/audio/${id}.mp3`);if(!object)throw new HttpError(404,'Zvuk neexistuje.');
     return new Response(object.body,{headers:{'Content-Type':object.httpMetadata?.contentType||'audio/mpeg','Cache-Control':'private, max-age=3600','X-Content-Type-Options':'nosniff'}});
   }
+  const videoRoute=path.match(/^\/api\/assistant\/media\/video\/([0-9a-f-]+)$/i);
+  if(videoRoute&&request.method==='GET'){
+    const id=uuid.parse(videoRoute[1]);
+    let object=await env.ARTIFACTS.get(`media/video/${id}.webm`);
+    if(!object)object=await env.ARTIFACTS.get(`media/video/${id}.mp4`);
+    if(!object)object=await env.ARTIFACTS.get(`media/video/${id}.html`);
+    if(!object&&env.DB?.prepare){
+      try{
+        const row=await env.DB.prepare('SELECT r2_key,content_type FROM ops_artifacts WHERE id=?').bind(id).first();
+        if(row&&row.r2_key)object=await env.ARTIFACTS.get(row.r2_key);
+      }catch{}
+    }
+    if(!object)throw new HttpError(404,'Video neexistuje.');
+    const headers=new Headers();
+    if(typeof object.writeHttpMetadata==='function')object.writeHttpMetadata(headers);
+    if(!headers.has('Content-Type')&&object.httpMetadata?.contentType)headers.set('Content-Type',object.httpMetadata.contentType);
+    if(!headers.has('Content-Type'))headers.set('Content-Type','text/html; charset=utf-8');
+    headers.set('Cache-Control','private, max-age=86400');
+    headers.set('X-Content-Type-Options','nosniff');
+    return new Response(object.body,{headers});
+  }
   if(path==='/api/assistant/rbac'&&request.method==='GET'){
     const roles=user.role==='owner'?['owner','admin','user']:[user.role];const items=[];for(const role of roles)items.push({role,permissions:await rolePermissions(env,role)});
     return json({capabilities:TRINITY2_CAPABILITIES,items});

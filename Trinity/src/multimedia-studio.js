@@ -125,16 +125,17 @@ async function saveCreationRecord(env, item) {
   }
 }
 
-export async function listMultimediaCreations(env, { media_type = '', limit = 30 } = {}) {
+export async function listMultimediaCreations(env, { media_type = '', kind = '', limit = 30 } = {}) {
   await ensureMultimediaSchema(env);
   if (!env?.DB?.prepare) return { items: [], counts: { total: 0, photo: 0, video: 0, music: 0, presentation: 0, creative_pack: 0 } };
   const lim = Math.max(1, Math.min(Number(limit) || 30, 100));
+  const filterType = (media_type || kind || '').trim();
   try {
     let q = 'SELECT * FROM ops_multimedia_creations';
     const params = [];
-    if (media_type && media_type !== 'all') {
+    if (filterType && filterType !== 'all') {
       q += ' WHERE media_type = ?';
-      params.push(media_type);
+      params.push(filterType);
     }
     q += ' ORDER BY created_at DESC LIMIT ?';
     params.push(lim);
@@ -144,7 +145,9 @@ export async function listMultimediaCreations(env, { media_type = '', limit = 30
       try { meta = JSON.parse(r.meta_json || '{}'); } catch {}
       return {
         id: r.id,
+        kind: r.media_type,
         media_type: r.media_type,
+        type: r.media_type,
         title: r.title,
         prompt: r.prompt,
         style: r.style,
@@ -455,11 +458,13 @@ export async function generateMusicTrack(env, actor, rawInput = {}) {
     tags: ['multimedia', 'music', input.genre]
   });
 
-  return {
-    ok: true,
-    type: 'music',
+  const creationObj = {
     id: artifact.id,
+    type: 'music',
+    kind: 'music',
+    media_type: 'music',
     title,
+    prompt: input.prompt,
     genre: input.genre,
     key_signature: preset.keyName,
     bpm,
@@ -468,14 +473,35 @@ export async function generateMusicTrack(env, actor, rawInput = {}) {
     url: artifact.url,
     download_url: artifact.download_url,
     audio_stream_url: `/api/assistant/media/audio/${artifact.id}`,
-    size_bytes: wavBytes.byteLength
+    audio_data_uri: artifact.url,
+    created_at: now
+  };
+
+  return {
+    ok: true,
+    type: 'music',
+    kind: 'music',
+    media_type: 'music',
+    id: artifact.id,
+    title,
+    prompt: input.prompt,
+    genre: input.genre,
+    key_signature: preset.keyName,
+    bpm,
+    duration_sec: input.duration_sec,
+    filename: artifact.filename,
+    url: artifact.url,
+    download_url: artifact.download_url,
+    audio_stream_url: `/api/assistant/media/audio/${artifact.id}`,
+    size_bytes: wavBytes.byteLength,
+    creation: creationObj
   };
 }
 
 // ============================================================================
 // 2. REAL ANIMATED 60FPS HTML5 CANVAS VIDEO STUDIO + WEBM EXPORT
 // ============================================================================
-function buildVideoScenes(prompt, title, style, scenesCount = 4, durationSec = 16) {
+export function buildVideoScenes(prompt, title, style, scenesCount = 4, durationSec = 16) {
   const perScene = Math.max(3, Math.round(durationSec / scenesCount));
   const cleanPrompt = String(prompt || '').trim();
   const sentences = cleanPrompt
@@ -495,11 +521,18 @@ function buildVideoScenes(prompt, title, style, scenesCount = 4, durationSec = 1
   const scenes = [];
   for (let i = 0; i < scenesCount; i++) {
     const base = defaultTemplates[i % defaultTemplates.length];
+    const heading = i === 0 ? (title || base.heading) : (sentences[i] ? sentences[i].slice(0, 68) : base.heading);
+    const subtitle = sentences[i] || base.caption;
     scenes.push({
       index: i + 1,
+      scene_index: i + 1,
       badge: `SCÉNA 0${i + 1} · ${style.toUpperCase()}`,
-      heading: i === 0 ? (title || base.heading) : (sentences[i] ? sentences[i].slice(0, 68) : base.heading),
-      subtitle: sentences[i] || base.caption,
+      heading,
+      title: heading,
+      subtitle,
+      caption: subtitle,
+      visual_prompt: subtitle,
+      audio_mood: `${style} ambient soundtrack (${perScene}s)`,
       duration_sec: perScene
     });
   }
@@ -792,31 +825,74 @@ document.getElementById('fs-btn').onclick = () => {
   const st = document.getElementById('stage');
   if (st.requestFullscreen) st.requestFullscreen();
 };
+let mediaRecorderInstance = null;
+let recordTimerInterval = null;
+
 document.getElementById('record-webm-btn').onclick = () => {
-  if (!canvas.captureStream || typeof MediaRecorder === 'undefined') {
-    alert('Prehliadač nepodporuje priamy MediaRecorder export.');
+  const btn = document.getElementById('record-webm-btn');
+  if (mediaRecorderInstance && mediaRecorderInstance.state === 'recording') {
+    mediaRecorderInstance.stop();
     return;
   }
-  const btn = document.getElementById('record-webm-btn');
-  btn.disabled = true;
-  btn.textContent = '⏺ Nahrávam WebM (5s)…';
+  if (!canvas.captureStream || typeof MediaRecorder === 'undefined') {
+    alert('Tento prehliadač nepodporuje priamy Canvas MediaRecorder export.');
+    return;
+  }
+  const preferredTypes = [
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm',
+    'video/mp4'
+  ];
+  let chosenMime = '';
+  for (const t of preferredTypes) {
+    if (typeof MediaRecorder.isTypeSupported === 'function' && MediaRecorder.isTypeSupported(t)) {
+      chosenMime = t;
+      break;
+    }
+  }
+
   const stream = canvas.captureStream(30);
-  const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+  try {
+    mediaRecorderInstance = chosenMime ? new MediaRecorder(stream, { mimeType: chosenMime }) : new MediaRecorder(stream);
+  } catch (err) {
+    mediaRecorderInstance = new MediaRecorder(stream);
+  }
+
   const chunks = [];
-  recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-  recorder.onstop = () => {
-    const blob = new Blob(chunks, { type: 'video/webm' });
+  mediaRecorderInstance.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+  mediaRecorderInstance.onstop = () => {
+    if (recordTimerInterval) clearInterval(recordTimerInterval);
+    recordTimerInterval = null;
+    const mime = chosenMime || 'video/webm';
+    const ext = mime.includes('mp4') ? 'mp4' : 'webm';
+    const blob = new Blob(chunks, { type: mime });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'trinity-video.webm';
+    a.download = '${slugify(title, 'trinity-video')}.' + ext;
     a.click();
     btn.disabled = false;
     btn.textContent = '⬇ Exportovať .WebM Video';
+    mediaRecorderInstance = null;
   };
+
   elapsed = 0;
   playing = true;
-  recorder.start();
-  setTimeout(() => recorder.stop(), 5000);
+  initAudio();
+  mediaRecorderInstance.start();
+
+  let remaining = Math.ceil(TOTAL_SEC);
+  btn.textContent = '⏹ Zastaviť (nahrávam ' + remaining + 's)';
+  recordTimerInterval = setInterval(() => {
+    remaining--;
+    if (remaining <= 0) {
+      if (mediaRecorderInstance && mediaRecorderInstance.state === 'recording') {
+        mediaRecorderInstance.stop();
+      }
+    } else {
+      btn.textContent = '⏹ Zastaviť (nahrávam ' + remaining + 's)';
+    }
+  }, 1000);
 };
 </script>
 </body>
@@ -889,18 +965,46 @@ export async function generateVideoCreation(env, actor, rawInput = {}) {
     tags: ['multimedia', 'video', input.style]
   });
 
-  return {
-    ok: true,
-    type: 'video',
+  const creationObj = {
     id: artifact.id,
+    type: 'video',
+    kind: 'video',
+    media_type: 'video',
     title,
+    prompt: input.prompt,
     style: input.style,
     duration_sec: input.duration_sec,
     scenes_count: scenes.length,
     scenes,
     filename: artifact.filename,
     url: artifact.url,
-    download_url: artifact.download_url
+    player_url: artifact.url,
+    video_url: artifact.url,
+    download_url: artifact.download_url,
+    secondary_url: `/api/assistant/media/video/${artifact.id}`,
+    resolution: '1280x720 (16:9 HD 60fps Canvas + WebM Export)',
+    created_at: now
+  };
+
+  return {
+    ok: true,
+    type: 'video',
+    kind: 'video',
+    media_type: 'video',
+    id: artifact.id,
+    title,
+    prompt: input.prompt,
+    style: input.style,
+    duration_sec: input.duration_sec,
+    scenes_count: scenes.length,
+    scenes,
+    filename: artifact.filename,
+    url: artifact.url,
+    player_url: artifact.url,
+    video_url: artifact.url,
+    download_url: artifact.download_url,
+    secondary_url: `/api/assistant/media/video/${artifact.id}`,
+    creation: creationObj
   };
 }
 
@@ -1234,9 +1338,31 @@ export async function generatePresentationDeck(env, actor, rawInput = {}) {
     tags: ['multimedia', 'presentation', input.theme]
   });
 
+  const creationObj = {
+    id: htmlArtifact.id,
+    type: 'presentation',
+    kind: 'presentation',
+    media_type: 'presentation',
+    title,
+    subtitle,
+    prompt: input.topic,
+    theme: input.theme,
+    slides_count: slides.length,
+    slides,
+    filename: htmlArtifact.filename,
+    url: htmlArtifact.url,
+    download_url: htmlArtifact.download_url,
+    pdf_url: pdfArtifact.url,
+    pdf_download_url: pdfArtifact.download_url,
+    html_deck: htmlDeck,
+    created_at: now
+  };
+
   return {
     ok: true,
     type: 'presentation',
+    kind: 'presentation',
+    media_type: 'presentation',
     id: htmlArtifact.id,
     title,
     subtitle,
@@ -1247,7 +1373,9 @@ export async function generatePresentationDeck(env, actor, rawInput = {}) {
     url: htmlArtifact.url,
     download_url: htmlArtifact.download_url,
     pdf_url: pdfArtifact.url,
-    pdf_download_url: pdfArtifact.download_url
+    pdf_download_url: pdfArtifact.download_url,
+    html_deck: htmlDeck,
+    creation: creationObj
   };
 }
 
@@ -1385,16 +1513,37 @@ export async function generatePhotoCreation(env, actor, rawInput = {}) {
     tags: ['multimedia', 'photo', input.style]
   });
 
-  return {
-    ok: true,
-    type: 'photo',
+  const creationObj = {
     id: artifactId,
+    type: 'photo',
+    kind: 'photo',
+    media_type: 'photo',
     title,
+    prompt: input.prompt,
     style: input.style,
     aspect_ratio: input.aspect_ratio,
     model: usedModel,
     url,
-    download_url: downloadUrl
+    download_url: downloadUrl,
+    data_uri: url,
+    created_at: now
+  };
+
+  return {
+    ok: true,
+    type: 'photo',
+    kind: 'photo',
+    media_type: 'photo',
+    id: artifactId,
+    title,
+    prompt: input.prompt,
+    style: input.style,
+    aspect_ratio: input.aspect_ratio,
+    model: usedModel,
+    url,
+    download_url: downloadUrl,
+    data_uri: url,
+    creation: creationObj
   };
 }
 

@@ -161,15 +161,37 @@ function renderReply(target,raw){
     }
   }
 
-  // 2. Video detection and embedding
+  // 2. Video detection and embedding (direct video streams and interactive 16:9 canvas players)
   const vidMatches = text.match(/\/api\/assistant\/media\/video\/[0-9a-f-]{36}|https?:\/\/[^\s"'>]+\.(mp4|webm|mov)|data:video\/[^;]+;base64,[^\s"'>]+/gi);
   if(vidMatches){
     for(const vUrl of vidMatches){
-      const box = document.createElement('div');
-      box.className = 'embedded-media-box';
-      box.innerHTML = `<video controls playsinline preload="metadata" src="${vUrl}"></video><div class="media-card-bar"><span>🎬 Video záznam Trinity</span><button type="button">🔍 Otvoriť v kine (Fullscreen)</button></div>`;
-      box.querySelector('button').onclick = () => openTrinityLightbox({type:'video',src:vUrl,title:'Video záznam Trinity'});
-      target.append(box);
+      if(!target.querySelector(`video[src="${vUrl}"]`)){
+        const box = document.createElement('div');
+        box.className = 'embedded-media-box';
+        box.innerHTML = `<video controls playsinline preload="metadata" src="${vUrl}"></video><div class="media-card-bar"><span>🎬 Video záznam Trinity</span><button type="button">🔍 Otvoriť v kine (Fullscreen)</button></div>`;
+        box.querySelector('button').onclick = () => openTrinityLightbox({type:'video',src:vUrl,title:'Video záznam Trinity'});
+        target.append(box);
+      }
+    }
+  }
+
+  const htmlVidMatches = text.match(/\/api\/assistant\/files\/[0-9a-f-]{36}\/[^\s"')>]+-video\.html/gi);
+  if(htmlVidMatches){
+    for(const hvUrl of htmlVidMatches){
+      if(!target.querySelector(`iframe[src="${hvUrl}"]`)){
+        const box = document.createElement('div');
+        box.className = 'embedded-media-box';
+        box.style.marginBottom = '12px';
+        box.innerHTML = `
+          <iframe src="${hvUrl}" style="width:100%;aspect-ratio:16/9;border:1px solid rgba(255,255,255,0.18);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,0.55);" allow="autoplay; fullscreen"></iframe>
+          <div class="media-card-bar">
+            <span>🎬 16:9 Video Prehrávač Trinity (60fps Canvas + Audio)</span>
+            <button type="button">⛶ Otvoriť v plnom okne</button>
+          </div>
+        `;
+        box.querySelector('button').onclick = () => window.open(hvUrl, '_blank');
+        target.append(box);
+      }
     }
   }
 
@@ -2028,17 +2050,50 @@ function displayMultimediaStage(creation, type) {
 
     wrap.append(audio, info, dl);
   } else if (type === 'video') {
+    const videoUrl = creation.url || creation.player_url || creation.video_url || creation.download_url || (creation.artifact_id ? `/api/assistant/artifacts/${creation.artifact_id}` : '');
+    const downloadUrl = creation.download_url || videoUrl;
+
+    if (videoUrl) {
+      const frame = document.createElement('iframe');
+      frame.src = videoUrl;
+      frame.title = `Trinity Video Prehrávač · ${creation.title || '16:9 Video'}`;
+      frame.style.width = '100%';
+      frame.style.aspectRatio = '16/9';
+      frame.style.minHeight = '420px';
+      frame.style.borderRadius = '12px';
+      frame.style.border = '1px solid rgba(255,255,255,0.18)';
+      frame.style.boxShadow = '0 16px 50px rgba(0,0,0,0.6)';
+      frame.setAttribute('allow', 'autoplay; fullscreen');
+      wrap.append(frame);
+    }
+
     const playerBox = node('div', undefined, 'mm-scene-card');
-    playerBox.innerHTML = `<b>🎬 Video animácia 16:9: ${creation.title}</b><p>${creation.prompt}</p><small>Štýl: ${creation.style || 'cinematic'} · Počet scén: ${(creation.scenes || []).length} · Rozlíšenie: 1280x720 (16:9) HD</small>`;
+    const scenesList = creation.scenes || creation.meta?.scenes || [];
+    playerBox.innerHTML = `<b>🎬 Video animácia 16:9: ${escapeHtml(creation.title || 'Trinity Video')}</b><p>${escapeHtml(creation.prompt || '')}</p><small>Štýl: ${escapeHtml(creation.style || 'cinematic')} · Počet scén: ${scenesList.length} · Dĺžka: ${creation.duration_sec || 16}s · Rozlíšenie: 1280×720 (16:9 HD 60fps Canvas + WebM Export)</small>`;
 
     const scenesGrid = node('div', undefined, 'mm-scene-grid');
-    (creation.scenes || []).forEach(sc => {
+    scenesList.forEach((sc, i) => {
       const card = node('article', undefined, 'mm-scene-card');
-      card.innerHTML = `<b>Scéna ${sc.scene_index}: ${sc.caption || ''} (${sc.duration_sec || 4}s)</b><p>${sc.visual_prompt || ''}</p><small>Zvuková kulisa: ${sc.audio_mood || ''}</small>`;
+      const idx = sc.scene_index || sc.index || (i + 1);
+      const sceneTitle = sc.heading || sc.title || sc.badge || `Scéna 0${idx}`;
+      const sceneDesc = sc.subtitle || sc.caption || sc.visual_prompt || '';
+      const mood = sc.audio_mood || sc.badge || creation.style || 'ambient';
+      card.innerHTML = `<b>${idx}. ${escapeHtml(sceneTitle)} (${sc.duration_sec || 4}s)</b><p>${escapeHtml(sceneDesc)}</p><small>Zvuk / Nálada: ${escapeHtml(mood)}</small>`;
       scenesGrid.append(card);
     });
 
     const actRow = node('div', undefined, 'commerce-offer-actions');
+    if (videoUrl) {
+      const openBtn = node('button', '⛶ Otvoriť v plnom okne', 'primary');
+      openBtn.type = 'button';
+      openBtn.onclick = () => window.open(videoUrl, '_blank');
+      actRow.append(openBtn);
+
+      const dlHtml = node('a', '⬇ Stiahnuť video prehrávač (.html)', 'button-link');
+      dlHtml.href = downloadUrl;
+      dlHtml.download = `${(creation.title || 'trinity-video').replace(/[^a-z0-9_-]/gi, '_')}.html`;
+      actRow.append(dlHtml);
+    }
     if (creation.data_uri) {
       const dl = node('a', '⬇ Stiahnuť .WEBM video', 'primary');
       dl.href = creation.data_uri;
@@ -2113,9 +2168,10 @@ async function loadMultimediaStudio() {
     items.forEach(item => {
       const card = node('article', undefined, 'domain-market-card');
       const head = node('div', undefined, 'domain-market-head');
+      const itemKind = (item.kind || item.media_type || 'media').toLowerCase();
       head.append(
-        node('strong', `${typeIcons[item.kind] || '✦'} ${item.title || item.topic}`),
-        node('span', item.kind.toUpperCase(), 'domain-badge active')
+        node('strong', `${typeIcons[itemKind] || '✦'} ${item.title || item.topic || 'Trinity Multimédia'}`),
+        node('span', itemKind.toUpperCase(), 'domain-badge active')
       );
       const desc = node('p', item.prompt || item.topic || item.summary || '', 'domain-market-notes');
       const meta = node('small', `Vytvorené: ${new Date(item.created_at).toLocaleString('sk-SK')}`);
@@ -2123,12 +2179,13 @@ async function loadMultimediaStudio() {
 
       const playBtn = node('button', '👁 Otvoriť a zobraziť', 'primary');
       playBtn.type = 'button';
-      playBtn.onclick = () => displayMultimediaStage(item, item.kind);
+      playBtn.onclick = () => displayMultimediaStage(item, itemKind);
 
       actions.append(playBtn);
-      if (item.data_uri || item.audio_data_uri) {
+      const dlLink = item.data_uri || item.audio_data_uri || item.download_url || item.url;
+      if (dlLink) {
         const dl = node('a', '⬇ Stiahnuť', 'button-link');
-        dl.href = item.data_uri || item.audio_data_uri;
+        dl.href = dlLink;
         dl.download = `${(item.title || 'trinity-media').replace(/[^a-z0-9_-]/gi, '_')}`;
         actions.append(dl);
       }
@@ -2152,8 +2209,9 @@ $('mm-video-form')?.addEventListener('submit', safe(async e => {
       style: $('mm-video-style').value,
       scenes_count: Number($('mm-video-scenes').value) || 4
     });
-    notice(`16:9 Video „${res.creation.title}“ bolo vygenerované so scenárom a zvukom.`);
-    displayMultimediaStage(res.creation, 'video');
+    const creation = res.creation || res;
+    notice(`16:9 Video „${creation.title || 'Trinity Video'}“ bolo vygenerované so scenárom a zvukom.`);
+    displayMultimediaStage(creation, 'video');
     await loadMultimediaStudio();
   } finally {
     if (btn) btn.disabled = false;
@@ -2171,8 +2229,9 @@ $('mm-music-form')?.addEventListener('submit', safe(async e => {
       genre: $('mm-music-genre').value,
       duration_sec: Number($('mm-music-duration').value) || 10
     });
-    notice(`Hudobná skladba „${res.creation.title}“ (.WAV) bola skomponovaná a syntetizovaná.`);
-    displayMultimediaStage(res.creation, 'music');
+    const creation = res.creation || res;
+    notice(`Hudobná skladba „${creation.title || 'Trinity Skladba'}“ (.WAV) bola skomponovaná a syntetizovaná.`);
+    displayMultimediaStage(creation, 'music');
     await loadMultimediaStudio();
   } finally {
     if (btn) btn.disabled = false;
@@ -2189,8 +2248,9 @@ $('mm-photo-form')?.addEventListener('submit', safe(async e => {
       title: $('mm-photo-title').value.trim() || undefined,
       style: $('mm-photo-style').value
     });
-    notice(`Fotografia / ilustrácia „${res.creation.title}“ bola vygenerovaná.`);
-    displayMultimediaStage(res.creation, 'photo');
+    const creation = res.creation || res;
+    notice(`Fotografia / ilustrácia „${creation.title || 'Trinity Fotografia'}“ bola vygenerovaná.`);
+    displayMultimediaStage(creation, 'photo');
     await loadMultimediaStudio();
   } finally {
     if (btn) btn.disabled = false;
@@ -2208,8 +2268,9 @@ $('mm-pres-form')?.addEventListener('submit', safe(async e => {
       theme: $('mm-pres-theme').value,
       slides_count: Number($('mm-pres-slides').value) || 6
     });
-    notice(`Prezentácia „${res.creation.title}“ (${res.creation.slides_count} slajdov) bola vytvorená.`);
-    displayMultimediaStage(res.creation, 'presentation');
+    const creation = res.creation || res;
+    notice(`Prezentácia „${creation.title || 'Trinity Prezentácia'}“ (${creation.slides_count || 6} slajdov) bola vytvorená.`);
+    displayMultimediaStage(creation, 'presentation');
     await loadMultimediaStudio();
   } finally {
     if (btn) btn.disabled = false;
@@ -2226,8 +2287,9 @@ $('mm-pack-form')?.addEventListener('submit', safe(async e => {
       title: $('mm-pack-title').value.trim() || undefined,
       kind: $('mm-pack-kind').value
     });
-    notice(`Kreatívny balík „${res.creation.title}“ bol vygenerovaný a archivovaný.`);
-    displayMultimediaStage(res.creation, 'creative_pack');
+    const creation = res.creation || res;
+    notice(`Kreatívny balík „${creation.title || 'Trinity Balík'}“ bol úspešne vygenerovaný.`);
+    displayMultimediaStage(creation, 'creative_pack');
     await loadMultimediaStudio();
   } finally {
     if (btn) btn.disabled = false;
