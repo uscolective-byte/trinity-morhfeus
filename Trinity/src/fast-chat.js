@@ -206,7 +206,7 @@ export function matchFastChatEdge(task,env={}){
       latency_ms:Date.now()-started,
       slogan:'Tetrakis ($TTK) – Fuel of the Autonomous Edge.',
       pillars:['Sovereign Will (Ring 0)','Edge Cognition','Cryptographic Assurance (TAP)','Autonomous Vaults'],
-      reply:'Tetrakis ($TTK) – Fuel of the Autonomous Edge. Natívny suverénny token ekosystému Trinity Omni-Core v11.2.0 na sieti Base L2 (Chain ID 8453, fixný Hard Cap 10 000 000 $TTK) stojaci na 4 vrcholoch posvätného štvorstenu: 1. Sovereign Will (Ring 0), 2. Edge Cognition, 3. Cryptographic Assurance (TAP), 4. Autonomous Vaults. Prísaha Architekta: „Nestaviame servery, ktoré môžu vypnúť. Nestaviame menu, ktorú môžu nafúknuť. Tetrakis je digitálna pevnosť uzamknutá v posvätnej geometrii kódu. Ring 0 drží kľúč. Budúcnosť je autonómna.“'
+      reply:'Tetrakis ($TTK) – Fuel of the Autonomous Edge. Natívny suverénny token ekosystému Trinity Omni-Core v11.2.0 na sieti Base L2 (Chain ID 8453, fixná zásoba 1 000 000 000 $TTK, bez mint) stojaci na 4 vrcholoch posvätného štvorstenu: 1. Sovereign Will (Ring 0), 2. Edge Cognition, 3. Cryptographic Assurance (TAP), 4. Autonomous Vaults. Prísaha Architekta: „Nestaviame servery, ktoré môžu vypnúť. Nestaviame menu, ktorú môžu nafúknuť. Tetrakis je digitálna pevnosť uzamknutá v posvätnej geometrii kódu. Ring 0 drží kľúč. Budúcnosť je autonómna.“'
     };
   }
 

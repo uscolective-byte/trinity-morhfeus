@@ -1,4 +1,4 @@
-import {calculateIntrinsicValuation,calculateTtkQuote,VALUATION_MILESTONES,VALUE_MECHANISMS} from './crypto-value-engine.js';
+import {getTetrakisStatus} from './crypto-value-engine.js';
 import {authorizeBridgeProxy,authorizeBridgeRequest} from './bridge-proxy-auth.js';
 import {BRIDGE_AUTH_VERSION,registeredBridgeTunnelUrl} from '../../packages/contracts/src/bridge-auth.js';
 import {getProviderSecret,getEnvironmentOverview} from './env-vault.js';
@@ -16,7 +16,7 @@ import {provisionDomainWithEnvironments,deployDomainEnvironment,listDomainEnviro
 import {generateMusicTrack,generateVideoCreation,generatePresentationDeck,generatePhotoCreation,generateCreativePack,listMultimediaCreations} from './multimedia-studio.js';
 import {createTrinityDocument,listTrinityDocuments,getTrinityDocument,deleteTrinityDocument,exportTrinityDocument} from './trinity-documents.js';
 import {analyzeCommodities,getCommodityDeskOverview,executeCommodityTrade,runAutonomousCommodityDesk,listBankConnections,configureBankConnection,deleteBankConnection,syncLiveMarketFeeds,getCommodityChart} from './commodities-engine.js';
-import {manageCloudflare,manageGitHub,scrapeWithFirecrawl,manageFirebase,listAllIntegrations} from './external-integrations.js';
+import {manageCloudflare,manageGitHub,scrapeWithFirecrawl,manageFirebase,manageOneDrive,manageGoogleCloud,manageLocalBridge,listAllIntegrations} from './external-integrations.js';
 import {trinityMasterStatus} from './trinity-master-status.js';
 import {adviseTrinityMaster} from './trinity-master-agent.js';
 import {scanForImprovements} from './maintenance-scan.js';
@@ -114,6 +114,7 @@ import themeCSS from '../public/assistant/theme.css';
 import garageCSS from '../public/assistant/garage.css';
 import garageArt from '../public/assistant/garage-v1.webp';
 export {TrinityAgent,ChatAgent,GuardianAgent,TrinityOperations,PINNED_SYSTEM_PROMPT,TRINITY_TOOL_DEFINITIONS,normalizeText,handleFastEdgeRoute,executeTool,runInferenceCascade};
+import tetrakisLogo from '../public/assistant/tetrakis-logo.png';
 const json=(data,status=200)=>Response.json(data,{status});
 const runtimeEnvironment=(request,env)=>['localhost','127.0.0.1','::1'].includes(new URL(request.url).hostname)?'local':env.TRINITY_ENV||'local';
 const uuid=z.string().uuid();
@@ -192,6 +193,7 @@ async function route(request,env,ctx){
   if(request.method==='GET'&&path==='/builder.css')return new Response(builderCSS,{headers:{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});
   if(request.method==='GET'&&path==='/garage.css')return new Response(garageCSS,{headers:{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});
   if(request.method==='GET'&&path==='/garage-v1.webp')return new Response(garageArt,{headers:{'Content-Type':'image/webp'}});
+  if(request.method==='GET'&&path==='/tetrakis-logo.png')return new Response(tetrakisLogo,{headers:{'Content-Type':'image/png','Cache-Control':'public, max-age=86400'}});
     if(request.method==='GET'&&path==='/manifest.json')return new Response(typeof manifestJSON==='string'?manifestJSON:JSON.stringify(manifestJSON),{headers:{'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'}});
   if(request.method==='GET'&&path==='/sw.js')return new Response(serviceWorkerJS,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache'}});
   if(request.method==='GET'&&path==='/theme.css')return new Response(await renderDynamicThemeCss(env,themeCSS),{headers:{'Content-Type':'text/css; charset=utf-8','Cache-Control':'no-cache, must-revalidate'}});
@@ -978,23 +980,42 @@ async function route(request,env,ctx){
   const videoRoute=path.match(/^\/api\/assistant\/media\/video\/([0-9a-f-]+)$/i);
   if(videoRoute&&request.method==='GET'){
     const id=uuid.parse(videoRoute[1]);
-    let object=await env.ARTIFACTS.get(`media/video/${id}.webm`);
-    if(!object)object=await env.ARTIFACTS.get(`media/video/${id}.mp4`);
-    if(!object)object=await env.ARTIFACTS.get(`media/video/${id}.html`);
+    const rangeHeader=request.headers.get('Range');
+    const getOptions=rangeHeader?{range:request.headers}:{};
+    let object=await env.ARTIFACTS.get(`media/video/${id}.webm`,getOptions);
+    if(!object)object=await env.ARTIFACTS.get(`media/video/${id}.mp4`,getOptions);
+    if(!object)object=await env.ARTIFACTS.get(`media/video/${id}.html`,getOptions);
     if(!object&&env.DB?.prepare){
       try{
         const row=await env.DB.prepare('SELECT r2_key,content_type FROM ops_artifacts WHERE id=?').bind(id).first();
-        if(row&&row.r2_key)object=await env.ARTIFACTS.get(row.r2_key);
+        if(row&&row.r2_key)object=await env.ARTIFACTS.get(row.r2_key,getOptions);
       }catch{}
     }
     if(!object)throw new HttpError(404,'Video neexistuje.');
     const headers=new Headers();
     if(typeof object.writeHttpMetadata==='function')object.writeHttpMetadata(headers);
     if(!headers.has('Content-Type')&&object.httpMetadata?.contentType)headers.set('Content-Type',object.httpMetadata.contentType);
-    if(!headers.has('Content-Type'))headers.set('Content-Type','text/html; charset=utf-8');
-    headers.set('Cache-Control','private, max-age=86400');
+    if(!headers.has('Content-Type'))headers.set('Content-Type',object.key?.endsWith('.mp4')?'video/mp4':object.key?.endsWith('.webm')?'video/webm':'video/webm');
+    headers.set('Accept-Ranges','bytes');
+    headers.set('Cache-Control','public, max-age=86400');
     headers.set('X-Content-Type-Options','nosniff');
-    return new Response(object.body,{headers});
+    if(url.searchParams.get('download')==='1'||url.searchParams.get('dl')==='1'){
+      const ext=headers.get('Content-Type')?.includes('mp4')?'mp4':'webm';
+      headers.set('Content-Disposition',`attachment; filename="trinity-video-${id}.${ext}"`);
+    }
+    const status=object.range?206:200;
+    return new Response(object.body,{status,headers});
+  }
+  if(videoRoute&&request.method==='POST'){
+    const id=uuid.parse(videoRoute[1]);
+    const body=await request.arrayBuffer();
+    const bytes=new Uint8Array(body);
+    if(bytes.byteLength===0)throw new HttpError(400,'Prázdny video stream.');
+    await env.ARTIFACTS.put(`media/video/${id}.webm`,bytes,{
+      httpMetadata:{contentType:'video/webm'},
+      customMetadata:{updated_at:new Date().toISOString(),size_bytes:String(bytes.byteLength)}
+    });
+    return json({ok:true,id,size_bytes:bytes.byteLength,url:`/api/assistant/media/video/${id}`},201);
   }
   if(path==='/api/assistant/rbac'&&request.method==='GET'){
     const roles=user.role==='owner'?['owner','admin','user']:[user.role];const items=[];for(const role of roles)items.push({role,permissions:await rolePermissions(env,role)});
@@ -1527,48 +1548,17 @@ async function route(request,env,ctx){
     return json(await syncConnector(env,ownerId,syncMatch[1]));
   }
   if(path==='/api/assistant/crypto/value'&&request.method==='GET'){
-    return json({
-      valuation: calculateIntrinsicValuation(),
-      milestones: VALUATION_MILESTONES,
-      mechanisms: VALUE_MECHANISMS
-    });
+    return json(await getTetrakisStatus(env));
   }
   if(path==='/api/assistant/crypto/quote'&&request.method==='POST'){
-    const body = await readJSON(request, 8000).catch(() => ({}));
-    return json(calculateTtkQuote(Number(body?.amount_eur || 50)));
+    return json({
+      error: 'TTK zatiaľ nemá overenú živú trhovú cenu. Trinity preto nevypočíta EUR quote ani nevydáva cenový sľub.',
+      market_price: null,
+      market_price_status: 'unavailable'
+    }, 503);
   }
   if(path==='/api/assistant/crypto/tetrakis'&&request.method==='GET'){
-    return json({
-      token: 'Tetrakis',
-      symbol: 'TTK',
-      decimals: 18,
-      total_supply: '1,000,000,000 TTK',
-      basterix_wallet: '0x7e17f9072cfCbc7fE45973De0F11eC8db99281e4',
-      basterix_allocation: '1,000,000 TTK (100% v osobnom držaní)',
-      official_treasury: '0x4d308452a96D7dAbFd2f33d92677A3a2724f387e',
-      treasury_allocation: '999,000,000 TTK (pre DEX likviditu a ekosystém)',
-      network: 'Base Mainnet (Coinbase L2)',
-      chain_id: 8453,
-      dex_platforms: ['Aerodrome Finance', 'Uniswap v3 (Base)'],
-      pair: 'TTK / WETH',
-      value_engine: calculateIntrinsicValuation(),
-      valuation_milestones: VALUATION_MILESTONES,
-      value_mechanisms: VALUE_MECHANISMS,
-      staking_tiers: [
-        { tier: 1, required_ttk: 1000, name: 'Sovereign Explorer', benefits: 'Unlimited chat, knowledge search, and semantic memory' },
-        { tier: 2, required_ttk: 10000, name: 'Sovereign Operator', benefits: 'Full PC Bridge remote execution, Azure AI Foundry GPT-4o inference, and skill synthesis' },
-        { tier: 3, required_ttk: 50000, name: 'Sovereign Mastermind', benefits: 'Revenue share from Trinity platform transactions, priority agent queue, and autonomous commodity desk' }
-      ],
-      tokenomics: {
-        liquidity_pool: '40% (400,000,000 TTK)',
-        agent_ecosystem: '30% (300,000,000 TTK)',
-        treasury_reserve: '20% (200,000,000 TTK)',
-        founder_basterix: '0.1% (1,000,000 TTK priamo v peňaženke Basterixa)',
-        founder_dev_reserve: '9.9% (99,000,000 TTK)'
-      },
-      status: 'COMPILED_AND_READY_FOR_BASE_MAINNET_LIQUIDITY',
-      basescan: 'https://basescan.org/address/0x4d308452a96D7dAbFd2f33d92677A3a2724f387e'
-    });
+    return json(await getTetrakisStatus(env));
   }
   if(path==='/api/assistant/dashboard'&&request.method==='GET'){
     requireOwner(user);
@@ -1718,7 +1708,7 @@ async function route(request,env,ctx){
         plugin_installation: true,
         source_inspection: true,
         code_changes: 'GitHub branch + PR + CI; no in-place runtime rewrite',
-        github_configured: Boolean(env.TRINITY_GITHUB_TOKEN||env.GITHUB_TOKEN),
+        github_configured: Boolean(env.TRINITY_GITHUB_TOKEN||env.GITHUB_TOKEN||env.trinitygithube_key||env.GITHUBE_API_KEY),
         audited_approval: true,
         self_modifying_runtime: true,
         live_ui_evolution: true,
@@ -1986,6 +1976,21 @@ async function route(request,env,ctx){
     requireAdmin(user);
     const body=await readJSON(request,50000);
     return json(await manageFirebase(env,user.email||user.id,body.action||'status',body));
+  }
+  if(path==='/api/assistant/integrations/onedrive'&&request.method==='POST'){
+    requireAdmin(user);
+    const body=await readJSON(request,50000);
+    return json(await manageOneDrive(env,user.email||user.id,body.action||'status',body));
+  }
+  if(path==='/api/assistant/integrations/google-cloud'&&request.method==='POST'){
+    requireAdmin(user);
+    const body=await readJSON(request,25000);
+    return json(await manageGoogleCloud(env,user.email||user.id,body.action||'status',body));
+  }
+  if(path==='/api/assistant/integrations/local-bridge'&&request.method==='POST'){
+    requireAdmin(user);
+    const body=await readJSON(request,25000);
+    return json(await manageLocalBridge(env,user.email||user.id,body.action||'status',body));
   }
   if(path==='/api/modules/catalog'&&request.method==='GET'){
     return json({modules:FREE_MODULES_CATALOG});

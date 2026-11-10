@@ -59,15 +59,16 @@ export async function getConnectorsRegistry(env, ownerId = 'admin') {
     } catch {}
   }
 
-  // Fallback defaults for owner Ivan Sabo if database row is empty
-  const iban = terminalRow?.iban || 'LT613250098859511281';
-  const bic = terminalRow?.bic || 'REVOLT21';
-  const accountName = terminalRow?.account_name || 'Ivan Sabo';
-  const revolutHandle = terminalRow?.revolut_handle || 'https://revolut.me/isabo91';
-  const paypalEmail = terminalRow?.paypal_email || 'saboivan2008@gmail.com';
-  const cryptoAddress = terminalRow?.crypto_address || '0x67397A1D122c14061706c83B0017689D7289B57a';
-  const cryptoNetwork = terminalRow?.crypto_network || 'polygon';
-  const tonAddress = terminalRow?.ton_address || null;
+  // Payment destinations must come from explicit owner configuration. No personal
+  // or crypto address is inferred from a default value.
+  const iban = terminalRow?.iban ? normalizeIban(terminalRow.iban) : null;
+  const bic = terminalRow?.bic ? normalizeBic(terminalRow.bic) : null;
+  const accountName = terminalRow?.account_name || null;
+  const revolutHandle = terminalRow?.revolut_handle || null;
+  const paypalEmail = terminalRow?.paypal_email || null;
+  const cryptoAddress = terminalRow?.crypto_address ? normalizeEvmAddress(terminalRow.crypto_address) : null;
+  const cryptoNetwork = CRYPTO_CHAINS[terminalRow?.crypto_network] ? terminalRow.crypto_network : 'polygon';
+  const tonAddress = terminalRow?.ton_address ? normalizeTonAddress(terminalRow.ton_address) : null;
 
   // 1. Revolut Personal Connector
   const revolutPersonal = {
@@ -80,11 +81,13 @@ export async function getConnectorsRegistry(env, ownerId = 'admin') {
       iban: iban ? `${iban.slice(0, 4)} **** **** **** ${iban.slice(-4)}` : null,
       bic,
       recipient_name: accountName,
-      payment_link: revolutHandle
+      payment_link: revolutHandle || null
     },
     status: 'needs_provider_setup',
-    status_reason: 'Revolut Business API nepodporuje osobné účty. Prepojenie osobného účtu vyžaduje Open Banking (PSD2) cez licencovaného agregátora (napr. GoCardless Bank Account Data). Prijímanie na IBAN a revolut.me je plne funkčné.',
-    can_receive: true,
+    status_reason: revolutHandle
+      ? 'Revolut odkaz je nakonfigurovaný. Trinity neoverila vlastníctvo profilu ani prijatie platby.'
+      : 'Revolut odkaz nie je nastavený. Pripojenie osobného účtu cez Open Banking nie je aktívne.',
+    can_receive: Boolean(revolutHandle),
     can_read_balance: false,
     can_payout: false,
     requires_business: false,
@@ -96,6 +99,12 @@ export async function getConnectorsRegistry(env, ownerId = 'admin') {
   // 2. PayPal Checkout & Personal Connector
   const hasPaypalSecret = Boolean(env?.PAYPAL_CLIENT_SECRET || env?.PAYPAL_CLIENT_ID);
   const paypalMode = (env?.PAYPAL_MODE || 'live').toLowerCase();
+  const paypalEmailAddress = paypalEmail && /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(paypalEmail)
+    ? paypalEmail
+    : null;
+  const paypalHandle = paypalEmail && /^[A-Za-z0-9]{3,20}$/.test(paypalEmail)
+    ? paypalEmail
+    : null;
   const paypal = {
     id: 'paypal',
     name: 'PayPal (Personal / Orders v2)',
@@ -103,20 +112,22 @@ export async function getConnectorsRegistry(env, ownerId = 'admin') {
     account_type: 'personal',
     currency: 'EUR',
     receiving_endpoint: {
-      email: paypalEmail ? `${paypalEmail.slice(0, 3)}***@${paypalEmail.split('@')[1] || 'paypal'}` : null,
-      paypal_me: `https://paypal.me/${paypalEmail.split('@')[0]}`
+      email: paypalEmailAddress ? `${paypalEmailAddress.slice(0, 3)}***@${paypalEmailAddress.split('@')[1]}` : null,
+      paypal_me: paypalHandle ? `https://paypal.me/${paypalHandle}` : null
     },
-    status: hasPaypalSecret ? (paypalMode === 'sandbox' ? 'sandbox_connected' : 'live_verified') : 'needs_provider_setup',
+    status: 'needs_provider_setup',
     status_reason: hasPaypalSecret
-      ? `PayPal REST Orders v2 je aktívne v režime ${paypalMode}. Osobné účty nemajú automatizované čítanie zostatku cez REST API.`
-      : 'PayPal Orders v2 vyžaduje nastavenie PAYPAL_CLIENT_ID a PAYPAL_CLIENT_SECRET. Osobné platby cez paypal.me fungujú priamo.',
-    can_receive: true,
+      ? `PayPal poverenia sú nastavené v režime ${paypalMode}, ale ich platnosť ani spojenie s účtom neboli týmto registrom overené.`
+      : 'PayPal účet ani platobný odkaz nie sú overené.',
+    can_receive: Boolean(paypalEmailAddress || paypalHandle),
     can_read_balance: false,
     can_payout: false,
     requires_business: false,
     verified_balance: null,
-    last_sync_at: hasPaypalSecret ? new Date().toISOString() : null,
-    next_action: 'Používať na prijímanie platieb cez web pokladňu (Sandbox) a odkaz paypal.me.'
+    last_sync_at: null,
+    next_action: paypalEmailAddress || paypalHandle
+      ? 'Overiť účet a platobný tok v PayPal pred prijímaním zákazníckych platieb.'
+      : 'Nastaviť overený PayPal účet.'
   };
 
   // 3. Telegram Wallet Connector
@@ -130,12 +141,12 @@ export async function getConnectorsRegistry(env, ownerId = 'admin') {
       ton_address: tonAddress ? maskIdentifier(tonAddress) : null,
       telegram_service: 'Telegram @wallet'
     },
-    status: tonAddress ? 'live_verified' : 'needs_provider_setup',
+    status: tonAddress ? 'needs_user_consent' : 'needs_provider_setup',
     status_reason: tonAddress
-      ? 'TON adresa je nastavená a pripravená na prijímanie USDT a TON. Telegram Bot token nemá prístup k zostatku peňaženky.'
+      ? 'TON adresa je nastavená. Trinity neoverila vlastníctvo adresy ani zostatok; Bot token k peňaženke nemá prístup.'
       : 'Zadaj svoju osobnú TON adresu z aplikácie Telegram (@wallet -> Vložiť -> USDT/TON), aby Trinity mohla vygenerovať QR kódy a kontrolovať prichádzajúce vklady.',
     can_receive: Boolean(tonAddress),
-    can_read_balance: Boolean(tonAddress),
+    can_read_balance: false,
     can_payout: false,
     requires_business: false,
     verified_balance: null, // TON / USDT balance
@@ -143,7 +154,8 @@ export async function getConnectorsRegistry(env, ownerId = 'admin') {
     next_action: tonAddress ? 'Pripravené na prijímanie krypto platieb.' : 'Otvoriť Telegram @wallet a skopírovať TON adresu.'
   };
 
-  // 4. Sovereign On-Chain EVM (Polygon)
+  // 4. Owner-configured EVM receive address. A public RPC balance read does not
+  // prove that the owner controls the address.
   let onchainBalance = null;
   const chain = CRYPTO_CHAINS[cryptoNetwork] || CRYPTO_CHAINS.polygon;
   if (cryptoAddress) {
@@ -153,9 +165,9 @@ export async function getConnectorsRegistry(env, ownerId = 'admin') {
   }
   const cryptoEvm = {
     id: 'crypto_evm',
-    name: `Sovereign Web3 Vault (${chain.label})`,
+    name: `EVM adresa (${chain.label})`,
     category: 'onchain_crypto',
-    account_type: 'sovereign_self_custody',
+    account_type: cryptoAddress ? 'owner_configured_address' : 'unconfigured',
     currency: 'USDC',
     receiving_endpoint: {
       address: cryptoAddress,
@@ -163,20 +175,26 @@ export async function getConnectorsRegistry(env, ownerId = 'admin') {
       chain_id: chain.id,
       token_contract: chain.usdc
     },
-    status: 'live_verified',
-    status_reason: `Verejné RPC spojenie so sieťou ${chain.label} je aktívne. Zostatok je priamo overený z blockchainu.`,
-    can_receive: true,
-    can_read_balance: true,
+    status: !cryptoAddress ? 'needs_provider_setup' : (onchainBalance?.ok ? 'needs_user_consent' : 'error'),
+    status_reason: !cryptoAddress
+      ? 'Krypto prijímacia adresa nie je nastavená.'
+      : (onchainBalance?.ok
+        ? `Verejné RPC načítalo USDC zostatok na ${chain.label}; vlastníctvo adresy ani prijatie platby tým nie je overené.`
+        : `Nastavenú adresu sa nepodarilo overiť cez ${chain.label} RPC.`),
+    can_receive: Boolean(cryptoAddress),
+    can_read_balance: Boolean(onchainBalance?.ok),
     can_payout: false,
     requires_business: false,
-    verified_balance: onchainBalance !== null ? {
-      amount: onchainBalance,
+    verified_balance: onchainBalance?.ok ? {
+      amount: onchainBalance.usdc,
       currency: 'USDC',
       as_of: new Date().toISOString(),
-      verified_by: 'Polygon RPC Contract Query'
+      verified_by: `${chain.label} USDC contract query`
     } : null,
-    last_sync_at: new Date().toISOString(),
-    next_action: 'Suverénna krypto peňaženka je plne pripojená a aktívna.'
+    last_sync_at: onchainBalance?.ok ? onchainBalance.fetched_at : null,
+    next_action: cryptoAddress
+      ? 'Pred zákazníckymi platbami over vlastníctvo adresy podpisom z pripojenej peňaženky.'
+      : 'Pripoj svoju vlastnú EVM peňaženku alebo nastav prijímaciu adresu.'
   };
 
   // 5. SEPA Instant & Bank QR
@@ -191,17 +209,19 @@ export async function getConnectorsRegistry(env, ownerId = 'admin') {
       bic,
       recipient_name: accountName
     },
-    status: iban ? 'live_verified' : 'needs_provider_setup',
+    status: iban ? 'needs_user_consent' : 'needs_provider_setup',
     status_reason: iban
-      ? 'IBAN je platný podľa normy ISO 13616 a pripravený pre generovanie štandardných EPC069-12 QR kódov pre bankové aplikácie.'
+      ? 'IBAN má platný formát a kontrolný súčet. Trinity neoverila vlastníctvo účtu ani prijatie platby.'
       : 'IBAN nie je nastavený.',
-    can_receive: true,
+    can_receive: Boolean(iban && accountName),
     can_read_balance: false,
     can_payout: false,
     requires_business: false,
     verified_balance: null,
-    last_sync_at: new Date().toISOString(),
-    next_action: 'Pripravené na okamžité platby cez mobilné bankovníctvo.'
+    last_sync_at: null,
+    next_action: iban && accountName
+      ? 'Skontrolovať IBAN a meno príjemcu pred odoslaním platobnej požiadavky.'
+      : 'Nastaviť IBAN a meno príjemcu.'
   };
 
   return {

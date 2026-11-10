@@ -109,10 +109,13 @@ export async function buildSystemGroundingContext(env, userQuestion = '') {
           const res = await env.JERICHO_SERVICE.fetch('https://trinity.internal/api/prices');
           if (res.ok) prices = (await res.json()).prices;
         }
-        if (prices) {
-          context += '• Živé krypto ceny (Jericho Engine): ' + Object.entries(prices).map(([k, v]) => `${k.toUpperCase()}: $${Number(v.price_usd).toLocaleString('en-US', {maximumFractionDigits: 2})}`).join(', ') + '.\n';
+        const livePrices = Object.entries(prices || {}).filter(([, value]) => value?.live === true && Number.isFinite(Number(value.price_usd)));
+        if (livePrices.length) {
+          context += '• Aktuálne ceny z Jericho (iba položky označené poskytovateľom ako live): ' + livePrices.map(([symbol, value]) => `${symbol.toUpperCase()}: $${Number(value.price_usd).toLocaleString('en-US', {maximumFractionDigits: 2})}`).join(', ') + '.\n';
+        } else {
+          context += '• Živé krypto ceny: momentálne nie sú dostupné; referenčné hodnoty sa nepoužijú ako aktuálne ceny.\n';
         }
-        context += '• Tetrakis ($TTK): Fixná zásoba 1,000,000,000 TTK (ERC-20, OpenZeppelin v5.1.0, Shanghai EVM, sieť Sepolia/Ethereum).\n';
+        context += '• Tetrakis ($TTK): zdrojový kontrakt uvádza pevnú zásobu 1 000 000 000 TTK. Nasadenie, sieť a treasury adresa nie sú týmto kontextom overené.\n';
       }
     } catch {}
   }
@@ -230,7 +233,6 @@ export async function executePC(env) {
 
 export async function executeCrypto(env) {
   let prices = null;
-  let ttkInfo = null;
   if (env.JERICHO_SERVICE) {
     try {
       if (typeof env.JERICHO_SERVICE.getPrices === 'function') {
@@ -243,20 +245,12 @@ export async function executeCrypto(env) {
         }
       }
     } catch {}
-    try {
-      if (typeof env.JERICHO_SERVICE.getTetrakisInfo === 'function') {
-        ttkInfo = await env.JERICHO_SERVICE.getTetrakisInfo();
-      } else if (env.JERICHO_SERVICE.fetch) {
-        const res = await env.JERICHO_SERVICE.fetch('https://trinity.internal/api/tetrakis');
-        if (res.ok) ttkInfo = await res.json();
-      }
-    } catch {}
   }
   let msg = '💎 TRINITY KRYPTO & TETRAKIS ($TTK)\n\n';
-  if (prices && typeof prices === 'object' && Object.keys(prices).length > 0) {
-    msg += '📊 Trhové Ceny (Jericho Engine):\n';
-    for (const [sym, data] of Object.entries(prices)) {
-      if (!data) continue;
+  const livePrices = Object.entries(prices || {}).filter(([, data]) => data?.live === true && Number.isFinite(Number(data.price_usd)));
+  if (livePrices.length > 0) {
+    msg += '📊 Ceny označené poskytovateľom ako live (Jericho):\n';
+    for (const [sym, data] of livePrices) {
       const price = Number(data.price_usd || 0).toLocaleString('en-US', {maximumFractionDigits: 2});
       const chg = data.change_24h_pct !== undefined ? ` (${data.change_24h_pct >= 0 ? '+' : ''}${Number(data.change_24h_pct).toFixed(2)}%)` : '';
       msg += `• ${sym.toUpperCase()}: $${price}${chg}\n`;
@@ -265,14 +259,11 @@ export async function executeCrypto(env) {
   } else {
     msg += '• Trhové dáta: nepodarilo sa načítať overené ceny z Jericho Engine\n\n';
   }
-  const treasuryAddr = ttkInfo?.treasury_address
-    ? `${ttkInfo.treasury_address.slice(0, 10)}...${ttkInfo.treasury_address.slice(-6)}`
-    : 'neoverená (nebola vrátená adresa)';
   msg +=
     '🪙 Tetrakis ($TTK) Token:\n' +
-    '• Celková ponuka: 1,000,000,000 TTK (Fixná zásoba)\n' +
-    '• Štandard: ERC-20 (OpenZeppelin v5.1.0, Shanghai EVM)\n' +
-    `• Treasury adresa: ${treasuryAddr}\n` +
+    '• Zásoba podľa zdrojového kontraktu: 1 000 000 000 TTK (fixná)\n' +
+    '• Štandard v zdroji: ERC-20\n' +
+    '• Treasury adresa: neoverená; nepoužívaj ju na platbu\n' +
     '• Stav: nasadenie smart kontraktu nebolo týmto príkazom overené';
   return msg;
 }

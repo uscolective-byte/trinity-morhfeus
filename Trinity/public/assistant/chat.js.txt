@@ -168,7 +168,7 @@ function renderReply(target,raw){
       if(!target.querySelector(`video[src="${vUrl}"]`)){
         const box = document.createElement('div');
         box.className = 'embedded-media-box';
-        box.innerHTML = `<video controls playsinline preload="metadata" src="${vUrl}"></video><div class="media-card-bar"><span>🎬 Video záznam Trinity</span><button type="button">🔍 Otvoriť v kine (Fullscreen)</button></div>`;
+        box.innerHTML = `<video controls playsinline preload="metadata" src="${vUrl}"></video><div class="media-card-bar"><span>🎬 Video záznam Trinity</span><a href="${vUrl}?download=1" download class="media-dl-link" style="color:var(--accent,#00e5ff);font-size:12px;text-decoration:none;font-weight:600;">⬇ Stiahnuť .webm</a><button type="button">🔍 Otvoriť v kine (Fullscreen)</button></div>`;
         box.querySelector('button').onclick = () => openTrinityLightbox({type:'video',src:vUrl,title:'Video záznam Trinity'});
         target.append(box);
       }
@@ -365,7 +365,7 @@ async function readChatStream(response,onEvent){
 }
 async function sessions(){const rows=await api('/sessions');$('sessions').replaceChildren();for(const row of rows){const button=node('button',row.title.slice(0,45));button.onclick=safe(async()=>{session=row.session;localStorage.setItem('trinity-chat-session',session);await loadHistory();await setView('chat');});$('sessions').append(button);}}
 const viewMeta={dashboard:['TRINITY','overview','dashboardHere'],chat:['TRINITY CHAT','chat','here'],studio:['AI STUDIO','AI Studio','builderIntro'],projects:['WORKSPACE','projects','projectsIntro'],settings:['SETTINGS','settings','settingsIntro'],domains:['DOMÉNY A HOSTING','Domény a hosting','Vyhľadávanie, registrácia, prostredia, DNS, subdomény a nasadenie webov.'],commodities:['TRINITY COMMODITY DESK','Komodity & Trading','Analýza všetkých 22 svetových komodít, autonómne investovanie, nákup a predaj v portfóliu.'],wallet:['FINANČNÉ CENTRUM TRINITY','Peňaženka & Platobné Terminály','Skutočná správa zostatkov, platobné terminály na príjem a okamžité výbery peňazí.'],modules:['TRINITY OPEN-DATA','Open-Data Moduly','100% bezplatné živé API: počasie, Wikipédia, DoH DNSSEC, spot krypto, HN tech správy a Svetová banka.'],documents:['TRINITY DOCUMENTS','Trinity Dokumenty','Automatická dokumentácia každého kroku, zmien UI, domén a samorozvoja.'],graph:['TRINITY GRAPH RAG','Pamäťový Graf','Vizuálne prepojenie dlhodobej pamäte, domén, projektov a transakcií v reálnom čase.'],omnidev:['TRINITY OMNI-DEV','Omni-Dev Studio (auru.dev)','Autonómne štúdio s ovládaním PC, dynamickými skillmi, editorom kódu a auditom.'],
-crypto:['TETRAKIS CRYPTO PLATFORM ($TTK)','Tetrakis Sovereign Crypto','Base Mainnet tokenomika, staking a decentralizovany AI ekosystem Trinity.'],
+crypto:['TETRAKIS ($TTK) — PLATBY TRINITY','Tetrakis Wallet & Payments','Neväzobná peňaženka a overenie skutočného stavu TTK kontraktu.'],
 agentlab:['AI AGENT SANDBOX & LAB','AI Agent Lab (auru.dev)','Vytváranie, trénovanie, testovanie a spúšťanie autonómnych AI agentov.'],workflows:['VISUAL WORKFLOWS','Drag & Drop Workflows','Vizuálna orchestrácia procesov, exekúcie PC brány a automatizácie.']};
 function updateHeading(){const meta=viewMeta[currentView]||viewMeta.dashboard;$('page-kicker').textContent=meta[0];$('page-title').textContent=meta[1].includes(' ')?meta[1]:t(meta[1]);$('subtitle').textContent=t(meta[2]);}
 async function setView(name,updateHash=true){if(name==='dashboard'&&state?.account?.role!=='owner')name='chat';if(!viewMeta[name])name='dashboard';currentView=name;document.querySelectorAll('.view').forEach(view=>view.hidden=view.id!==`${name}-view`);document.querySelectorAll('.main-nav [data-view]').forEach(button=>button.classList.toggle('active',button.dataset.view===name));updateHeading();if(updateHash)history.replaceState(null,'',`#${name}`);if(name==='dashboard'){await loadDashboard();await refreshUiEvolutionLive();}if(name==='studio'){await loadStudio();await loadVisualWorkflows();await loadMultimediaStudio();}if(name==='projects')await loadProjects();if(name==='domains'){await loadDomains();await loadDomainEnvironments();}if(name==='commodities')await loadCommodityDesk();if(name==='wallet')await loadWalletView();if(name==='crypto')await loadCryptoView();if(name==='modules')await loadModulesView();if(name==='documents')await loadTrinityDocuments();if(name==='graph')await loadGraphView();if(name==='settings'){await loadSettings();await loadTrinity2Settings();await loadUiEvolution();}if(name==='omnidev'){await loadOmniDev();initOmniDevEvents();}
@@ -2050,26 +2050,30 @@ function displayMultimediaStage(creation, type) {
 
     wrap.append(audio, info, dl);
   } else if (type === 'video') {
-    const videoUrl = creation.url || creation.player_url || creation.video_url || creation.download_url || (creation.artifact_id ? `/api/assistant/artifacts/${creation.artifact_id}` : '');
-    const downloadUrl = creation.download_url || videoUrl;
+    const videoStreamUrl = creation.video_url || creation.url || (creation.id ? `/api/assistant/media/video/${creation.id}` : '');
+    const downloadUrl = creation.download_url || `${videoStreamUrl}?download=1`;
+    const playerUrl = creation.player_url;
 
-    if (videoUrl) {
-      const frame = document.createElement('iframe');
-      frame.src = videoUrl;
-      frame.title = `Trinity Video Prehrávač · ${creation.title || '16:9 Video'}`;
-      frame.style.width = '100%';
-      frame.style.aspectRatio = '16/9';
-      frame.style.minHeight = '420px';
-      frame.style.borderRadius = '12px';
-      frame.style.border = '1px solid rgba(255,255,255,0.18)';
-      frame.style.boxShadow = '0 16px 50px rgba(0,0,0,0.6)';
-      frame.setAttribute('allow', 'autoplay; fullscreen');
-      wrap.append(frame);
+    if (videoStreamUrl) {
+      const vid = document.createElement('video');
+      vid.src = videoStreamUrl;
+      vid.controls = true;
+      vid.playsInline = true;
+      vid.preload = 'metadata';
+      vid.style.width = '100%';
+      vid.style.aspectRatio = '16/9';
+      vid.style.borderRadius = '12px';
+      vid.style.backgroundColor = '#000';
+      vid.style.border = '1px solid rgba(255,255,255,0.18)';
+      vid.style.boxShadow = '0 16px 50px rgba(0,0,0,0.6)';
+      wrap.append(vid);
     }
 
     const playerBox = node('div', undefined, 'mm-scene-card');
     const scenesList = creation.scenes || creation.meta?.scenes || [];
-    playerBox.innerHTML = `<b>🎬 Video animácia 16:9: ${escapeHtml(creation.title || 'Trinity Video')}</b><p>${escapeHtml(creation.prompt || '')}</p><small>Štýl: ${escapeHtml(creation.style || 'cinematic')} · Počet scén: ${scenesList.length} · Dĺžka: ${creation.duration_sec || 16}s · Rozlíšenie: 1280×720 (16:9 HD 60fps Canvas + WebM Export)</small>`;
+    const sizeStr = creation.size_bytes ? ` · Veľkosť: ${(creation.size_bytes / 1024).toFixed(1)} KB` : '';
+    const provStr = creation.provider || creation.meta?.provider || 'Trinity Sovereign Video Engine';
+    playerBox.innerHTML = `<b>🎬 Skutočné 16:9 Video: ${escapeHtml(creation.title || 'Trinity Video')}</b><p>${escapeHtml(creation.prompt || '')}</p><small>Engine: ${escapeHtml(provStr)} · Štýl: ${escapeHtml(creation.style || 'cinematic')} · Počet scén: ${scenesList.length} · Dĺžka: ${creation.duration_sec || 16}s · Formát: WebM VP8${sizeStr}</small>`;
 
     const scenesGrid = node('div', undefined, 'mm-scene-grid');
     scenesList.forEach((sc, i) => {
@@ -2078,27 +2082,22 @@ function displayMultimediaStage(creation, type) {
       const sceneTitle = sc.heading || sc.title || sc.badge || `Scéna 0${idx}`;
       const sceneDesc = sc.subtitle || sc.caption || sc.visual_prompt || '';
       const mood = sc.audio_mood || sc.badge || creation.style || 'ambient';
-      card.innerHTML = `<b>${idx}. ${escapeHtml(sceneTitle)} (${sc.duration_sec || 4}s)</b><p>${escapeHtml(sceneDesc)}</p><small>Zvuk / Nálada: ${escapeHtml(mood)}</small>`;
+      card.innerHTML = `<b>${idx}. ${escapeHtml(sceneTitle)} (${sc.duration_sec || 4}s)</b><p>${escapeHtml(sceneDesc)}</p><small>Nálada / Tón: ${escapeHtml(mood)}</small>`;
       scenesGrid.append(card);
     });
 
     const actRow = node('div', undefined, 'commerce-offer-actions');
-    if (videoUrl) {
-      const openBtn = node('button', '⛶ Otvoriť v plnom okne', 'primary');
-      openBtn.type = 'button';
-      openBtn.onclick = () => window.open(videoUrl, '_blank');
-      actRow.append(openBtn);
-
-      const dlHtml = node('a', '⬇ Stiahnuť video prehrávač (.html)', 'button-link');
-      dlHtml.href = downloadUrl;
-      dlHtml.download = `${(creation.title || 'trinity-video').replace(/[^a-z0-9_-]/gi, '_')}.html`;
-      actRow.append(dlHtml);
-    }
-    if (creation.data_uri) {
+    if (downloadUrl) {
       const dl = node('a', '⬇ Stiahnuť .WEBM video', 'primary');
-      dl.href = creation.data_uri;
+      dl.href = downloadUrl;
       dl.download = `${(creation.title || 'trinity-video').replace(/[^a-z0-9_-]/gi, '_')}.webm`;
       actRow.append(dl);
+    }
+    if (playerUrl) {
+      const openBtn = node('button', '🎬 Otvoriť interaktívne kino a storyboard', 'button-link');
+      openBtn.type = 'button';
+      openBtn.onclick = () => window.open(playerUrl, '_blank');
+      actRow.append(openBtn);
     }
     wrap.append(playerBox, scenesGrid, actRow);
   } else if (type === 'photo') {
@@ -4567,39 +4566,254 @@ function initChatPlusMenu(){
 initChatPlusMenu();
 
 
+let ttkRuntimeState = null;
+let ttkActiveAccount = null;
+let ttkConnectedChainId = null;
+let ttkBoundProvider = null;
+const TTK_WEI = 10n ** 18n;
+const TTK_TRANSFER_EVENT = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+const isTtkEvmAddress = value => typeof value === 'string' && /^0x[0-9a-fA-F]{40}$/.test(value);
+const getTtkWalletAccount = accounts => Array.isArray(accounts) && isTtkEvmAddress(accounts[0]) ? accounts[0] : null;
+
+function parseTtkAmountInput(value) {
+  const text = String(value || '').trim();
+  if (!/^(?:0|[1-9]\d{0,9})(?:\.\d{1,18})?$/.test(text)) throw new Error('Zadaj kladnú sumu TTK s najviac 18 desatinnými miestami.');
+  const [whole, fraction = ''] = text.split('.');
+  const units = BigInt(whole) * TTK_WEI + BigInt((fraction + '0'.repeat(18)).slice(0, 18));
+  if (units <= 0n || units > 1_000_000_000n * TTK_WEI) throw new Error('Suma TTK je mimo povoleného rozsahu.');
+  return units;
+}
+
+function formatTtkUnits(units) {
+  const whole = units / TTK_WEI;
+  const fraction = (units % TTK_WEI).toString().padStart(18, '0').replace(/0+$/, '');
+  return fraction ? `${whole.toLocaleString('sk-SK')},${fraction}` : whole.toLocaleString('sk-SK');
+}
+
+function walletChainLabel(chainId) {
+  if (chainId === 8453) return 'Base Mainnet (8453)';
+  if (chainId === 84532) return 'Base Sepolia (84532)';
+  return chainId ? `Neznáma sieť (${chainId})` : 'Neznáma';
+}
+
+function updateTtkPayButton() {
+  const button = $('ttk-pay-btn');
+  if (!button) return;
+  const enabled = Boolean(ttkRuntimeState?.payments?.enabled);
+  const correctChain = enabled && ttkConnectedChainId === Number(ttkRuntimeState.payments.chain_id);
+  button.disabled = !correctChain || !ttkActiveAccount;
+  button.textContent = !enabled
+    ? '🔒 Platby vypnuté'
+    : (!ttkActiveAccount ? 'Pripoj peňaženku' : (!correctChain ? 'Prejdi na správnu Base sieť' : '💸 Potvrdiť TTK platbu'));
+}
+
+async function refreshTtkWallet() {
+  const box = $('web3-wallet-status');
+  const connectButton = $('web3-connect-btn');
+  const chainTarget = $('web3-user-chain');
+  const balanceTarget = $('web3-user-ttk');
+  const messageTarget = $('ttk-wallet-message');
+  const provider = window.ethereum;
+  if (!provider) {
+    if (box) box.style.display = 'none';
+    if (connectButton) connectButton.textContent = '🦊 Pripojiť Web3 Peňaženku';
+    ttkActiveAccount = null;
+    ttkConnectedChainId = null;
+    updateTtkPayButton();
+    return;
+  }
+
+  try {
+    const chainHex = await provider.request({ method: 'eth_chainId' });
+    ttkConnectedChainId = Number(BigInt(chainHex));
+    if (chainTarget) chainTarget.textContent = walletChainLabel(ttkConnectedChainId);
+  } catch {
+    ttkConnectedChainId = null;
+    if (chainTarget) chainTarget.textContent = 'Sieť sa nepodarilo načítať';
+  }
+
+  if (ttkActiveAccount) {
+    if (box) box.style.display = 'block';
+    if ($('web3-user-address')) $('web3-user-address').textContent = ttkActiveAccount;
+    if (connectButton) connectButton.textContent = `✓ ${ttkActiveAccount.slice(0, 6)}…${ttkActiveAccount.slice(-4)}`;
+  } else {
+    if (box) box.style.display = 'none';
+    if (connectButton) connectButton.textContent = '🦊 Pripojiť Web3 Peňaženku';
+  }
+
+  const payment = ttkRuntimeState?.payments;
+  if (!ttkActiveAccount) {
+    if (balanceTarget) balanceTarget.textContent = 'Nedostupný';
+    if (messageTarget) messageTarget.textContent = 'Pripoj peňaženku. Trinity nedostáva seed ani privátny kľúč.';
+  } else if (!payment?.enabled) {
+    if (balanceTarget) balanceTarget.textContent = 'Kontrakt neoverený';
+    if (messageTarget) messageTarget.textContent = payment?.reason || 'TTK kontrakt a príjemca nie sú nakonfigurované.';
+  } else if (ttkConnectedChainId !== Number(payment.chain_id)) {
+    if (balanceTarget) balanceTarget.textContent = 'Nesprávna sieť';
+    if (messageTarget) messageTarget.textContent = `Peňaženku pre TTK platbu prepnúť na ${payment.network}.`;
+  } else {
+    try {
+      const addressWord = ttkActiveAccount.slice(2).toLowerCase().padStart(64, '0');
+      const raw = await provider.request({
+        method: 'eth_call',
+        params: [{ to: payment.contract_address, data: `0x70a08231${addressWord}` }, 'latest']
+      });
+      const units = BigInt(raw);
+      if (balanceTarget) balanceTarget.textContent = `${formatTtkUnits(units)} TTK`;
+      if (messageTarget) messageTarget.textContent = `Zostatok načítaný z ${payment.network}; ide o verejný on-chain údaj.`;
+    } catch {
+      if (balanceTarget) balanceTarget.textContent = 'Nedostupný';
+      if (messageTarget) messageTarget.textContent = 'Zostatok TTK sa nepodarilo načítať z peňaženky.';
+    }
+  }
+  updateTtkPayButton();
+}
+
+function verifyTtkTransferReceipt(receipt, payment, sender, amount) {
+  if (!receipt || !payment || !isTtkEvmAddress(payment.contract_address) || !isTtkEvmAddress(payment.recipient) || !isTtkEvmAddress(sender)) return false;
+  try {
+    if (BigInt(receipt.status || '0x0') !== 1n) return false;
+  } catch { return false; }
+  const token = payment.contract_address.toLowerCase();
+  const fromTopic = sender.slice(2).toLowerCase().padStart(64, '0');
+  const toTopic = payment.recipient.slice(2).toLowerCase().padStart(64, '0');
+  if (receipt.from && String(receipt.from).toLowerCase() !== sender.toLowerCase()) return false;
+  if (receipt.to && String(receipt.to).toLowerCase() !== token) return false;
+  return (Array.isArray(receipt.logs) ? receipt.logs : []).some(log => {
+    try {
+      return String(log.address || '').toLowerCase() === token &&
+        String(log.topics?.[0] || '').toLowerCase() === TTK_TRANSFER_EVENT &&
+        String(log.topics?.[1] || '').toLowerCase() === `0x${fromTopic}` &&
+        String(log.topics?.[2] || '').toLowerCase() === `0x${toTopic}` &&
+        BigInt(log.data || '0x0') === amount;
+    } catch { return false; }
+  });
+}
+
+async function waitForTtkReceipt(provider, txHash) {
+  for (let attempt = 0; attempt < 120; attempt++) {
+    const receipt = await provider.request({ method: 'eth_getTransactionReceipt', params: [txHash] });
+    if (receipt) return receipt;
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  return null;
+}
+
 async function loadCryptoView() {
   try {
-    const res = await fetch('/api/assistant/crypto/tetrakis');
-    if (res.ok) {
-      const data = await res.json();
-      if ($('ttk-stat-supply')) $('ttk-stat-supply').textContent = data.total_supply || '1 000 000 000 TTK';
-      if ($('ttk-stat-network')) $('ttk-stat-network').textContent = data.network || 'Base Mainnet (8453)';
+    const response = await fetch('/api/assistant/crypto/tetrakis');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    ttkRuntimeState = await response.json();
+    if ($('ttk-stat-supply')) $('ttk-stat-supply').textContent = ttkRuntimeState.total_supply;
+    if ($('ttk-stat-network')) $('ttk-stat-network').textContent = ttkRuntimeState.network;
+    if ($('ttk-stat-deployment')) $('ttk-stat-deployment').textContent = ttkRuntimeState.deployment_status.replaceAll('_', ' ');
+    if ($('ttk-stat-price')) $('ttk-stat-price').textContent = 'Neznáma';
+    if ($('ttk-contract-address')) $('ttk-contract-address').textContent = ttkRuntimeState.contract_address || 'Zatiaľ nie je overená';
+    const explorer = $('ttk-contract-explorer');
+    if (explorer && ttkRuntimeState.contract_address && ttkRuntimeState.payments?.explorer) {
+      explorer.href = `${ttkRuntimeState.payments.explorer}/address/${ttkRuntimeState.contract_address}`;
+      explorer.style.display = 'inline-block';
+    } else if (explorer) {
+      explorer.style.display = 'none';
     }
-  } catch (e) {
-    console.error('Failed to load crypto view', e);
+    if ($('ttk-payment-badge')) $('ttk-payment-badge').textContent = ttkRuntimeState.payments?.enabled ? 'Kontrakt overený; príjemca nakonfigurovaný' : 'Platby vypnuté';
+    if ($('ttk-payment-status')) $('ttk-payment-status').textContent = ttkRuntimeState.payments?.reason || ttkRuntimeState.deployment_reason;
+  } catch (error) {
+    ttkRuntimeState = null;
+    if ($('ttk-stat-deployment')) $('ttk-stat-deployment').textContent = 'Stav sa nepodarilo načítať';
+    if ($('ttk-payment-status')) $('ttk-payment-status').textContent = 'Stav TTK sa nepodarilo overiť. Platby zostávajú vypnuté.';
+    console.error('Failed to load verified TTK status', error);
   }
-  const btn = $('web3-connect-btn');
-  if (btn && !btn.dataset.bound) {
-    btn.dataset.bound = 'true';
-    btn.onclick = async () => {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          if (accounts && accounts[0]) {
-            const addr = accounts[0];
-            const box = $('web3-wallet-status');
-            if (box) box.style.display = 'block';
-            if ($('web3-user-address')) $('web3-user-address').textContent = addr;
-            btn.textContent = '✓ Pripojené (' + addr.slice(0, 6) + '...' + addr.slice(-4) + ')';
-            btn.classList.remove('primary');
-            btn.classList.add('secondary');
-          }
-        } catch (err) {
-          alert('Chyba pripojenia peňaženky: ' + (err.message || err));
-        }
-      } else {
-        alert('Web3 peňaženka (napr. MetaMask) nebola detegovaná.');
+
+  const provider = window.ethereum;
+  const connectButton = $('web3-connect-btn');
+  if (provider && provider !== ttkBoundProvider) {
+    ttkBoundProvider = provider;
+    provider.on?.('accountsChanged', accounts => {
+      ttkActiveAccount = getTtkWalletAccount(accounts);
+      void refreshTtkWallet();
+    });
+    provider.on?.('chainChanged', () => { void refreshTtkWallet(); });
+  }
+  if (provider && !ttkActiveAccount) {
+    try {
+      const accounts = await provider.request({ method: 'eth_accounts' });
+      ttkActiveAccount = getTtkWalletAccount(accounts);
+    } catch {}
+  }
+  if (connectButton && !connectButton.dataset.bound) {
+    connectButton.dataset.bound = 'true';
+    connectButton.onclick = async () => {
+      if (!window.ethereum) {
+        if ($('ttk-payment-status')) $('ttk-payment-status').textContent = 'Nenašla sa EIP-1193 peňaženka. Nainštaluj MetaMask alebo použi kompatibilnú peňaženku.';
+        return;
+      }
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        ttkActiveAccount = getTtkWalletAccount(accounts);
+        if (!ttkActiveAccount) throw new Error('Peňaženka nevrátila platnú EVM adresu.');
+        await refreshTtkWallet();
+      } catch (error) {
+        if ($('ttk-payment-status')) $('ttk-payment-status').textContent = error?.code === 4001
+          ? 'Pripojenie peňaženky si odmietol.'
+          : `Peňaženku sa nepodarilo pripojiť: ${error?.message || 'neznáma chyba'}`;
       }
     };
   }
+
+  const form = $('ttk-payment-form');
+  if (form && !form.dataset.bound) {
+    form.dataset.bound = 'true';
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      const button = $('ttk-pay-btn');
+      const status = $('ttk-payment-status');
+      const payment = ttkRuntimeState?.payments;
+      if (!window.ethereum || !payment?.enabled || !ttkActiveAccount) return;
+      if (!isTtkEvmAddress(payment.contract_address) || !isTtkEvmAddress(payment.recipient)) {
+        if (status) status.textContent = 'Konfigurácia kontraktu alebo príjemcu nie je platná; platba bola zablokovaná.';
+        return;
+      }
+      let amount;
+      try { amount = parseTtkAmountInput($('ttk-payment-amount')?.value); }
+      catch (error) { if (status) status.textContent = error.message; return; }
+      if (button) button.disabled = true;
+      try {
+        const chainHex = await window.ethereum.request({ method: 'eth_chainId' });
+        if (Number(BigInt(chainHex)) !== Number(payment.chain_id)) {
+          throw new Error(`Najprv prepnúť peňaženku na ${payment.network}.`);
+        }
+        const currentAccount = getTtkWalletAccount(await window.ethereum.request({ method: 'eth_accounts' }));
+        if (!currentAccount || currentAccount.toLowerCase() !== ttkActiveAccount.toLowerCase()) {
+          ttkActiveAccount = currentAccount;
+          throw new Error('Aktívny účet peňaženky sa zmenil. Skontroluj pripojený účet a skús znova.');
+        }
+        const addressWord = payment.recipient.slice(2).toLowerCase().padStart(64, '0');
+        const amountWord = amount.toString(16).padStart(64, '0');
+        const txHash = await window.ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [{ from: ttkActiveAccount, to: payment.contract_address, data: `0xa9059cbb${addressWord}${amountWord}`, value: '0x0' }]
+        });
+        if (typeof txHash !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(txHash)) throw new Error('Peňaženka nevrátila platný hash transakcie.');
+        if (status) status.textContent = `Transakcia odoslaná (${txHash}). Čakám na potvrdenie siete…`;
+        const receipt = await waitForTtkReceipt(window.ethereum, txHash);
+        if (!receipt) {
+          if (status) status.textContent = `Transakcia ešte nemá potvrdenie: ${payment.explorer}/tx/${txHash}. Platba ani služba sa zatiaľ nepotvrdzuje.`;
+          return;
+        }
+        if (!verifyTtkTransferReceipt(receipt, payment, ttkActiveAccount, amount)) {
+          throw new Error('Potvrdená transakcia neobsahuje očakávaný TTK Transfer na nakonfigurovaného príjemcu.');
+        }
+        if (status) status.textContent = `TTK prevod je v bloku ${Number(BigInt(receipt.blockNumber))}: ${payment.explorer}/tx/${txHash}. Trinity zatiaľ automaticky nepripisuje službu.`;
+        await refreshTtkWallet();
+      } catch (error) {
+        if (status) status.textContent = error?.code === 4001
+          ? 'Transakciu si odmietol vo svojej peňaženke.'
+          : `TTK platba sa nepotvrdila: ${error?.message || 'neznáma chyba'}`;
+      } finally {
+        await refreshTtkWallet();
+      }
+    });
+  }
+  await refreshTtkWallet();
 }

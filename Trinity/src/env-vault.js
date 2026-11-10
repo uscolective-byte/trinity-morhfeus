@@ -22,7 +22,7 @@ export const PROVIDER_ENV_KEYS = Object.freeze({
   mistral: ['MISTRAL_API_KEY'],
   openrouter: ['OPENROUTER_API_KEY'],
   cloudflare: ['CLOUDFLARE_API_TOKEN', 'CF_API_TOKEN', 'TRINITY_CF_TOKEN'],
-  github: ['GITHUB_TOKEN', 'TRINITY_GITHUB_TOKEN', 'GITHUBE_API_KEY'],
+  github: ['GITHUB_TOKEN', 'TRINITY_GITHUB_TOKEN', 'GITHUBE_API_KEY', 'trinitygithube_key'],
   firecrawl: ['FIRECRAWL_API_KEY', 'TRINITY_FIRECRAWL_KEY'],
   firebase: ['FIREBASE_API_KEY', 'FIREBASE_SERVICE_ACCOUNT'],
   azure: ['AZURE_AI_FOUNDRY_TOKEN', 'Azureagent_api', 'AZURE_BEARER_TOKEN'],

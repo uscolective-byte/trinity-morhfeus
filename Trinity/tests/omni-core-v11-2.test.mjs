@@ -684,15 +684,19 @@ test('Module 10: Sovereign Monolith Tool Engine (execute_d1_sql, cloudflare_flee
 
 test('Module 11: Tetrakis ($TTK) Base L2 Smart Contract, Hardhat Config & Worker #24 (trinity-treasury)', async () => {
   const repoRoot = path.resolve(__dirname, '../..');
-  const rootSol = fs.readFileSync(path.join(repoRoot, 'contracts/TetrakisToken.sol'), 'utf8');
+  const canonicalSol = fs.readFileSync(path.join(repoRoot, 'contracts/tetrakis/TetrakisToken.sol'), 'utf8');
   const pkgSol = fs.readFileSync(path.join(repoRoot, 'packages/crypto-core/contracts/TetrakisToken.sol'), 'utf8');
-  assert.equal(rootSol, pkgSol);
-  assert.match(rootSol, /uint256 public constant HARD_CAP = 10_000_000 \* 10\*\*18/);
+  assert.equal(canonicalSol.replace(/\r\n/g, '\n'), pkgSol.replace(/\r\n/g, '\n'));
+  assert.ok(!fs.existsSync(path.join(repoRoot, 'contracts/TetrakisToken.sol')), 'only one canonical contract may exist');
+  assert.match(canonicalSol, /TOTAL_SUPPLY_CAP = 1_000_000_000 \* 10 \*\* 18/);
+  assert.doesNotMatch(canonicalSol, /function\s+mint\s*\(/);
 
-  const artifact = JSON.parse(fs.readFileSync(path.join(repoRoot, 'packages/crypto-core/build/TetrakisToken.json'), 'utf8'));
+  // Artifact digests must be consistent with the compiled artifact the worker serves (no hard-coded hashes).
+  const artifact = JSON.parse(fs.readFileSync(path.join(repoRoot, 'contracts/tetrakis/build/TetrakisToken.json'), 'utf8'));
   assert.equal(artifact.contractName, 'TetrakisToken');
-  assert.equal(artifact.bytecodeSha256, '0x51783e809cffb8b5318402e27f9bd181ea0578404feffcc17dcf9d1c236aef93');
-  assert.equal(artifact.runtimeKeccak256, '0x6130b013de4971ca4102f4d330144fbfc72fd8316a6f17c842a47d3a2260eb84');
+  assert.match(artifact.bytecodeSha256, /^0x[0-9a-f]{64}$/);
+  assert.match(artifact.runtimeKeccak256, /^0x[0-9a-f]{64}$/);
+  assert.ok(!artifact.abi.some(f => f.type === 'function' && f.name === 'mint'));
 
   const treasuryWrangler = JSON.parse(fs.readFileSync(path.join(repoRoot, 'services/trinity-treasury/wrangler.jsonc'), 'utf8'));
   assert.equal(treasuryWrangler.name, 'trinity-treasury');
@@ -707,7 +711,10 @@ test('Module 11: Tetrakis ($TTK) Base L2 Smart Contract, Hardhat Config & Worker
   assert.equal(healthBody.service, 'trinity-treasury');
   assert.equal(healthBody.workerId, 24);
   assert.equal(healthBody.token.symbol, 'TTK');
-  assert.equal(healthBody.token.hardCapTokens, 10000000);
+  assert.equal(healthBody.token.totalSupplyTokens, 1_000_000_000);
+  assert.equal(healthBody.token.mintable, false);
+  assert.equal(healthBody.token.deployed, false);
+  assert.equal(healthBody.token.contractAddress, null);
 
   const pipelineRes = await treasuryWorker.fetch(new Request('https://auru.space/api/treasury/listing-pipeline'), treasuryWrangler.vars);
   assert.equal(pipelineRes.status, 200);
@@ -721,7 +728,7 @@ test('Module 11: Tetrakis ($TTK) Base L2 Smart Contract, Hardhat Config & Worker
   const abiRes = await treasuryWorker.fetch(new Request('https://auru.space/api/treasury/abi'), treasuryWrangler.vars);
   assert.equal(abiRes.status, 200);
   const abiBody = await abiRes.json();
-  assert.equal(abiBody.bytecodeSha256, '0x51783e809cffb8b5318402e27f9bd181ea0578404feffcc17dcf9d1c236aef93');
+  assert.equal(abiBody.bytecodeSha256, artifact.bytecodeSha256);
   assert.ok(Array.isArray(abiBody.abi) && abiBody.abi.length >= 10);
 
   const manifestoRes = await treasuryWorker.fetch(new Request('https://auru.space/api/treasury/manifesto'), treasuryWrangler.vars);

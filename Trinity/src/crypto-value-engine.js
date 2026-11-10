@@ -1,117 +1,174 @@
-/**
- * @module TRINITY_CRYPTO_VALUE_ENGINE
- * @description Autonomous Economic Value, Buyback & Valuation Engine for Tetrakis ($TTK).
- * Connects real-world Trinity platform revenues (AI Studio, Escrow, API, Commerce)
- * to on-chain liquidity, buyback-and-burn, and founder staking dividends.
- *
- * Truth Policy 2.1: Mathematical proofs and deterministic economic invariants.
- */
+import { keccak_256 } from '@noble/hashes/sha3.js';
+import { normalizeEvmAddress } from './wallet-terminals.js';
 
-export const TTK_METRICS = {
-  token_name: 'Tetrakis',
-  token_symbol: 'TTK',
-  total_supply: 1_000_000_000n,
-  basterix_wallet: '0x7e17f9072cfCbc7fE45973De0F11eC8db99281e4',
-  basterix_holding: 1_000_000n, // Exactly 1 Million TTK
-  official_treasury: '0x4d308452a96D7dAbFd2f33d92677A3a2724f387e',
-  network: 'Base Mainnet (Coinbase L2, ChainId 8453)',
-  dex_platform: 'Aerodrome Finance & Uniswap v3 (Base)',
-  pair: 'TTK / WETH'
-};
+export const TTK_TOKEN = Object.freeze({
+  name: 'Tetrakis',
+  symbol: 'TTK',
+  decimals: 18,
+  totalSupply: 1_000_000_000n,
+  founderAllocation: 1_000_000n,
+  treasuryAllocation: 999_000_000n
+});
 
-export const VALUE_MECHANISMS = {
-  protocol_revenue_share_pct: 30, // 30% of all Trinity gross revenue goes to TTK buyback & liquidity
-  service_payment_discount_pct: 30, // Users get 30% discount when paying in TTK vs EUR/USD
-  deflationary_burn_pct: 50, // 50% of TTK collected from services is permanently burned
-  staking_dividend_pct: 50 // 50% of TTK collected from services is distributed to Tier 2 & Tier 3 stakers
-};
+export const TTK_RUNTIME_KECCAK256 = '0x3d8a3c7a764f1b12aa17052d6d8772e1924a3395c1ffd52024891f5e794bb705';
 
-export const VALUATION_MILESTONES = [
-  {
-    tier: 'Seed / Genesis',
-    price_usd: 0.00001325,
-    price_eur: 0.00001219,
-    fdv_usd: 13_250,
-    basterix_portfolio_usd: 13.25,
-    status: 'ACTIVE_INITIAL_PRICE'
+const NETWORKS = Object.freeze({
+  8453: {
+    label: 'Base Mainnet',
+    rpc: 'https://mainnet.base.org',
+    explorer: 'https://basescan.org'
   },
-  {
-    tier: 'Ecosystem Utility Launch ($1M FDV)',
-    price_usd: 0.001,
-    price_eur: 0.00092,
-    fdv_usd: 1_000_000,
-    basterix_portfolio_usd: 1_000,
-    status: 'TARGET_MILESTONE_1'
-  },
-  {
-    tier: 'Commercial Expansion ($10M FDV)',
-    price_usd: 0.01,
-    price_eur: 0.0092,
-    fdv_usd: 10_000_000,
-    basterix_portfolio_usd: 10_000,
-    status: 'TARGET_MILESTONE_2'
-  },
-  {
-    tier: 'Autonomous Scale ($100M FDV)',
-    price_usd: 0.10,
-    price_eur: 0.092,
-    fdv_usd: 100_000_000,
-    basterix_portfolio_usd: 100_000,
-    status: 'TARGET_MILESTONE_3'
-  },
-  {
-    tier: 'Sovereign Hegemony ($1B FDV)',
-    price_usd: 1.00,
-    price_eur: 0.92,
-    fdv_usd: 1_000_000_000,
-    basterix_portfolio_usd: 1_000_000,
-    status: 'TARGET_MILESTONE_4'
+  84532: {
+    label: 'Base Sepolia',
+    rpc: 'https://sepolia.base.org',
+    explorer: 'https://sepolia.basescan.org'
   }
-];
+});
 
-/**
- * Calculates live intrinsic valuation metrics based on platform volume and protocol buyback
- */
-export function calculateIntrinsicValuation(monthlyPlatformRevenueEur = 5000) {
-  const buybackBudgetEur = (monthlyPlatformRevenueEur * VALUE_MECHANISMS.protocol_revenue_share_pct) / 100;
-  const annualBuybackEur = buybackBudgetEur * 12;
+const UINT256_MAX = (1n << 256n) - 1n;
+const MAX_TTK_UNITS = TTK_TOKEN.totalSupply * 10n ** BigInt(TTK_TOKEN.decimals);
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
-  // Intrinsic floor valuation using conservative P/E multiple of 15x annualized protocol buyback
-  const intrinsicValuationFloorEur = annualBuybackEur * 15;
-  const intrinsicTokenPriceEur = intrinsicValuationFloorEur / Number(TTK_METRICS.total_supply);
-  const basterixHoldingValueEur = intrinsicTokenPriceEur * Number(TTK_METRICS.basterix_holding);
+function bytesToHex(bytes) {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
 
+function decodeHexBytes(value) {
+  if (typeof value !== 'string' || !/^0x(?:[0-9a-f]{2})+$/i.test(value)) return null;
+  const bytes = new Uint8Array((value.length - 2) / 2);
+  for (let i = 0; i < bytes.length; i++) bytes[i] = Number.parseInt(value.slice(2 + i * 2, 4 + i * 2), 16);
+  return bytes;
+}
+
+export function parseTtkAmount(value) {
+  const text = String(value ?? '').trim();
+  if (!/^(?:0|[1-9]\d{0,9})(?:\.\d{1,18})?$/.test(text)) {
+    throw new TypeError('Zadaj sumu TTK s najviac 18 desatinnými miestami.');
+  }
+  const [whole, fraction = ''] = text.split('.');
+  const units = BigInt(whole) * 10n ** BigInt(TTK_TOKEN.decimals)
+    + BigInt((fraction + '0'.repeat(TTK_TOKEN.decimals)).slice(0, TTK_TOKEN.decimals));
+  if (units <= 0n || units > MAX_TTK_UNITS || units > UINT256_MAX) {
+    throw new RangeError('Suma musí byť väčšia ako nula a nesmie prekročiť celkovú zásobu TTK.');
+  }
+  return units;
+}
+
+export function encodeTtkTransfer(recipient, amount) {
+  const address = normalizeEvmAddress(recipient);
+  if (!address || address.toLowerCase() === ZERO_ADDRESS) throw new TypeError('Príjemca nemá platnú EVM adresu.');
+  const units = typeof amount === 'bigint' ? amount : parseTtkAmount(amount);
+  if (units <= 0n || units > MAX_TTK_UNITS || units > UINT256_MAX) {
+    throw new RangeError('Suma TTK je mimo povoleného rozsahu.');
+  }
+  const addressWord = address.slice(2).toLowerCase().padStart(64, '0');
+  const amountWord = units.toString(16).padStart(64, '0');
+  return `0xa9059cbb${addressWord}${amountWord}`;
+}
+
+async function rpc(fetchImpl, network, method, params) {
+  const response = await fetchImpl(network.rpc, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+    signal: AbortSignal.timeout(8000)
+  });
+  if (!response.ok) throw new Error(`RPC HTTP ${response.status}`);
+  const data = await response.json();
+  if (data?.error) throw new Error(data.error.message || 'RPC error');
+  return data?.result;
+}
+
+function baseStatus(env, status, reason) {
+  const chainId = Number(env?.TTK_CHAIN_ID);
+  const network = NETWORKS[chainId] || null;
   return {
-    monthly_platform_revenue_eur: monthlyPlatformRevenueEur,
-    protocol_buyback_monthly_eur: buybackBudgetEur,
-    protocol_buyback_annual_eur: annualBuybackEur,
-    intrinsic_valuation_floor_eur: intrinsicValuationFloorEur,
-    intrinsic_token_price_eur: Number(intrinsicTokenPriceEur.toFixed(8)),
-    intrinsic_token_price_usd: Number((intrinsicTokenPriceEur * 1.087).toFixed(8)),
-    basterix_wallet: TTK_METRICS.basterix_wallet,
-    basterix_holding_ttk: '1,000,000 TTK',
-    basterix_intrinsic_value_eur: Number(basterixHoldingValueEur.toFixed(2)),
-    basterix_intrinsic_value_usd: Number((basterixHoldingValueEur * 1.087).toFixed(2)),
-    staking_tier: 'Tier 3 · Sovereign Mastermind (Direct Revenue Share Qualified)',
-    timestamp: new Date().toISOString()
+    token: TTK_TOKEN.name,
+    symbol: TTK_TOKEN.symbol,
+    decimals: TTK_TOKEN.decimals,
+    total_supply: `${TTK_TOKEN.totalSupply.toLocaleString('en-US')} TTK`,
+    allocations: {
+      founder: `${TTK_TOKEN.founderAllocation.toLocaleString('en-US')} TTK`,
+      treasury: `${TTK_TOKEN.treasuryAllocation.toLocaleString('en-US')} TTK`
+    },
+    network: network?.label || 'Base (nasadenie neoverené)',
+    chain_id: network ? chainId : null,
+    deployment_status: status,
+    deployment_reason: reason,
+    contract_address: null,
+    runtime_keccak256: null,
+    market_price: null,
+    market_price_status: 'unavailable',
+    payments: {
+      enabled: false,
+      chain_id: network ? chainId : null,
+      network: network?.label || null,
+      contract_address: null,
+      recipient: null,
+      explorer: network?.explorer || null,
+      reason
+    }
   };
 }
 
-/**
- * Calculates a discounted $TTK payment quote for any platform service
- */
-export function calculateTtkQuote(amountEur, currentPriceEur = 0.00001219) {
-  const discountedEur = amountEur * (1 - VALUE_MECHANISMS.service_payment_discount_pct / 100);
-  const ttkAmount = Math.ceil(discountedEur / currentPriceEur);
+export async function getTetrakisStatus(env, { fetchImpl = globalThis.fetch } = {}) {
+  const rawChainId = env?.TTK_CHAIN_ID;
+  const chainId = rawChainId === undefined || rawChainId === '' ? null : Number(rawChainId);
+  const network = chainId === null ? null : NETWORKS[chainId];
+  const rawContract = env?.TTK_CONTRACT_ADDRESS;
+  const rawRecipient = env?.TTK_PAYMENT_RECIPIENT;
+  const contractAddress = rawContract ? normalizeEvmAddress(rawContract) : null;
+  const recipient = rawRecipient ? normalizeEvmAddress(rawRecipient) : null;
 
+  if ((rawContract && (!contractAddress || contractAddress.toLowerCase() === ZERO_ADDRESS))
+    || (rawRecipient && (!recipient || recipient.toLowerCase() === ZERO_ADDRESS))) {
+    return baseStatus(env, 'invalid_configuration', 'Adresa kontraktu alebo platobného príjemcu nemá platný EVM formát.');
+  }
+  if (chainId !== null && !network) {
+    return baseStatus(env, 'invalid_configuration', 'Podporované sú iba Base Mainnet (8453) a Base Sepolia (84532).');
+  }
+  if (!contractAddress || !network) {
+    return baseStatus(env, 'not_configured', 'TTK kontrakt ešte nie je nakonfigurovaný; platby sú vypnuté.');
+  }
+
+  let code;
+  try {
+    const [reportedChain, deployedCode] = await Promise.all([
+      rpc(fetchImpl, network, 'eth_chainId', []),
+      rpc(fetchImpl, network, 'eth_getCode', [contractAddress, 'latest'])
+    ]);
+    if (Number(BigInt(reportedChain)) !== chainId) {
+      return baseStatus(env, 'network_mismatch', 'RPC odpovedá iným chain ID než nakonfigurovaná sieť. Platby sú vypnuté.');
+    }
+    code = deployedCode;
+  } catch {
+    return baseStatus(env, 'verification_unavailable', 'Nasadenie sa teraz nepodarilo overiť cez Base RPC. Platby sú vypnuté.');
+  }
+
+  const bytes = decodeHexBytes(code);
+  if (!bytes) return baseStatus(env, 'not_deployed', 'Na nakonfigurovanej adrese nie je na tejto Base sieti nasadený kontrakt.');
+
+  const runtimeHash = `0x${bytesToHex(keccak_256(bytes))}`;
+  if (runtimeHash !== TTK_RUNTIME_KECCAK256) {
+    return baseStatus(env, 'contract_mismatch', 'Nasadený bytecode sa nezhoduje s overeným Tetrakis zdrojom. Platby sú vypnuté.');
+  }
+
+  const paymentEnabled = Boolean(recipient);
+  const reason = paymentEnabled
+    ? 'Bytecode TTK sa zhoduje s overeným zdrojom; peňaženka môže odoslať platbu po potvrdení používateľom.'
+    : 'Kontrakt je overený, ale TTK_PAYMENT_RECIPIENT nie je nastavený; platby sú vypnuté.';
   return {
-    original_amount_eur: amountEur,
-    discount_pct: VALUE_MECHANISMS.service_payment_discount_pct,
-    discounted_amount_eur: discountedEur,
-    required_ttk: ttkAmount,
-    token_price_eur: currentPriceEur,
-    burn_portion_ttk: Math.floor(ttkAmount * (VALUE_MECHANISMS.deflationary_burn_pct / 100)),
-    dividend_portion_ttk: Math.ceil(ttkAmount * (VALUE_MECHANISMS.staking_dividend_pct / 100)),
-    recipient_treasury: TTK_METRICS.official_treasury
+    ...baseStatus(env, 'deployed_verified', reason),
+    contract_address: contractAddress,
+    runtime_keccak256: runtimeHash,
+    payments: {
+      enabled: paymentEnabled,
+      chain_id: chainId,
+      network: network.label,
+      contract_address: contractAddress,
+      recipient,
+      explorer: network.explorer,
+      reason
+    }
   };
 }

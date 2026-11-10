@@ -5,6 +5,7 @@ import {
   generateMusicSchema,
   buildVideoScenes,
   renderInteractiveVideoPlayerHtml,
+  synthesizeWebMVideoBytes,
   generateVideoCreation,
   listMultimediaCreations
 } from '../src/multimedia-studio.js';
@@ -145,7 +146,29 @@ test('renderInteractiveVideoPlayerHtml: generates complete HTML5 canvas player w
   assert.ok(html.includes('triggerSynthNote'), 'Contains WebAudio synthesizer');
 });
 
-test('generateVideoCreation: creates artifact, records creation and returns creation object', async () => {
+test('synthesizeWebMVideoBytes: produces valid WebM container with VP8 frames', () => {
+  const bytes = synthesizeWebMVideoBytes({
+    style: 'cyberpunk',
+    durationSec: 8,
+    scenes: [{ heading: 'S1', subtitle: 'Desc' }],
+    width: 640,
+    height: 360,
+    fps: 1
+  });
+
+  assert.ok(bytes instanceof Uint8Array, 'Returns Uint8Array');
+  assert.ok(bytes.byteLength > 100, 'Size is non-trivial');
+  // Check EBML header: 0x1A, 0x45, 0xDF, 0xA3
+  assert.equal(bytes[0], 0x1a);
+  assert.equal(bytes[1], 0x45);
+  assert.equal(bytes[2], 0xdf);
+  assert.equal(bytes[3], 0xa3);
+  // Check docType "webm"
+  const hex = Buffer.from(bytes.subarray(0, 64)).toString('hex');
+  assert.ok(hex.includes('7765626d'), 'Contains "webm" docType');
+});
+
+test('generateVideoCreation: creates binary WebM video in R2, records creation and returns creation object', async () => {
   const env = createMockEnv();
   const actor = { email: 'basterix@auru.space' };
 
@@ -162,17 +185,26 @@ test('generateVideoCreation: creates artifact, records creation and returns crea
   assert.equal(result.kind, 'video');
   assert.equal(result.media_type, 'video');
   assert.ok(result.id, 'Has artifact ID');
-  assert.ok(result.url.includes('/api/assistant/files/'), 'Has file URL');
+  assert.equal(result.url, `/api/assistant/media/video/${result.id}`, 'Has stream video URL');
+  assert.equal(result.video_url, `/api/assistant/media/video/${result.id}`, 'Has video_url');
   assert.ok(result.player_url, 'Has player_url');
-  assert.ok(result.download_url, 'Has download_url');
-  assert.ok(result.secondary_url, 'Has secondary_url');
+  assert.equal(result.download_url, `/api/assistant/media/video/${result.id}?download=1`, 'Has download_url');
+  assert.ok(result.size_bytes > 0, 'Video has non-zero byte size');
+  assert.ok(result.data_uri.startsWith('data:video/webm;base64,'), 'Has data_uri');
+  assert.equal(result.mime_type, 'video/webm');
   assert.equal(result.scenes.length, 4);
+
+  // Overenie uloženia reálneho videa do R2 úložiska
+  const r2Video = await env.ARTIFACTS.get(`media/video/${result.id}.webm`);
+  assert.ok(r2Video, 'Binary WebM video is stored in R2');
+  assert.equal(r2Video.httpMetadata?.contentType, 'video/webm', 'R2 contentType is video/webm');
 
   // Overenie obálky creation pre kompatibilitu s frontendom
   assert.ok(result.creation, 'Has creation wrapper');
   assert.equal(result.creation.title, 'Trinity Showcase');
   assert.equal(result.creation.style, 'cinematic');
   assert.equal(result.creation.scenes.length, 4);
+  assert.equal(result.creation.mime_type, 'video/webm');
 
   // Overenie listovania v multimédiách
   const listByKind = await listMultimediaCreations(env, { kind: 'video' });

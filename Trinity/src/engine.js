@@ -337,8 +337,11 @@ async function runAgentUnchecked(env, id, task, context='', provider='workers-ai
     const started=Date.now();
     const outcome=await runTool(env,agent,'generate_video',{prompt:task.slice(0,1500),style,duration_sec:16,scenes_count:4});
     const receipt={tool:'generate_video',status:'completed',effect:'mutation',action:'create_file',actions:['create_file'],receipt_id:outcome._evidence?.receipt_id||`video:${outcome.id}`,verified_at:new Date().toISOString()};
-    const text=`🎬 Vytvorila som interaktívne 16:9 animované video **${outcome.title}** (${outcome.scenes_count} scény · ${outcome.duration_sec}s · 60fps Canvas + WebM export).\n\nPrehrať a stiahnuť video: ${outcome.url}`;
-    return {text,model:'trinity-cinema-engine',provider:'internal',agent_id:id,tool_log:[receipt],truth:truthStatus(text,[receipt]),duration_ms:Date.now()-started};
+    const videoStreamUrl=outcome.video_url||outcome.url||`/api/assistant/media/video/${outcome.id}`;
+    const downloadUrl=outcome.download_url||`${videoStreamUrl}?download=1`;
+    const playerUrl=outcome.player_url||outcome.url;
+    const text=`🎬 Vygenerovala som skutočné 16:9 video **${outcome.title}** (${outcome.scenes_count||4} scény · ${outcome.duration_sec||16}s · ${outcome.provider||'Trinity Sovereign Video Engine'}).\n\n- **Prehrať video stream:** ${videoStreamUrl}\n- **Stiahnuť súbor .webm:** ${downloadUrl}\n- **Interaktívne kino & Storyboard:** ${playerUrl}`;
+    return {text,model:'trinity-cinema-engine',provider:outcome.provider||'internal',agent_id:id,tool_log:[receipt],truth:truthStatus(text,[receipt]),duration_ms:Date.now()-started};
   }
   if(activeTools.includes('generate_presentation')&&isPresentationRequest(task)){
     const norm=task.toLowerCase();
@@ -389,34 +392,60 @@ async function runAgentUnchecked(env, id, task, context='', provider='workers-ai
         outcome = await env.JERICHO_SERVICE.executeWorkCycle();
       } else {
         const res = await env.JERICHO_SERVICE.fetch('https://jericho123.internal/api/work', { method: 'POST' });
+        if (!res.ok) throw new Error('Jericho service returned an unsuccessful response');
         outcome = await res.json();
       }
-    } catch (err) {
-      outcome = {
-        work_id: `jericho:local:${Date.now()}`,
-        status: 'COMPLETED',
-        duration_ms: 5,
-        summary: 'Jericho vyhodnotil stav krypto pokladnice a trhu v safe-mode.',
-        market_sentiment: { label: 'Neutral', score: 50 },
-        treasury_addresses: { evm: '0x4d308452a96D7dAbFd2f33d92677A3a2724f387e' },
-        top_actions: []
+    } catch {
+      const text = 'Jericho momentálne neodpovedá. Ceny, pokladnicu ani pracovný cyklus sa nepodarilo overiť.';
+      return {
+        text,
+        model: 'jericho123-unavailable',
+        provider: 'internal',
+        agent_id: id,
+        tool_log: [],
+        truth: truthStatus(text, []),
+        duration_ms: Date.now() - started
+      };
+    }
+    if (!outcome || outcome.status !== 'COMPLETED' || typeof outcome.work_id !== 'string' || !outcome.work_id.trim()) {
+      const text = 'Jericho nevrátil potvrdenie dokončeného pracovného cyklu. Výsledok sa nepovažuje za overený.';
+      return {
+        text,
+        model: 'jericho123-unverified',
+        provider: 'internal',
+        agent_id: id,
+        tool_log: [],
+        truth: truthStatus(text, []),
+        duration_ms: Date.now() - started
       };
     }
     const receipt = {
       tool: 'jericho_crypto',
       status: 'completed',
       effect: 'read',
-      receipt_id: outcome.work_id || `jericho:${Date.now()}`,
+      receipt_id: outcome.work_id,
       verified_at: new Date().toISOString()
     };
-    const topActions = (outcome.top_actions || []).map(a => `- **${a.action} ${a.symbol}**: $${a.price} · ${a.rationale} (Dôvera: ${Math.round(a.confidence * 100)}%)`).join('\n');
-    const text = `⚡ **Jericho123 · Autonómny Crypto Super-Agent pre Trinity:**\n\n` +
-      `- **Work ID**: \`${outcome.work_id}\` (${outcome.duration_ms || 0} ms)\n` +
-      `- **Trhový sentiment**: **${outcome.market_sentiment?.label || 'Neutral'}** (Index: ${outcome.market_sentiment?.score || 50}/100)\n` +
-      `- **EVM Pokladnica (Tetrakis $TTK)**: \`${outcome.treasury_addresses?.evm || '0x4d308452a96D7dAbFd2f33d92677A3a2724f387e'}\` (Base / Eth / Arb)\n` +
-      `- **Stav Tetrakis ($TTK)**: ERC-20 (OpenZeppelin v5.1.0, 1 mld. TTK pevná zásoba, 15/15 testov PASS)\n\n` +
-      `### 📊 Aktuálne odporúčania super-agenta:\n${topActions || 'Trh konsoliduje, žiadne agresívne breakouty.'}\n\n` +
-      `*Jericho beží ako nezávislý servisný worker flotily na Cloudflare Edge s autonómnym cyklom sledovania.*`;
+    const topActions = (Array.isArray(outcome.top_actions) ? outcome.top_actions : [])
+      .filter(action => action && typeof action.action === 'string' && typeof action.symbol === 'string')
+      .slice(0, 5)
+      .map(action => {
+        const price = Number(action.price);
+        const confidence = Number(action.confidence);
+        const priceText = Number.isFinite(price) ? ` · $${price}` : '';
+        const confidenceText = Number.isFinite(confidence) ? ` (Dôvera: ${Math.round(confidence * 100)}%)` : '';
+        const rationale = typeof action.rationale === 'string' ? action.rationale.slice(0, 400) : '';
+        return `- **${action.action} ${action.symbol}**${priceText}${rationale ? ` · ${rationale}` : ''}${confidenceText}`;
+      }).join('\n');
+    const sentiment = outcome.market_sentiment && typeof outcome.market_sentiment.label === 'string'
+      ? `\n- **Sentiment podľa Jericho**: ${outcome.market_sentiment.label}${Number.isFinite(Number(outcome.market_sentiment.score)) ? ` (${Number(outcome.market_sentiment.score)}/100)` : ''}`
+      : '';
+    const summary = typeof outcome.summary === 'string' ? outcome.summary.slice(0, 600) : 'Cyklus vrátil potvrdený výsledok.';
+    const text = `⚡ **Jericho123 — výsledok pracovného cyklu**\n\n` +
+      `- **Work ID**: \`${outcome.work_id}\`\n` +
+      `- **Výsledok**: ${summary}${sentiment}\n\n` +
+      (topActions ? `### Odporúčania z výsledku\n${topActions}\n\n` : '') +
+      'Nasadenie TTK, vlastníctvo treasury adresy ani uskutočnené prevody týmto cyklom neboli overené.';
     return {
       text,
       model: 'jericho123-crypto-core',

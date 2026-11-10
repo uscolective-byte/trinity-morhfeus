@@ -12,7 +12,7 @@ import {HttpError} from './security.js';
 
 export const secretInputSchema=z.object({
   provider:z.enum([
-    'github','cloudflare','gemini','openai','firecrawl','firebase','supabase','vercel','telegram','slack','discord','notion','dataverse','microsoft','powerplatform','custom','groq','deepseek','anthropic','mistral','openrouter','revolut','paypal'
+    'github','cloudflare','gemini','google_cloud','onedrive','local_bridge','openai','firecrawl','firebase','supabase','vercel','telegram','slack','discord','notion','dataverse','microsoft','powerplatform','custom','groq','deepseek','anthropic','mistral','openrouter','revolut','paypal'
   ]),
   name:z.string().trim().min(2).max(80),
   secret:z.string().trim().min(8).max(4096)
@@ -257,11 +257,118 @@ async function verifyDataverse(secret){
     business_unit_id:whoamiData.BusinessUnitId
   };
 }
+export async function verifyMicrosoftOneDrive(secret,{fetcher=fetch}={}){
+  let token=secret;
+  try{
+    const parsed=JSON.parse(secret);
+    if(parsed.token||parsed.access_token)token=parsed.token||parsed.access_token;
+    if(parsed.tenantId&&parsed.clientId&&parsed.clientSecret){
+      const tokenResp=await fetcher(`https://login.microsoftonline.com/${parsed.tenantId}/oauth2/v2.0/token`,{
+        method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:new URLSearchParams({
+          grant_type:'client_credentials',
+          client_id:parsed.clientId,
+          client_secret:parsed.clientSecret,
+          scope:'https://graph.microsoft.com/.default'
+        }).toString(),
+        signal:AbortSignal.timeout(15000)
+      });
+      const tokenData=await tokenResp.json().catch(()=>({}));
+      if(!tokenResp.ok||!tokenData.access_token){
+        throw new Error(`Microsoft Entra token zlyhal (HTTP ${tokenResp.status}): ${tokenData.error_description||tokenData.error||'neplatné poverenia'}`);
+      }
+      token=tokenData.access_token;
+    }
+  }catch(e){
+    if(e.message&&e.message.includes('Microsoft Entra token zlyhal'))throw e;
+  }
+  const driveResp=await fetcher('https://graph.microsoft.com/v1.0/me/drive',{
+    headers:{Authorization:`Bearer ${token}`,Accept:'application/json'},
+    signal:AbortSignal.timeout(15000)
+  });
+  const driveData=await driveResp.json().catch(()=>({}));
+  if(!driveResp.ok){
+    const meResp=await fetcher('https://graph.microsoft.com/v1.0/me',{
+      headers:{Authorization:`Bearer ${token}`,Accept:'application/json'},
+      signal:AbortSignal.timeout(15000)
+    });
+    if(!meResp.ok){
+      throw new Error(`OneDrive Graph API odmietlo prístup (HTTP ${driveResp.status}): ${String(driveData.error?.message||'neplatný token alebo chýbajúce oprávnenie Files.Read')}`);
+    }
+    const meData=await meResp.json().catch(()=>({}));
+    return {
+      connected:true,
+      provider:'onedrive',
+      account:meData.userPrincipalName||meData.displayName||'microsoft_user',
+      drive_type:'graph_user',
+      status:'verified',
+      permission_verified:'user:read'
+    };
+  }
+  return {
+    connected:true,
+    provider:'onedrive',
+    drive_id:driveData.id,
+    drive_type:driveData.driveType||'personal',
+    owner:driveData.owner?.user?.displayName||driveData.owner?.user?.email||'authenticated_user',
+    quota_total:driveData.quota?.total,
+    quota_remaining:driveData.quota?.remaining,
+    status:'verified',
+    permission_verified:'files:read'
+  };
+}
+export async function verifyGoogleCloud(secret,{fetcher=fetch}={}){
+  let token=secret;
+  let projectId='tangential-osprey-dl7cp';
+  try{
+    const parsed=JSON.parse(secret);
+    if(parsed.project_id||parsed.projectId)projectId=parsed.project_id||parsed.projectId;
+    token=parsed.access_token||parsed.token||parsed.apiKey||parsed.key||secret;
+  }catch{}
+  if(typeof token==='string'&&token.startsWith('ya29.')){
+    const resp=await fetcher(`https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${encodeURIComponent(token)}`,{
+      signal:AbortSignal.timeout(12000)
+    });
+    const info=await resp.json().catch(()=>({}));
+    if(!resp.ok){
+      throw new Error(`Google Cloud OAuth token je neplatný alebo expiroval (HTTP ${resp.status}).`);
+    }
+    return {
+      connected:true,
+      provider:'google_cloud',
+      project_id:projectId,
+      email:info.email,
+      scope:info.scope,
+      status:'verified',
+      permission_verified:'oauth:tokeninfo'
+    };
+  }
+  if(typeof token==='string'&&(token.startsWith('AIza')||token.length>20)){
+    const resp=await fetcher(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(token)}`,{
+      signal:AbortSignal.timeout(15000)
+    });
+    if(!resp.ok){
+      throw new Error(`Google Cloud / Gemini API kľúč nebol overený (HTTP ${resp.status}).`);
+    }
+    const data=await resp.json().catch(()=>({}));
+    return {
+      connected:true,
+      provider:'google_cloud',
+      project_id:projectId,
+      models_count:Array.isArray(data.models)?data.models.length:0,
+      status:'verified',
+      permission_verified:'models:list'
+    };
+  }
+  throw new Error('Google Cloud poverenie musí byť platný OAuth access token (ya29...) alebo Google API kľúč (AIza...).');
+}
 export async function getSecretMaterial(env,{ownerId,id,provider}){const row=await env.DB.prepare("SELECT * FROM ops_secret_vault WHERE id=? AND owner_id=? AND provider=? AND status!='revoked'").bind(id,ownerId,provider).first();if(!row)throw new HttpError(404,'Tajomstvo neexistuje.');return {...row,secret:await decrypt(env,row)};}
 export async function resolveProviderSecret(env,provider){
   const envMap={
     cloudflare:[env?.CF_API_TOKEN,env?.CLOUDFLARE_API_TOKEN,env?.TRINITY_CF_TOKEN],
-    github:[env?.TRINITY_GITHUB_TOKEN,env?.GITHUB_TOKEN,env?.GITHUBE_API_KEY],
+    github:[env?.TRINITY_GITHUB_TOKEN,env?.GITHUB_TOKEN,env?.GITHUBE_API_KEY,env?.trinitygithube_key],
+    onedrive:[env?.ONEDRIVE_TOKEN,env?.MICROSOFT_GRAPH_TOKEN,env?.MS_GRAPH_TOKEN,env?.MICROSOFT_TOKEN],
+    google_cloud:[env?.GOOGLE_CLOUD_TOKEN,env?.GCP_ACCESS_TOKEN,env?.GOOGLE_PROJECT_TOKEN,env?.GEMINI_API_KEY],
     firecrawl:[env?.FIRECRAWL_API_KEY,env?.TRINITY_FIRECRAWL_KEY,env?.firecrawl],
     firebase:[env?.FIREBASE_API_KEY,env?.FIREBASE_SERVICE_ACCOUNT,env?.TRINITY_FIREBASE_KEY],
     supabase:[env?.SUPABASE_KEY,env?.SUPABASE_SERVICE_ROLE_KEY],
@@ -305,6 +412,12 @@ export async function resolveProviderSecret(env,provider){
       if(!row&&provider==='cloudflare'){
         row=await env.DB.prepare("SELECT * FROM ops_secret_vault WHERE provider='custom' AND status!='revoked' AND (lower(name) LIKE '%cloudflare%' OR lower(name) LIKE '%claudflare%' OR lower(name)='cf' OR lower(name)='wrangler') ORDER BY updated_at DESC LIMIT 1").first();
       }
+      if(!row&&provider==='onedrive'){
+        row=await env.DB.prepare("SELECT * FROM ops_secret_vault WHERE (provider='microsoft' OR (provider='custom' AND (lower(name) LIKE '%onedrive%' OR lower(name) LIKE '%graph%'))) AND status!='revoked' ORDER BY updated_at DESC LIMIT 1").first();
+      }
+      if(!row&&provider==='google_cloud'){
+        row=await env.DB.prepare("SELECT * FROM ops_secret_vault WHERE (provider='gemini' OR (provider='custom' AND (lower(name) LIKE '%gcp%' OR lower(name) LIKE '%google%'))) AND status!='revoked' ORDER BY updated_at DESC LIMIT 1").first();
+      }
       if(!row&&provider==='ollama'){
         row=await env.DB.prepare("SELECT * FROM ops_secret_vault WHERE provider='custom' AND status!='revoked' AND lower(name) LIKE '%ollama%' ORDER BY updated_at DESC LIMIT 1").first();
       }
@@ -340,6 +453,8 @@ export async function verifySecret(env,ownerId,id){
     const secret=await decrypt(env,row);
     const verification=row.provider==='github'?await verifyGitHub(secret)
       :row.provider==='cloudflare'?await verifyCloudflare(secret,env.CF_ACCOUNT_ID||'b60342e5e52f5646fbd4e913bb409334')
+      :row.provider==='onedrive'?await verifyMicrosoftOneDrive(secret)
+      :row.provider==='google_cloud'?await verifyGoogleCloud(secret)
       :row.provider==='openai'?await verifyOpenAI(secret)
       :row.provider==='firecrawl'?await verifyFirecrawl(secret)
       :row.provider==='firebase'?await verifyFirebase(secret)

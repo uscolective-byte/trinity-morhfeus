@@ -45,7 +45,8 @@
     {
       "type": "Data",
       "globs": [
-        "**/*.webp"
+        "**/*.webp",
+        "**tetrakis-logo.png"
       ],
       "fallthrough": true
     },
@@ -97,6 +98,9 @@
   },
   "ai": {
     "binding": "AI"
+  },
+  "browser": {
+    "binding": "BROWSER"
   },
   "d1_databases": [
     {
@@ -212,6 +216,10 @@
     }
   ],
   "services": [
+    {
+      "binding": "TRINITY_BROWSER",
+      "service": "trinity-browser"
+    },
     {
       "binding": "KNOWLEDGE_SERVICE",
       "service": "trinity-knowledge"
@@ -532,6 +540,10 @@
       ],
       "services": [
         {
+          "binding": "TRINITY_BROWSER",
+          "service": "trinity-browser"
+        },
+        {
           "binding": "KNOWLEDGE_SERVICE",
           "service": "trinity-knowledge"
         },
@@ -849,6 +861,10 @@
         }
       ],
       "services": [
+        {
+          "binding": "TRINITY_BROWSER",
+          "service": "trinity-browser"
+        },
         {
           "binding": "KNOWLEDGE_SERVICE",
           "service": "trinity-knowledge"

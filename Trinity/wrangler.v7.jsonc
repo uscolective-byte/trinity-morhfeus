@@ -1,0 +1,82 @@
+{
+  "name": "trinity",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-10-11",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "single-page-application"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "CHAT_AGENT",
+        "class_name": "ChatAgent"
+      }
+    ]
+  },
+  "services": [
+    { "binding": "TRINITY_BROWSER", "service": "trinity-browser" },
+    { "binding": "CHAT_INFERENCE_SERVICE", "service": "trinity-chat-inference" },
+    { "binding": "AI_INFERENCE_SERVICE", "service": "trinity-chat-inference" },
+    { "binding": "DISPATCHER", "service": "trinity-dispatcher" },
+    { "binding": "CORE", "service": "trinity-core" },
+    { "binding": "CONNECTORS", "service": "trinity-connectors" },
+    { "binding": "PC_BRIDGE_SERVICE", "service": "trinity-pc-bridge-v2" },
+    { "binding": "PC_BRIDGE_V2", "service": "trinity-pc-bridge-v2" },
+    { "binding": "AURA_MEMORY", "service": "trinity-memory" },
+    { "binding": "MEMORY", "service": "trinity-memory" },
+    { "binding": "AUDIT_SERVICE", "service": "trinity-audit" },
+    { "binding": "GUARDIAN", "service": "trinity-guardian" },
+    { "binding": "JERICHO", "service": "trinity-jericho" },
+    { "binding": "COPILOT_BRIDGE", "service": "trinity-copilot-bridge" }
+  ],
+  "d1_databases": [
+    { "binding": "DB", "database_name": "trinity-v03", "database_id": "ca8ea24e-f7db-431e-b8bf-97f713ae4533" },
+    { "binding": "TRINITY_D1", "database_name": "trinity-v03", "database_id": "ca8ea24e-f7db-431e-b8bf-97f713ae4533" }
+  ],
+  "kv_namespaces": [
+    { "binding": "TRINITY_KV", "id": "a3b3e5f7c9d14e6b8a0f2c4d6e8f0a2b" },
+    { "binding": "SESSIONS", "id": "b4c4f6d8e0f25f7c9b1a3d5e7f9a1b3c" },
+    { "binding": "CACHE", "id": "c5d5e7f9a1f36a8d0c2b4e6f8a0b2c4d" }
+  ],
+  "r2_buckets": [
+    { "binding": "R2", "bucket_name": "trinity-storage" }
+  ],
+  "vectorize": [
+    { "binding": "AURA_MEMORY_VECTOR", "index_id": "d6e6f8a0b2f47b9e1d3c5f7a9b1c3d5e" }
+  ],
+  "ai": {
+    "binding": "AI"
+  },
+  "browser": {
+    "binding": "BROWSER"
+  },
+  "queues": {
+    "producers": [
+      { "binding": "TASK_QUEUE", "queue": "trinity-tasks" },
+      { "binding": "EVENT_QUEUE", "queue": "trinity-events" }
+    ]
+  },
+  "vars": {
+    "AI_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+    "AI_FAST_MODEL": "@cf/meta/llama-3.1-8b-instruct-fast",
+    "AI_FALLBACK_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+    "AI_FAST_FALLBACK_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+    "GOOGLE_REDIRECT_URI": "https://auru.space/auth/google/callback"
+  },
+  "triggers": {
+    "crons": ["*/15 * * * *"]
+  },
+  "env": {
+    "staging": {
+      "name": "trinity-staging",
+      "vars": {
+        "AI_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+        "GOOGLE_REDIRECT_URI": "https://auru.dev/auth/google/callback"
+      }
+    }
+  }
+}

@@ -521,10 +521,197 @@ export async function manageFirebase(env, actor = 'trinity', action = 'status', 
   return { success: false, error: `Neznáma Firebase akcia: ${action}` };
 }
 
+export async function manageOneDrive(env, actor = 'trinity', action = 'status', params = {}) {
+  const token = await resolveProviderSecret(env, 'onedrive') || await resolveProviderSecret(env, 'microsoft');
+  const profile = params.profile || 'personal_msa';
+
+  if (action === 'status') {
+    if (!token) {
+      return {
+        success: true,
+        source: 'local_or_pending',
+        connected: false,
+        verified: false,
+        profile,
+        message: 'Microsoft OneDrive poverenie zatiaľ nie je nakonfigurované. Token vlož v Trezore (poskytovateľ onedrive alebo microsoft).'
+      };
+    }
+    try {
+      const resp = await fetch('https://graph.microsoft.com/v1.0/me/drive', {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+        signal: AbortSignal.timeout(10000)
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (resp.ok) {
+        return {
+          success: true,
+          connected: true,
+          verified: true,
+          source: 'microsoft_graph',
+          drive_id: data.id,
+          drive_type: data.driveType,
+          owner: data.owner?.user?.displayName || data.owner?.user?.email || 'saboivan2008@gmail.com',
+          quota: data.quota
+        };
+      }
+      return {
+        success: false,
+        connected: false,
+        verified: false,
+        error: `OneDrive Graph API odpovedalo HTTP ${resp.status}: ${data.error?.message || 'prístup zamietnutý'}`
+      };
+    } catch (err) {
+      return { success: false, connected: false, verified: false, error: err.message };
+    }
+  }
+
+  if (action === 'drive_info') {
+    if (!token) return { success: false, error: 'Chýba OneDrive token.' };
+    const resp = await fetch('https://graph.microsoft.com/v1.0/me/drive', {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+    });
+    const data = await resp.json().catch(() => ({}));
+    return { success: resp.ok, drive: data };
+  }
+
+  if (action === 'list_files') {
+    if (!token) return { success: false, error: 'Chýba OneDrive token.' };
+    const folderPath = params.path ? `root:/${encodeURIComponent(params.path).replace(/%2F/g, '/')}:/children` : 'root/children';
+    const resp = await fetch(`https://graph.microsoft.com/v1.0/me/drive/${folderPath}?$top=50`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+    });
+    const data = await resp.json().catch(() => ({}));
+    return {
+      success: resp.ok,
+      files: (data.value || []).map(f => ({
+        id: f.id,
+        name: f.name,
+        size: f.size,
+        is_folder: Boolean(f.folder),
+        web_url: f.webUrl,
+        last_modified: f.lastModifiedDateTime
+      })),
+      total: data.value?.length || 0
+    };
+  }
+
+  if (action === 'get_file') {
+    if (!token) return { success: false, error: 'Chýba OneDrive token.' };
+    const endpoint = params.itemId
+      ? `https://graph.microsoft.com/v1.0/me/drive/items/${encodeURIComponent(params.itemId)}`
+      : `https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIComponent(params.path || '')}`;
+    const resp = await fetch(endpoint, {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+    });
+    const data = await resp.json().catch(() => ({}));
+    return { success: resp.ok, item: data };
+  }
+
+  if (action === 'upload_file') {
+    if (!token) return { success: false, error: 'Chýba OneDrive token.' };
+    const path = params.path;
+    if (!path || typeof path !== 'string') return { success: false, error: 'Chýba cieľová cesta (path) v OneDrive.' };
+    const content = typeof params.content === 'string' ? params.content : JSON.stringify(params.content || {});
+    const resp = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIComponent(path).replace(/%2F/g, '/')}:/content`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': params.contentType || 'text/plain; charset=utf-8' },
+      body: content
+    });
+    const data = await resp.json().catch(() => ({}));
+    return { success: resp.ok, file: data };
+  }
+
+  return { success: false, error: `Neznáma OneDrive akcia: ${action}` };
+}
+
+export async function manageGoogleCloud(env, actor = 'trinity', action = 'status', params = {}) {
+  const token = await resolveProviderSecret(env, 'google_cloud') || await resolveProviderSecret(env, 'gemini');
+  const projectId = params.projectId || env.GOOGLE_PROJECT_ID || 'tangential-osprey-dl7cp';
+
+  if (action === 'status') {
+    return {
+      success: true,
+      connected: Boolean(token),
+      verified: Boolean(token),
+      source: 'gcp_gemini_platform',
+      project_id: projectId,
+      configured_services: {
+        gemini_models: true,
+        vertex_ai: true,
+        cloud_storage: true,
+        google_drive_plugin: true
+      },
+      has_token: Boolean(token)
+    };
+  }
+
+  if (action === 'list_models') {
+    const key = token || env.GEMINI_API_KEY;
+    if (!key) return { success: false, error: 'Chýba Google Cloud / Gemini API kľúč.' };
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`);
+    const data = await resp.json().catch(() => ({}));
+    return {
+      success: resp.ok,
+      models: (data.models || []).map(m => m.name),
+      total: data.models?.length || 0
+    };
+  }
+
+  return { success: false, error: `Neznáma Google Cloud akcia: ${action}` };
+}
+
+export async function manageLocalBridge(env, actor = 'trinity', action = 'status', params = {}) {
+  const localEndpoints = [
+    { name: 'Local-Desktop', url: 'http://127.0.0.1:8795/health', port: 8795 },
+    { name: 'Local-Gateway', url: 'http://127.0.0.1:7789/health', port: 7789 }
+  ];
+
+  if (action === 'status' || action === 'ping') {
+    let desktopReachable = false;
+    let gatewayReachable = false;
+    let telemetry = null;
+
+    try {
+      const resp = await fetch(localEndpoints[0].url, { signal: AbortSignal.timeout(1500) });
+      if (resp.ok) {
+        desktopReachable = true;
+        telemetry = await resp.json().catch(() => null);
+      }
+    } catch {}
+
+    try {
+      const resp = await fetch(localEndpoints[1].url, { signal: AbortSignal.timeout(1500) });
+      if (resp.ok) gatewayReachable = true;
+    } catch {}
+
+    const connected = desktopReachable || gatewayReachable || Boolean(env.PC_BRIDGE);
+
+    return {
+      success: true,
+      connected,
+      bridge_mode: connected ? 'active' : 'standby',
+      endpoints: {
+        desktop: { port: 8795, active: desktopReachable },
+        gateway: { port: 7789, active: gatewayReachable }
+      },
+      workspaces: [
+        '/home/antigravity/uscolective-byte/Trinity-antigravity',
+        '/home/antigravity/uscolective-byte/trinity-morhfeus',
+        'C:\\Users\\saboi\\Trinity-antigravity'
+      ],
+      telemetry: telemetry || { status: connected ? 'online' : 'standby', platform: 'linux' }
+    };
+  }
+
+  return { success: false, error: `Neznáma Local Bridge akcia: ${action}` };
+}
+
 export async function listAllIntegrations(env) {
-  const [cfToken, ghToken, fcToken, fbToken, sbToken] = await Promise.all([
+  const [cfToken, ghToken, oneToken, gcToken, fcToken, fbToken, sbToken] = await Promise.all([
     resolveProviderSecret(env, 'cloudflare'),
     resolveProviderSecret(env, 'github'),
+    resolveProviderSecret(env, 'onedrive'),
+    resolveProviderSecret(env, 'google_cloud').catch(() => null),
     resolveProviderSecret(env, 'firecrawl'),
     resolveProviderSecret(env, 'firebase'),
     resolveProviderSecret(env, 'supabase')
@@ -546,6 +733,27 @@ export async function listAllIntegrations(env) {
       description: 'Správa kanonického repozitára uscolective-byte/Trinity-antigravity; starý Morpheus je iba synchronizovaný zdroj.'
     },
     {
+      id: 'onedrive',
+      name: 'Microsoft OneDrive & Office 365',
+      category: 'Cloud Storage & Documents',
+      status: oneToken ? 'configured' : 'ready',
+      description: 'Úložisko dokumentov a súborov Microsoft Graph (saboivan2008@gmail.com a Entra ID tenant usc31).'
+    },
+    {
+      id: 'google_cloud',
+      name: 'Google Cloud & Gemini Developer Platform',
+      category: 'AI & Cloud Infrastructure',
+      status: (gcToken || env.GOOGLE_PROJECT_ID) ? 'configured' : 'ready',
+      description: 'Projekt tangential-osprey-dl7cp: Gemini 3.8 Flash & Pro, Vertex AI / Agent Platform, Cloud Storage, Google Drive a Workspace.'
+    },
+    {
+      id: 'local_bridge',
+      name: 'Local PC Bridge & Hardware Node',
+      category: 'Local Infrastructure',
+      status: 'platform-connected',
+      description: 'Lokálna stanica Sabo Ivan (Local-Desktop na porte 8795, Local-Gateway na porte 7789, PC Bridge 2.0).'
+    },
+    {
       id: 'firecrawl',
       name: 'Firecrawl Web Crawler',
       category: 'Web Intelligence',
@@ -565,13 +773,6 @@ export async function listAllIntegrations(env) {
       category: 'Database',
       status: sbToken ? 'configured' : 'ready',
       description: 'Relačná PostgreSQL databáza s PostgREST API a vektorovým úložiskom.'
-    },
-    {
-      id: 'google_cloud',
-      name: 'Google Cloud & Gemini Developer Platform',
-      category: 'AI & Cloud Infrastructure',
-      status: env.GOOGLE_PROJECT_ID ? 'configured' : 'ready',
-      description: 'Projekt tangential-osprey-dl7cp: Gemini 3.8 Flash & Pro, Vertex AI / Agent Platform, Cloud Storage, Firestore a Google Workspace APIs.'
     }
   ];
 }

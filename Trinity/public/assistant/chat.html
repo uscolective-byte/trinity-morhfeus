@@ -1030,9 +1030,14 @@ Pripravené na spustenie príkazu na hostiteľskom PC...</div>
 
     <section id="crypto-view" class="view crypto-view" hidden>
       <div class="section-intro">
-        <span class="eyebrow">TRINITY DECENTRALIZED ASSETS · BASE MAINNET L2</span>
-        <h1>💎 Tetrakis ($TTK) Sovereign Crypto Platform</h1>
-        <p>Oficiálna kryptomenová platforma Trinity postavená na sieti Base Mainnet (Coinbase L2). Fixná ponuka 1 000 000 000 TTK, 3-úrovňový staking úžitkovej hodnoty a integrácia do autonómneho ekosystému agentov.</p>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <img src="/tetrakis-logo.png" alt="Tetrakis TTK — Trinity Ecosystem" width="112" height="112" style="width:112px;height:112px;object-fit:cover;border-radius:16px">
+          <div>
+            <span class="eyebrow">TETRAKIS · PLATOBNÁ VRSTVA TRINITY</span>
+            <h1>💎 Tetrakis ($TTK) — Fuel for the Autonomous Edge</h1>
+            <p>Príbeh Trinity spája štyri motívy: suverenitu používateľa, výpočet na okraji siete, kryptografickú overiteľnosť a priame platby medzi peňaženkami. Je to vízia projektu, nie tvrdenie o garantovanej cene, výnose alebo úplnej decentralizácii.</p>
+          </div>
+        </div>
       </div>
 
       <div class="metric-grid domain-metrics tabular-metrics">
@@ -1042,14 +1047,14 @@ Pripravené na spustenie príkazu na hostiteľskom PC...</div>
           <small>Fixná ponuka (100% mincovníctva)</small>
         </article>
         <article class="metric teal">
-          <span>SIEŤ & ŠTANDARD</span>
-          <strong id="ttk-stat-network">Base Mainnet (8453)</strong>
-          <small>ERC-20 · OpenZeppelin v5.1.0</small>
+          <span>NASADENIE</span>
+          <strong id="ttk-stat-deployment">Neoverené</strong>
+          <small id="ttk-stat-network">Base · sieť sa overí pri konfigurácii</small>
         </article>
         <article class="metric gold">
-          <span>DEX LIKVIDITA</span>
-          <strong id="ttk-stat-dex">Aerodrome & Uniswap v3</strong>
-          <small>Pár TTK / WETH na Base</small>
+          <span>TRHOVÁ CENA</span>
+          <strong id="ttk-stat-price">Neznáma</strong>
+          <small>Nie je zistená overená živá cena</small>
         </article>
         <article class="metric purple">
           <span>JERICHO NODE</span>
@@ -1061,49 +1066,35 @@ Pripravené na spustenie príkazu na hostiteľskom PC...</div>
       <div class="dashboard-grid admin-grid" style="grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; margin-top: 16px;">
         <article class="panel" style="padding: 18px;">
           <div class="panel-head">
-            <div><span class="eyebrow" style="color:#0ea5e9">OFICIÁLNE METADÁTA & ON-CHAIN KONTRAKT</span><h3>📜 Smart Kontrakt & Pokladnica</h3></div>
-            <a href="https://basescan.org/address/0x4d308452a96D7dAbFd2f33d92677A3a2724f387e" target="_blank" rel="noopener" class="detail-chip" style="text-decoration:none;">BaseScan ↗</a>
+            <div><span class="eyebrow" style="color:#0ea5e9">KONTRAKT A ZÁSOBA</span><h3>📜 TTK na Base</h3></div>
+            <a id="ttk-contract-explorer" href="#" target="_blank" rel="noopener" class="detail-chip" style="text-decoration:none;display:none">BaseScan ↗</a>
           </div>
           <div style="font-size:13px; color:#cbd5e1; line-height:1.7; margin-top:12px;">
-            <p><b>Token:</b> Tetrakis ($TTK) · 18 desatinných miest</p>
-            <p><b>Tvoja Osobná Peňaženka (1M TTK):</b> <code style="word-break:break-all; background:#0f172a; color:#10b981; padding:3px 6px; border-radius:4px; font-size:11px;">0x7e17f9072cfCbc7fE45973De0F11eC8db99281e4</code></p>
-            
-            <p><b>Oficiálna Pokladnica:</b> <code style="word-break:break-all; background:#0f172a; padding:3px 6px; border-radius:4px; font-size:11px;">0x4d308452a96D7dAbFd2f33d92677A3a2724f387e</code></p>
-            <p><b>Bytecode Hash (Keccak256):</b> <code style="word-break:break-all; background:#0f172a; padding:3px 6px; border-radius:4px; font-size:11px;">0x5db6aa4e0b155cc4eb54b45ce1ecde5ec0feb55c12e4fc75153b1615c5c9652c</code></p>
-            <p><b>NPM SDK Balík:</b> <a href="https://www.npmjs.com/package/tetrakis-token" target="_blank" rel="noopener" style="color:#38bdf8; font-weight:bold;">tetrakis-token@1.0.0</a> (Vlastník: <code>basterix3</code>)</p>
-          </div>
-          <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
-            <a href="https://www.npmjs.com/package/tetrakis-token" target="_blank" rel="noopener" class="primary" style="display:inline-block; padding:8px 14px; text-decoration:none; border-radius:8px; font-weight:bold; font-size:12px;">📦 NPM Balík</a>
-            <a href="https://jericho123.auru.space" target="_blank" rel="noopener" class="secondary" style="display:inline-block; padding:8px 14px; text-decoration:none; border-radius:8px; font-size:12px;">⚡ Jericho Crypto Node</a>
+            <p><b>Token:</b> Tetrakis ($TTK) · ERC-20 · 18 desatinných miest</p>
+            <p><b>Zásoba v zdrojovom kontrakte:</b> 1 000 000 000 TTK, raz vytvorených pri deployi; ďalšie mintovanie nie je možné.</p>
+            <p><b>Rozdelenie podľa zdroja:</b> 1 000 000 TTK founder adresa, 999 000 000 TTK treasury adresa. Treasury podiel je koncentrovaný; rozdelenie a kontrolu adresy treba vyriešiť pred nasadením.</p>
+            <p><b>Adresa kontraktu:</b> <code id="ttk-contract-address" style="word-break:break-all;background:#0f172a;padding:3px 6px;border-radius:4px;font-size:11px">Zatiaľ nie je overená</code></p>
+            <p><b>Trhová cena:</b> nezistená. Samotná zásoba ani kód cenu negarantujú.</p>
           </div>
         </article>
 
         <article class="panel" style="padding: 18px;">
           <div class="panel-head">
-            <div><span class="eyebrow" style="color:#f59e0b">TRINITY UTILITY STAKING</span><h3>💎 3 Úrovne Výhod pre Držiteľov</h3></div>
-            <span class="detail-chip" style="background:rgba(245,158,11,0.15); color:#fbbf24;">Sovereign Tiers</span>
+            <div><span class="eyebrow" style="color:#f59e0b">LORE · ŠTYRI VRCHOLY</span><h3>🔺 Príbeh Tetrakis</h3></div>
+            <span class="detail-chip" style="background:rgba(245,158,11,0.15); color:#fbbf24;">Vízia projektu</span>
           </div>
           <div style="display:flex; flex-direction:column; gap:12px; margin-top:12px;">
             <div style="padding:12px; background:#0f172a; border:1px solid #1e293b; border-radius:8px;">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <b style="color:#38bdf8;">Tier 1 · Sovereign Explorer</b>
-                <span class="detail-chip">1 000 TTK</span>
-              </div>
-              <p style="margin:6px 0 0; font-size:12px; color:#94a3b8;">Neobmedzený chat, sémantická pamäť a autonómne vyhľadávanie vedomostí.</p>
+              <b style="color:#38bdf8;">Suverenita používateľa</b>
+              <p style="margin:6px 0 0; font-size:12px; color:#94a3b8;">Používateľ podpisuje každú platbu vlastnou peňaženkou; Trinity nedostáva jeho privátny kľúč.</p>
             </div>
             <div style="padding:12px; background:#0f172a; border:1px solid #1e293b; border-radius:8px;">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <b style="color:#a855f7;">Tier 2 · Sovereign Operator</b>
-                <span class="detail-chip">10 000 TTK</span>
-              </div>
-              <p style="margin:6px 0 0; font-size:12px; color:#94a3b8;">Plná exekúcia PC Bridge, Azure AI Foundry (GPT-4o) a dynamická syntéza skillov.</p>
+              <b style="color:#a855f7;">Výpočet na hrane siete</b>
+              <p style="margin:6px 0 0; font-size:12px; color:#94a3b8;">Trinity používa Cloudflare Workers; tento príbehový motív neznamená, že celý systém je decentralizovaný.</p>
             </div>
             <div style="padding:12px; background:#0f172a; border:1px solid #1e293b; border-radius:8px;">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <b style="color:#eab308;">Tier 3 · Sovereign Mastermind</b>
-                <span class="detail-chip">50 000 TTK</span>
-              </div>
-              <p style="margin:6px 0 0; font-size:12px; color:#94a3b8;">Podiel na výnosoch platformy Trinity, prioritná fronta a autonómny komoditný desk.</p>
+              <b style="color:#eab308;">Kryptografia a platby</b>
+              <p style="margin:6px 0 0; font-size:12px; color:#94a3b8;">TTK má byť použiteľný na priame platby v ekosystéme; ceny služieb a automatické pripísanie služby sa ešte musia definovať.</p>
             </div>
           </div>
         </article>
@@ -1111,41 +1102,29 @@ Pripravené na spustenie príkazu na hostiteľskom PC...</div>
 
       <div class="panel" style="margin-top:16px; padding:18px;">
         <div class="panel-head">
-          <div><span class="eyebrow" style="color:#10b981">WEB3 PEŇAŽENKA & INTERAKCIA</span><h3>🦊 Pripojenie Peňaženky (Base Mainnet)</h3></div>
+          <div><span class="eyebrow" style="color:#10b981">NEVÄZOBNÁ WEB3 PEŇAŽENKA</span><h3>🦊 Pripoj vlastnú peňaženku</h3></div>
           <button id="web3-connect-btn" class="primary" type="button" style="display:inline-flex; align-items:center; gap:8px;">🦊 Pripojiť Web3 Peňaženku</button>
         </div>
-        <p style="color:#94a3b8; font-size:12px; margin-top:8px;">Pripoj svoju peňaženku MetaMask, Coinbase Wallet alebo Rainbow na sieti Base Mainnet a zisti svoj aktuálny zostatok a odomknuté výhody.</p>
+        <p style="color:#94a3b8; font-size:12px; margin-top:8px;">MetaMask alebo inú EIP-1193 peňaženku pripájaš ty. Trinity nikdy nežiada seed ani privátny kľúč. Pripojenie samo osebe neposiela transakciu.</p>
         <div id="web3-wallet-status" style="margin-top:12px; padding:12px; background:#0f172a; border-radius:8px; font-size:13px; color:#cbd5e1; display:none;">
           <p><b>Adresa peňaženky:</b> <code id="web3-user-address">-</code></p>
-          <p><b>Sieť:</b> <span id="web3-user-chain">Base Mainnet (8453)</span></p>
-          <p><b>Zostatok $TTK:</b> <b id="web3-user-ttk" style="color:#38bdf8;">0 TTK</b></p>
-          <p><b>Aktívny Tier:</b> <span id="web3-user-tier" class="detail-chip">Neaktívny</span></p>
+          <p><b>Aktuálna sieť peňaženky:</b> <span id="web3-user-chain">Neznáma</span></p>
+          <p><b>Zostatok TTK:</b> <b id="web3-user-ttk" style="color:#38bdf8;">Nedostupný</b></p>
+          <p id="ttk-wallet-message" style="color:#94a3b8">Zostatok sa zobrazí po overení kontraktu na správnej sieti.</p>
         </div>
       </div>
     
       <div class="panel" style="margin-top:16px; padding:18px;">
         <div class="panel-head">
-          <div><span class="eyebrow" style="color:#10b981">HODNOTA & VÝNOSY PRE TRINITY EKOSYSTÉM</span><h3>📈 Valuácia & Zisk pre Basterixa (1 000 000 TTK)</h3></div>
-          <span class="detail-chip" style="background:rgba(16,185,129,0.15); color:#34d399;">30% Buyback Protokolu</span>
+          <div><span class="eyebrow" style="color:#10b981">PLATBA ZA SLUŽBY TRINITY</span><h3>💸 Odoslať TTK</h3></div>
+          <span id="ttk-payment-badge" class="detail-chip">Platby vypnuté</span>
         </div>
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:14px; margin-top:14px;">
-          <div style="padding:14px; background:#0f172a; border-radius:8px; border:1px solid #1e293b;">
-            <b style="color:#38bdf8;">🔄 Autonómny Buyback & Burn</b>
-            <p style="margin:6px 0 0; font-size:12px; color:#94a3b8; line-height:1.6;">
-              <b>30% zo všetkých tržieb Trinity</b> (AI Studio weby, doménové escrow, API) je automaticky vyčlenených na trvalý nákup $TTK z DEX bazénov na Base.
-              <b>50% z vyzbieraných tokenov</b> za služby je navždy spálených (deflácia).
-            </p>
-          </div>
-          <div style="padding:14px; background:#0f172a; border-radius:8px; border:1px solid #1e293b;">
-            <b style="color:#34d399;">💰 Milníky Valuácie tvojho 1 000 000 TTK:</b>
-            <div style="margin-top:6px; font-size:12px; line-height:1.7; color:#cbd5e1;">
-              <div>• Pri $0.001 (FDV $1M): <b style="color:#38bdf8;">$1 000 USD</b></div>
-              <div>• Pri $0.01 (FDV $10M): <b style="color:#34d399;">$10 000 USD</b></div>
-              <div>• Pri $0.10 (FDV $100M): <b style="color:#fbbf24;">$100 000 USD</b></div>
-              <div>• Pri $1.00 (FDV $1B): <b style="color:#f43f5e; font-weight:bold;">$1 000 000 USD</b></div>
-            </div>
-          </div>
-        </div>
+        <form id="ttk-payment-form" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px;align-items:end">
+          <label><span>Suma TTK</span><input id="ttk-payment-amount" type="text" inputmode="decimal" autocomplete="off" placeholder="napr. 25" maxlength="30" required></label>
+          <button id="ttk-pay-btn" class="primary" type="submit" disabled>🔒 Platby nie sú pripravené</button>
+        </form>
+        <p id="ttk-payment-status" role="status" aria-live="polite" style="color:#94a3b8;font-size:12px;margin-top:12px">Platba sa povolí až po overení nasadeného TTK kontraktu a príjemcu. Suma sa zadáva priamo v TTK; Trinity netvrdí EUR/USD kurz.</p>
+        <p style="color:#94a3b8;font-size:12px">Platba iba odošle TTK do nakonfigurovanej peňaženky. Kým nebude prepojená s faktúrou a službou, sama neodomkne Trinity kredity. Transakciu musíš potvrdiť vo svojej peňaženke.</p>
       </div>
 
     </section>
@@ -1153,20 +1132,20 @@ Pripravené na spustenie príkazu na hostiteľskom PC...</div>
     <section id="wallet-view" class="view wallet-view" hidden>
       <div class="section-intro">
         <span class="eyebrow">FINANČNÉ CENTRUM TRINITY · PLATOBNÉ TERMINÁLY & PEŇAŽENKA</span>
-        <h1>Peňaženka, POS Terminály & Výbery Peňazí</h1>
-        <p>Skutočná správa zostatkov, platobné terminály na prijímanie platieb (SEPA Instant EPC QR, Revolut Pay, PayPal, Web3 krypto) a okamžité výbery peňazí na váš osobný bankový účet.</p>
+        <h1>Peňaženka, platobné požiadavky a evidencia</h1>
+        <p>Trinity eviduje sandbox zostatok a vytvára platobné požiadavky. Externé bankové alebo blockchainové prevody musíš podpísať a vykonať v príslušnej peňaženke; samotný odkaz ani QR nie je potvrdená platba.</p>
       </div>
 
       <div class="metric-grid domain-metrics tabular-metrics">
         <article class="metric blue">
-          <span>CELKOVÝ ZOSTATOK</span>
+          <span>SANDBOX ZOSTATOK</span>
           <strong id="wstat-balance">0,00 €</strong>
-          <small>peňaženka Trinity</small>
+          <small>nie je to bankový ani on-chain zostatok</small>
         </article>
         <article class="metric teal">
-          <span>DOSTUPNÉ NA VÝBER</span>
+          <span>SANDBOX DISPONIBILNÉ</span>
           <strong id="wstat-available">0,00 €</strong>
-          <small id="wstat-status">pripravené na výber (payout)</small>
+          <small id="wstat-status">žiadny reálny payout sa nevykonáva</small>
         </article>
         <article class="metric gold">
           <span>PRIJATÉ PLATBY</span>
@@ -1176,12 +1155,12 @@ Pripravené na spustenie príkazu na hostiteľskom PC...</div>
         <article class="metric purple">
           <span>CELKOVÉ VÝBERY</span>
           <strong id="wstat-withdrawn">0,00 €</strong>
-          <small>vyplatené na banku / PayPal</small>
+          <small>evidované položky; nie sú to vykonané výbery</small>
         </article>
         <article class="metric coral">
           <span>AKTÍVNE TERMINÁLY</span>
-          <strong id="wstat-terminals-count">4</strong>
-          <small>SEPA, Revolut, PayPal, Web3</small>
+          <strong id="wstat-terminals-count">0</strong>
+          <small>iba výslovne nastavené kanály</small>
         </article>
       </div>
 
@@ -2004,7 +1983,7 @@ Pripravené na spustenie príkazu na hostiteľskom PC...</div>
         <section class="panel" data-settings-section="capabilities" data-settings-keywords="moduly pluginy schopnosti nástroje"><div class="panel-head"><div><span class="eyebrow">CAPABILITIES</span><h2 data-i18n="modules">Moduly Trinity</h2></div><span id="settings-module-count" class="detail-chip">—</span></div><div id="settings-modules"></div></section>
         <section class="panel info-settings" data-settings-section="general" data-settings-keywords="systém verzia úložisko pamäť"><div class="panel-head"><div><span class="eyebrow">SYSTEM</span><h2 data-i18n="systemInfo">O Trinity</h2></div></div><dl><div><dt>Identity</dt><dd>Jedna Trinity</dd></div><div><dt>Version</dt><dd id="settings-version">—</dd></div><div><dt>Truth policy</dt><dd id="settings-truth">—</dd></div><div><dt>Úložisko</dt><dd id="settings-storage">—</dd></div><div><dt>Pamäťové záznamy</dt><dd id="settings-memory-count">—</dd></div><div><dt>Papierové portfóliá</dt><dd id="settings-portfolio-count">—</dd></div></dl><button id="settings-memory" data-i18n="openMemory">Otvoriť pamäť</button></section>
         <section class="panel integration-panel" data-settings-section="connections" data-settings-keywords="integrácie pripojenia aplikácie mcp cloudflare openai gemini google github antigravity gpt"><div class="panel-head"><div><span class="eyebrow">INTEGRATION HUB</span><h2>Pripojenia a aplikácie</h2></div><span class="detail-chip">STAV NAŽIVO</span></div><p class="settings-help">Stav rozlišuje uložené poverenie od skutočne overeného prístupu. Cloudflare, GitHub, OpenAI/GPT a Gemini pripojíš cez ich API kľúč v šifrovanom trezore nižšie; oprávnenia aj expiráciu týchto externých tokenov určuje poskytovateľ.</p><div id="settings-integrations" class="integration-list"></div></section>
-        <section class="panel" data-settings-section="connections" data-settings-keywords="pripojiť cloudflare token github token openai gpt api key gemini ai studio antigravity účet"><div class="panel-head"><div><span class="eyebrow">ÚČTY A API PRÍSTUPY</span><h2>Ako pripojiť službu</h2></div></div><p class="settings-help">Vytvor API token priamo v službe, ulož ho do šifrovaného trezora a použi tlačidlo <b>Overiť</b>. Trinity si nežiada ani neukladá heslo k tvojmu účtu.</p><div class="integration-list"><article class="api-key-item"><div><b>Cloudflare</b><small>API token s minimálnymi potrebnými oprávneniami</small></div><a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener noreferrer">Vytvoriť token ↗</a></article><article class="api-key-item"><div><b>GitHub</b><small>Odporúčame fine-grained token s prístupom len k potrebným repozitárom</small></div><a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer">Vytvoriť token ↗</a></article><article class="api-key-item"><div><b>OpenAI / GPT API</b><small>Použi API kľúč; heslo ani predplatné ChatGPT sa do Trinity neprihlasuje</small></div><a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">Vytvoriť API kľúč ↗</a></article><article class="api-key-item"><div><b>Google Gemini API</b><small>V tejto integrácii použi Gemini API kľúč z Google AI Studio</small></div><a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Vytvoriť API kľúč ↗</a></article><article class="api-key-item"><div><b>Google Antigravity</b><small>Prihlásenie do Antigravity cez Google zostáva v Antigravity. Nižšie vytvoríš kľúč, ktorým Antigravity pristúpi k Trinity MCP.</small></div><a href="https://antigravity.google/docs/mcp" target="_blank" rel="noopener noreferrer">Návod na MCP ↗</a></article><article class="api-key-item"><div><b>Visual Studio Code</b><small>Vlastný MCP kľúč s čítaním a zápisom, odvolateľný v Trinity</small></div><a href="https://code.visualstudio.com/docs/agent-customization/mcp-servers" target="_blank" rel="noopener noreferrer">Návod na MCP ↗</a></article></div></section>
+        <section class="panel" data-settings-section="connections" data-settings-keywords="pripojiť cloudflare token github token onedrive google cloud local bridge openai gpt api key gemini ai studio antigravity účet"><div class="panel-head"><div><span class="eyebrow">ÚČTY A API PRÍSTUPY</span><h2>Ako pripojiť 5 pilierov ekosystému Trinity</h2></div></div><p class="settings-help">Vytvor API token priamo v službe, ulož ho do šifrovaného trezora a použi tlačidlo <b>Overiť</b>. Trinity si nežiada ani neukladá heslo k tvojmu účtu.</p><div class="integration-list"><article class="api-key-item"><div><b>Cloudflare Edge Control</b><small>API token s oprávnením pre Workers, D1 a DNS zóny</small></div><a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener noreferrer">Vytvoriť token ↗</a></article><article class="api-key-item"><div><b>GitHub Repository & Actions</b><small>Fine-grained token pre kanonický repozitár uscolective-byte/Trinity-antigravity</small></div><a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener noreferrer">Vytvoriť token ↗</a></article><article class="api-key-item"><div><b>Microsoft OneDrive & Office 365</b><small>Microsoft Graph token (Files.Read, Files.ReadWrite) pre saboivan2008@gmail.com a Entra ID</small></div><a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" rel="noopener noreferrer">Azure Portal / Entra ID ↗</a></article><article class="api-key-item"><div><b>Google Cloud Platform & Vertex AI</b><small>Projekt tangential-osprey-dl7cp: Gemini Flash/Pro, Cloud Storage a Google Drive</small></div><a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">Google Cloud Console ↗</a></article><article class="api-key-item"><div><b>Local PC Bridge (Hardware Node)</b><small>Lokálna PC stanica na portoch 8795 (Desktop) a 7789 (Gateway)</small></div><a href="http://localhost:8795" target="_blank" rel="noopener noreferrer">Local Dashboard ↗</a></article><article class="api-key-item"><div><b>OpenAI / GPT API</b><small>Použi API kľúč; heslo ani predplatné ChatGPT sa do Trinity neprihlasuje</small></div><a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">Vytvoriť API kľúč ↗</a></article><article class="api-key-item"><div><b>Google Gemini API</b><small>V tejto integrácii použi Gemini API kľúč z Google AI Studio</small></div><a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">Vytvoriť API kľúč ↗</a></article><article class="api-key-item"><div><b>Google Antigravity</b><small>Prihlásenie do Antigravity cez Google zostáva v Antigravity. Nižšie vytvoríš kľúč, ktorým Antigravity pristúpi k Trinity MCP.</small></div><a href="https://antigravity.google/docs/mcp" target="_blank" rel="noopener noreferrer">Návod na MCP ↗</a></article><article class="api-key-item"><div><b>Visual Studio Code</b><small>Vlastný MCP kľúč s čítaním a zápisom, odvolateľný v Trinity</small></div><a href="https://code.visualstudio.com/docs/agent-customization/mcp-servers" target="_blank" rel="noopener noreferrer">Návod na MCP ↗</a></article></div></section>
         <section id="settings-api-key-panel" class="panel api-key-panel" data-settings-section="developer" data-settings-keywords="api kľúče vývojár"><div class="panel-head"><div><span class="eyebrow">DEVELOPER API</span><h2>Trinity API kľúče</h2></div><span id="settings-key-count" class="detail-chip">0 aktívnych</span></div><p class="settings-help">Kľúče sú určené pre tvoje budúce aplikácie. Tajná hodnota sa zobrazí iba raz. Nevkladaj ju do chatu ani pamäte.</p><form id="api-key-form" class="api-key-form"><input id="api-key-name" required minlength="2" maxlength="80" placeholder="Názov aplikácie"><select id="api-key-limit" aria-label="Requests per minute"><option value="30">30 požiadaviek/min</option><option value="60" selected>60 požiadaviek/min</option><option value="120">120 požiadaviek/min</option><option value="300">300 požiadaviek/min</option></select><button class="primary">Vytvoriť kľúč</button></form><div id="api-key-secret" class="api-key-secret" hidden></div><div id="api-key-list" class="api-key-list"></div></section>
         <section id="settings-antigravity-panel" class="panel admin-panel" data-settings-section="connections" data-settings-keywords="antigravity trinity mcp read write api kľúč"><div class="panel-head"><div><span class="eyebrow">ANTIGRAVITY · MCP</span><h2>Pripojiť Antigravity k Trinity</h2></div><span class="detail-chip">KĽÚČ SA UKÁŽE RAZ</span></div><p class="settings-help">Vygeneruj osobitný Trinity kľúč s plnými rozsahmi mcp:read aj mcp:write. Kľúč nemá dátum expirácie a môžeš ho kedykoľvek ručne zrušiť v zozname API kľúčov.</p><form id="antigravity-key-form" class="secret-form"><input id="antigravity-key-name" required minlength="2" maxlength="80" value="Antigravity · Trinity MCP" aria-label="Názov pripojenia"><button class="primary">Vytvoriť MCP kľúč</button></form><div id="antigravity-key-result" class="provider-result" aria-live="polite" hidden></div></section>
         <section id="settings-vscode-panel" class="panel admin-panel" data-settings-section="connections" data-settings-keywords="visual code vscode visual studio code github copilot mcp write read"><div class="panel-head"><div><span class="eyebrow">VISUAL STUDIO CODE · MCP</span><h2>Pripojiť VS Code s plnými MCP oprávneniami</h2></div><span class="detail-chip">ČÍTANIE + ZÁPIS</span></div><p class="settings-help">Tento kľúč povoľuje všetky Trinity MCP nástroje s rozsahom <code>mcp:read</code> aj <code>mcp:write</code>. Nemá dátum expirácie, zobrazuje sa iba raz a môžeš ho kedykoľvek ručne zrušiť v zozname API kľúčov.</p><form id="vscode-key-form" class="secret-form"><input id="vscode-key-name" required minlength="2" maxlength="80" value="Visual Studio Code · Trinity MCP" aria-label="Názov pripojenia"><button class="primary">Vytvoriť VS Code kľúč</button></form><div id="vscode-key-result" class="provider-result" aria-live="polite" hidden></div></section>
@@ -2017,6 +1996,9 @@ Pripravené na spustenie príkazu na hostiteľskom PC...</div>
 <div class="provider-test-row"><button id="openrouter-provider-test" type="button">🪐 Živý test OpenRouter</button><pre id="openrouter-provider-result" class="provider-result" aria-live="polite">OpenRouter API: 100+ free a pro modelov.</pre></div><form id="gemini-provider-form" class="provider-form"><label><span>Overený Gemini kľúč</span><select id="gemini-secret" required></select></label><label><span>Model</span><select id="gemini-model" required></select></label><label class="provider-toggle"><input id="gemini-enabled" type="checkbox" checked> Používať v Trinity</label><label class="provider-toggle control-toggle"><input id="gemini-project-control" type="checkbox"> Riadenie projektu cez Gemini</label><small class="settings-help control-help">Gemini môže navrhovať čítanie, zápis, úpravy, spustenie a deploy. Každá meniaca akcia stále vyžaduje tvoje samostatné schválenie a doklad z PC brány.</small><button class="primary">Uložiť Gemini</button><button id="gemini-provider-test" type="button">Živý test Gemini</button></form><div id="gemini-operator-status" class="gemini-operator" aria-live="polite"><div><span>GEMINI OPERATOR</span><b>Čaká na konfiguráciu</b><small>Návrh → schválenie vlastníka → PC brána → doklad</small></div><button id="gemini-use-chat" type="button" disabled>Použiť Gemini v chate</button></div><pre id="gemini-provider-result" class="provider-result" aria-live="polite">Najprv vlož a over Gemini API kľúč v trezore nižšie.</pre></section>
         <section id="settings-secret-panel" class="panel admin-panel" data-settings-section="data" data-settings-keywords="trezor tajomstvá kľúče bezpečnosť šifrovanie"><div class="panel-head"><div><span class="eyebrow">ENCRYPTED VAULT</span><h2>Trezor API kľúčov</h2></div><span class="detail-chip">IBA ADMIN</span></div><p class="settings-help">Cloudflare, GitHub, OpenAI/GPT a Gemini API kľúče vkladaj iba sem. Hodnota sa zašifruje pomocou AES-GCM a už sa nezobrazí.</p><form id="secret-form" class="secret-form"><select id="secret-provider">
 <option value="gemini">Google Gemini</option>
+<option value="google_cloud">Google Cloud (Vertex AI / Storage)</option>
+<option value="onedrive">Microsoft OneDrive / 365</option>
+<option value="microsoft">Microsoft Entra / Dataverse</option>
 <option value="openai">OpenAI / ChatGPT</option>
 <option value="groq">Groq LPU (Ultra-Fast)</option>
 <option value="deepseek">DeepSeek AI (Reasoner / Chat)</option>

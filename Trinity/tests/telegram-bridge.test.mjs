@@ -247,7 +247,7 @@ test('Telegram handles /status, /pc, /crypto, /fleet and /clear commands', async
       ...t.env,
       JERICHO_SERVICE: {
         async getPrices() {
-          return {btc: {price_usd: 68500, change_24h_pct: 2.5}};
+          return {btc: {price_usd: 68500, change_24h_pct: 2.5, live: true}};
         },
         async getTetrakisInfo() {
           return {treasury_address: '0x1234567890abcdef1234567890abcdef12345678'};
@@ -257,6 +257,7 @@ test('Telegram handles /status, /pc, /crypto, /fleet and /clear commands', async
     await ctxCrypto.done();
     assert.match(t.sent[t.sent.length - 1].text, /BTC: \$68,500/);
     assert.match(t.sent[t.sent.length - 1].text, /Tetrakis \(\$TTK\) Token/);
+    assert.doesNotMatch(t.sent[t.sent.length - 1].text, /0x1234567890abcdef1234567890abcdef12345678/);
 
     // 4. /status
     const statusUpdate = t.message('/status', 12345);
@@ -357,7 +358,7 @@ test('buildSystemGroundingContext dynamically injects system, PC and crypto cont
   const mockEnv = {
     JERICHO_SERVICE: {
       async getPrices() {
-        return {btc: {price_usd: 69000}};
+        return {btc: {price_usd: 69000, live: true}};
       }
     }
   };
@@ -369,8 +370,9 @@ test('buildSystemGroundingContext dynamically injects system, PC and crypto cont
   assert.match(pcContext, /Lokálne PC/);
 
   const cryptoContext = await buildSystemGroundingContext(mockEnv, 'Koľko stojí BTC a čo Tetrakis?');
-  assert.match(cryptoContext, /Živé krypto ceny/);
+  assert.match(cryptoContext, /ceny z Jericho/);
   assert.match(cryptoContext, /Tetrakis \(\$TTK\)/);
+  assert.match(cryptoContext, /Nasadenie, sieť a treasury adresa nie sú.*overené/);
 });
 
 test('Telegram configuration cannot claim an active webhook from env variables alone',()=>{
@@ -385,4 +387,18 @@ test('Telegram crypto without Jericho receipts never claims live prices or treas
   assert.match(output,/nepodarilo sa načítať overené ceny/);
   assert.match(output,/neoverená/);
   assert.doesNotMatch(output,/prepojenie aktívne|BIP-39 \/ EVM peňaženka pripravená/);
+});
+
+test('Telegram crypto ignores reference prices and never prints an unverified treasury address',async()=>{
+  const privateLookingTreasury = '0x4d308452a96D7dAbFd2f33d92677A3a2724f387e';
+  const output=await executeCrypto({
+    JERICHO_SERVICE: {
+      async getPrices() { return {BTC: {price_usd: 67500, live: false, source: 'unverified-reference'}}; },
+      async getTetrakisInfo() { return {treasury_address: privateLookingTreasury}; }
+    }
+  });
+  assert.match(output,/nepodarilo sa načítať overené ceny/);
+  assert.doesNotMatch(output,new RegExp(privateLookingTreasury));
+  assert.match(output,/Treasury adresa: neoverená/);
+  assert.match(output,/nasadenie smart kontraktu nebolo.*overené/);
 });

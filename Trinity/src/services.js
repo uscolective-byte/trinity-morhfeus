@@ -64,11 +64,17 @@ export async function serviceStatus(env, requested) {
       if(spec.action){init.headers={'Content-Type':'application/json'};init.body=JSON.stringify({action:spec.action,data:{limit:1},traceId:crypto.randomUUID()});}
       const response=await env[binding].fetch(`https://trinity.internal${path}`,init);
       const text=await boundedText(response); let data;
-      try{data=JSON.parse(text);}catch{throw new Error('Invalid JSON response');}
+      try{data=JSON.parse(text);}catch{
+        const preview = text.slice(0, 120).replace(/\s+/g, ' ').trim();
+        throw new Error(`Invalid JSON response (HTTP ${response.status}): ${preview || 'empty'}`);
+      }
       const accepted=spec.expected?.includes(response.status)||(response.ok&&data.ok!==false&&!data.error);
       return {binding,name:spec.name,status:accepted?'reachable':'error',http:response.status,duration_ms:Date.now()-start,
-        probe:spec.action||path,note:'Dostupnosť role a jej úložiska; nepotvrdzuje vykonanie AI úlohy.'};
-    } catch { return {binding,name:spec.name,status:'error',duration_ms:Date.now()-start}; }
+        probe:spec.action||path,detail:accepted?undefined:data?.error||`HTTP_${response.status}`,note:'Dostupnosť role a jej úložiska; nepotvrdzuje vykonanie AI úlohy.'};
+    } catch (err) {
+      console.error(`[serviceStatus] ${binding} (${spec.name}) failed:`, err?.message, err?.stack);
+      return {binding,name:spec.name,status:'error',duration_ms:Date.now()-start,error:err?.message||String(err),reason:err?.message||String(err)};
+    }
   }));
 }
 export async function readiness(env) {
