@@ -51,13 +51,15 @@ import {SOVEREIGN_IDENTITY,ROOT_REGISTRY,SOVEREIGN_LEGAL_CHARTER_20,validateSove
 import {SovereignTruthGuard,ExecutionLifecycleGuard,TEN_COMMANDMENTS_OF_TRUTH} from './truth.js';
 import {diagnoseOmniDevStackTrace,proposeOmniDevRecoveryPatch} from './omnidev-diagnostics.js';
 import {executeGeminiGemAgent} from './gemini-gem-agent.js';
+import {executeClaudeAgent} from './claude-agent.js';
+import {dualEngineDeliberate} from './dual-engine-orchestrator.js';
 import {TrinityMultiAgentOrchestrator,TASK_PRIORITIES} from './multi-agent-orchestrator.js';
 let sharedOrchestrator=null;
 import fs from 'node:fs';
 import path from 'node:path';
 import {antigravityReadFile,antigravityWriteFile,antigravityEditFile,antigravityRunCommand,antigravityManageTask,antigravitySearchMarketplace} from './antigravity-bridge.js';
 
-export const INTERNAL_TOOLS=new Set(['diagnostic_ping','request_system_action','system_action_status','project_inspect','project_read','improvement_submit','infrastructure_status','hosting_deploy','hosting_list','domain_search','domain_registration_status','domain_subdomain','domain_sync','meta_manage','sovereign_ledger_v3','sovereign_lock_check','truth_guard_verify','tmac_consensus','state_replay_provenance','omnidev_diagnose','cf_d1_query','cf_kv_store','cf_r2_manage','cf_self_deploy','mail_engine','http_fetch_pro','pc_fs_read','pc_fs_write','pc_fs_patch','pc_shell_exec','pc_system_telemetry','apply_self_evolution','triad_subagent_run','triad_deep_research','triad_code_patch','triad_test_matrix','triad_copilot_sync','triad_status','read_file','write_file','edit_file','run_command','manage_task','search_marketplace','execute_gemini_gem','multi_agent_dispatch']);
+export const INTERNAL_TOOLS=new Set(['diagnostic_ping','request_system_action','system_action_status','project_inspect','project_read','improvement_submit','infrastructure_status','hosting_deploy','hosting_list','domain_search','domain_registration_status','domain_subdomain','domain_sync','meta_manage','sovereign_ledger_v3','sovereign_lock_check','truth_guard_verify','tmac_consensus','state_replay_provenance','omnidev_diagnose','cf_d1_query','cf_kv_store','cf_r2_manage','cf_self_deploy','mail_engine','http_fetch_pro','pc_fs_read','pc_fs_write','pc_fs_patch','pc_shell_exec','pc_system_telemetry','apply_self_evolution','triad_subagent_run','triad_deep_research','triad_code_patch','triad_test_matrix','triad_copilot_sync','triad_status','read_file','write_file','edit_file','run_command','manage_task','search_marketplace','execute_gemini_gem','execute_claude','dual_engine_deliberate','multi_agent_dispatch']);
 export const DEVELOPMENT_TOOLS=['project_inspect','project_read','improvement_submit','infrastructure_status','hosting_deploy','hosting_list','domain_search','domain_registration_status','domain_subdomain','domain_sync'];
 export const PC_TOOLS=new Set(['pc_screenshot','pc_run_script','pc_run','pc_file_read','pc_file_write','pc_file_append','pc_file_edit','pc_directory_create','pc_open_app','pc_open_url','pc_open_file','pc_app_control','pc_notify','pc_system_info','pc_scrape','pc_web_fetch','pc_download','pc_git_commit','pc_git_pr','pc_fs_read','pc_fs_write','pc_fs_patch','pc_shell_exec','pc_system_telemetry']);
 export const OWNER_BUSINESS_TOOLS=new Set(['finance_propose_transfer','finance_confirm_transfer','finance_audit_ledger','prospect_queries','prospect_score','outreach_draft','revenue_model','improvement_plan','commerce_status','commerce_add_offer','monetization_blueprint','ui_evolve','self_evolve','domain_env_provision','domain_env_deploy','commodity_trade','commodity_auto_invest','morpheus_status','cf_self_deploy','apply_self_evolution']);
@@ -343,6 +345,8 @@ export const TOOL_SCHEMAS={
   manage_task:z.object({Action:z.enum(['list','kill','status','send_input']),TaskId:z.string().optional(),Input:z.string().optional()}).strict(),
   search_marketplace:z.object({queries:z.array(z.string()).default([]),kind:z.enum(['all','plugin','skill']).default('all'),limit:z.number().int().min(1).max(50).default(10)}).strict(),
   execute_gemini_gem:z.object({task:z.string().min(1).max(20000),systemPrompt:z.string().max(10000).optional(),maxTokens:z.number().int().optional()}).strict(),
+  execute_claude:z.object({task:z.string().min(1).max(50000),model:z.string().optional(),systemPrompt:z.string().max(10000).optional(),maxTokens:z.number().int().optional()}).strict(),
+  dual_engine_deliberate:z.object({task:z.string().min(1).max(50000),mode:z.enum(['deliberate','parallel','claude_only','gemini_only']).optional().default('deliberate'),geminiModel:z.string().optional(),claudeModel:z.string().optional(),systemPrompt:z.string().max(10000).optional(),maxTokens:z.number().int().optional()}).strict(),
   multi_agent_dispatch:z.object({title:z.string().min(1).max(4000),taskType:z.enum(['architecture','subsystems','scaling','research','analysis','comparison','documentation','refactoring','solutions','coding','patching','tests','implementation','dev_assistance','orchestration','coordination','planning']).default('orchestration'),priority:z.enum(['CRITICAL','HIGH','NORMAL','LOW']).default('NORMAL'),execute:z.boolean().default(false)}).strict()
 };
 const UNIT_GROUPS={length:{mm:.001,cm:.01,m:1,km:1000,in:.0254,ft:.3048,yd:.9144,mi:1609.344},mass:{mg:.000001,g:.001,kg:1,oz:.028349523125,lb:.45359237}};
@@ -1276,6 +1280,12 @@ export async function runTool(env, agent, name, input, executionContext={}) {
   if(name==='execute_gemini_gem'){
     return executeGeminiGemAgent(env, args.task, args);
   }
+  if(name==='execute_claude'){
+    return executeClaudeAgent(env, args.task, args);
+  }
+  if(name==='dual_engine_deliberate'){
+    return dualEngineDeliberate(env, args.task, args);
+  }
   if(name==='triad_subagent_run'){
     const roleMap = {
       researcher: 'Výskumný špecialista Triády',
@@ -1285,6 +1295,9 @@ export async function runTool(env, agent, name, input, executionContext={}) {
       sentinel: 'Bezpečnostný strážca Triády'
     };
     const rolePrompt = roleMap[args.role] || 'Špecializovaný subagent Triády';
+    if (args.model && (args.model.includes('claude') || args.model === 'claude-3.5-sonnet')) {
+      return executeClaudeAgent(env, args.task, { systemPrompt: 'Si ' + rolePrompt + '. Vykonaj zadanú úlohu odborne a presne.', model: args.model });
+    }
     return executeGeminiGemAgent(env, args.task, { systemPrompt: 'Si ' + rolePrompt + '. Vykonaj zadanú úlohu odborne a presne.' });
   }
   if(name==='triad_status'){
@@ -1301,6 +1314,16 @@ export async function runTool(env, agent, name, input, executionContext={}) {
         user_gem_linked: false,
         execution: 'inference_only',
         quota: 'provider_managed_unverified'
+      },
+      claude_agent: {
+        status: 'configured_in_code',
+        provider: 'Anthropic Messages API',
+        model_cascade: ['claude-3-7-sonnet-20250219', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
+        fallback: 'google_gemini'
+      },
+      dual_engine: {
+        status: 'active',
+        collaboration: 'cross_deliberation'
       }
     };
   }
@@ -1531,6 +1554,8 @@ export const TOOL_HELP={
   search_marketplace:'Prehľadáva pluginy a skilly v katalógu: {queries?:string[],kind?:all|plugin|skill,limit?:number}',
   multi_agent_dispatch:'Zaradí úlohu do prioritnej fronty a pridelí ju špecializovanému agentovi (Antigravity, Gemini, ChatGPT, Codex, Copilot, Trinity) so Sovereign Ledger zápisom; execute=false iba zaradí, execute=true vykoná cez nakonfigurovaný adaptér: {title:string,taskType?:architecture|research|coding|documentation|tests|planning|...,priority?:CRITICAL|HIGH|NORMAL|LOW,execute?:boolean}',
   execute_gemini_gem:'Vykoná Gemini API inferenciu s Trinity profilom, modelovou kaskádou a prípadným Workers AI fallbackom. Limity spravuje poskytovateľ: {task:string,systemPrompt?:string,maxTokens?:number}',
+  execute_claude:'Vykoná Anthropic Claude Messages API inferenciu (3.7 Sonnet, 3.5 Sonnet, Haiku, Opus) s modelovou kaskádou a fallbackom na Gemini: {task:string,model?:string,systemPrompt?:string,maxTokens?:number}',
+  dual_engine_deliberate:'Krížová deliberácia a konsenzus medzi Google Gemini (analytik) a Anthropic Claude (syntetizér) s Truth Policy 2.1 receiptom: {task:string,mode?:deliberate|parallel|claude_only|gemini_only,geminiModel?:string,claudeModel?:string}',
   finance_propose_transfer:'Pripraví autorizovaný finančný príkaz s limitom 50€/200€ denne: {amount_eur:number,recipient:string,provider?:revolut|paypal|sepa,note?:string}',
   finance_confirm_transfer:'Potvrdí a kryptograficky zapíše prevod do auditného ledgera: {proposal_id:string,confirmation_token?:string}',
   finance_audit_ledger:'Zobrazí nemennú auditnú knihu finančných transakcií: {limit?:number}',

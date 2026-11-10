@@ -384,12 +384,12 @@ export async function callModel(env, provider, messages, maxTokens = 8192, custo
     if(!text.trim())throw new Error('DeepSeek vrátil prázdnu odpoveď.');
     return {text,model:data.model||model,provider,usage:{input:data.usage?.prompt_tokens||0,output:data.usage?.completion_tokens||0}};
   }
-  if(provider==='anthropic'){
+  if(provider==='anthropic'||provider==='claude'){
     let {apiKey,model}=await getConfiguredAIProvider(env,'anthropic').catch(()=>({}));
     if(!apiKey)apiKey=env.ANTHROPIC_API_KEY;
     if(!apiKey)throw new Error('Anthropic Claude API nie je nakonfigurované.');
     apiKey=sanitizeApiKey(apiKey);
-    if(!model)model=env.ANTHROPIC_MODEL||'claude-3-5-sonnet-20241022';
+    if(!model)model=env.ANTHROPIC_MODEL||'claude-3-7-sonnet-20250219';
     const system=messages.filter(m=>m.role==='system').map(m=>m.content).join('\n\n').slice(0,40000);
     const chatMessages=messages.filter(m=>m.role!=='system').map(m=>({role:m.role==='assistant'?'assistant':'user',content:String(m.content).slice(0,40000)}));
     const response=await fetch('https://api.anthropic.com/v1/messages',{

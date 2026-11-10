@@ -334,6 +334,7 @@ export async function executeGeminiGemAgent(env, task, options = {}) {
     executionId,
     agent: 'gemini-gem',
     result: finalResultText,
+    text: finalResultText,
     tool_log: toolLog,
     model: lastInference?.model || 'unknown',
     provider: lastInference?.provider || 'gemini',

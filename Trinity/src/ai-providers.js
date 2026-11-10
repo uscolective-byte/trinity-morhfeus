@@ -121,11 +121,11 @@ export async function getConfiguredAIProvider(env,provider){
       return {apiKey:openaiKey,model:openaiModel};
     }
   }
-  if(!row&&['anthropic','groq','deepseek','mistral','openrouter'].includes(provider)){
-    const resolved=await resolveProviderSecret(env,provider);
+  if(!row&&['anthropic','claude','groq','deepseek','mistral','openrouter'].includes(provider)){
+    const resolved=await resolveProviderSecret(env,provider==='claude'?'anthropic':provider);
     const key=sanitizeApiKey(resolved);
     if(key&&key.length>=8){
-      return {apiKey:key,model:env[`${provider.toUpperCase()}_MODEL`]||'default'};
+      return {apiKey:key,model:env[`${provider.toUpperCase()}_MODEL`]||(provider==='anthropic'||provider==='claude'?'claude-3-7-sonnet-20250219':'default')};
     }
   }
   if(!row)throw new HttpError(503,`${provider==='gemini'?'Gemini':provider==='openai'?'OpenAI / ChatGPT':'AI poskytovateľ'} nie je nakonfigurovaný a overený.`);

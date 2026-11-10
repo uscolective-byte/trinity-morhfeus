@@ -12,7 +12,7 @@ import {HttpError} from './security.js';
 
 export const secretInputSchema=z.object({
   provider:z.enum([
-    'github','cloudflare','gemini','google_cloud','onedrive','local_bridge','openai','firecrawl','firebase','supabase','vercel','telegram','slack','discord','notion','dataverse','microsoft','powerplatform','custom','groq','deepseek','anthropic','mistral','openrouter','revolut','paypal'
+    'github','cloudflare','gemini','google_cloud','onedrive','local_bridge','openai','firecrawl','firebase','supabase','vercel','telegram','slack','discord','notion','dataverse','microsoft','powerplatform','custom','groq','deepseek','anthropic','claude','mistral','openrouter','revolut','paypal'
   ]),
   name:z.string().trim().min(2).max(80),
   secret:z.string().trim().min(8).max(4096)
@@ -385,7 +385,8 @@ export async function resolveProviderSecret(env,provider){
     copilot:[env?.COPILOT_API_TOKEN,env?.TRINITY_MASTER_COPILOT,env?.copilot],
     groq:[env?.GROQ_API_KEY,env?.groq],
     deepseek:[env?.DEEPSEEK_API_KEY,env?.deepseek],
-    anthropic:[env?.ANTHROPIC_API_KEY,env?.anthropic],
+    anthropic:[env?.ANTHROPIC_API_KEY,env?.ANTHROPIC_KEY,env?.TRINITY_MASTER_CLAUDE,env?.claude,env?.anthropic],
+    claude:[env?.ANTHROPIC_API_KEY,env?.ANTHROPIC_KEY,env?.TRINITY_MASTER_CLAUDE,env?.claude,env?.anthropic],
     mistral:[env?.MISTRAL_API_KEY,env?.mistral],
     openrouter:[env?.OPENROUTER_API_KEY,env?.openrouter]
   };
@@ -417,6 +418,9 @@ export async function resolveProviderSecret(env,provider){
       }
       if(!row&&provider==='google_cloud'){
         row=await env.DB.prepare("SELECT * FROM ops_secret_vault WHERE (provider='gemini' OR (provider='custom' AND (lower(name) LIKE '%gcp%' OR lower(name) LIKE '%google%'))) AND status!='revoked' ORDER BY updated_at DESC LIMIT 1").first();
+      }
+      if(!row&&(provider==='anthropic'||provider==='claude')){
+        row=await env.DB.prepare("SELECT * FROM ops_secret_vault WHERE (provider='anthropic' OR provider='claude' OR (provider='custom' AND (lower(name) LIKE '%claude%' OR lower(name) LIKE '%anthropic%'))) AND status!='revoked' ORDER BY updated_at DESC LIMIT 1").first();
       }
       if(!row&&provider==='ollama'){
         row=await env.DB.prepare("SELECT * FROM ops_secret_vault WHERE provider='custom' AND status!='revoked' AND lower(name) LIKE '%ollama%' ORDER BY updated_at DESC LIMIT 1").first();
@@ -462,7 +466,7 @@ export async function verifySecret(env,ownerId,id){
       :row.provider==='gemini'?await verifyGemini(secret)
       :row.provider==='groq'?await verifyOpenAICompatible('https://api.groq.com/openai/v1/models',secret,'groq')
       :row.provider==='deepseek'?await verifyOpenAICompatible('https://api.deepseek.com/models',secret,'deepseek')
-      :row.provider==='anthropic'?await verifyAnthropic(secret)
+      :(row.provider==='anthropic'||row.provider==='claude')?await verifyAnthropic(secret)
       :row.provider==='mistral'?await verifyOpenAICompatible('https://api.mistral.ai/v1/models',secret,'mistral')
       :row.provider==='openrouter'?await verifyOpenAICompatible('https://openrouter.ai/api/v1/models',secret,'openrouter')
       :row.provider==='revolut'?await verifyRevolut(secret)
