@@ -365,10 +365,10 @@ export async function verifyGoogleCloud(secret,{fetcher=fetch}={}){
 export async function getSecretMaterial(env,{ownerId,id,provider}){const row=await env.DB.prepare("SELECT * FROM ops_secret_vault WHERE id=? AND owner_id=? AND provider=? AND status!='revoked'").bind(id,ownerId,provider).first();if(!row)throw new HttpError(404,'Tajomstvo neexistuje.');return {...row,secret:await decrypt(env,row)};}
 export async function resolveProviderSecret(env,provider){
   const envMap={
-    cloudflare:[env?.CF_API_TOKEN,env?.CLOUDFLARE_API_TOKEN,env?.TRINITY_CF_TOKEN],
-    github:[env?.TRINITY_GITHUB_TOKEN,env?.GITHUB_TOKEN,env?.GITHUBE_API_KEY,env?.trinitygithube_key],
-    onedrive:[env?.ONEDRIVE_TOKEN,env?.MICROSOFT_GRAPH_TOKEN,env?.MS_GRAPH_TOKEN,env?.MICROSOFT_TOKEN],
-    google_cloud:[env?.GOOGLE_CLOUD_TOKEN,env?.GCP_ACCESS_TOKEN,env?.GOOGLE_PROJECT_TOKEN,env?.GEMINI_API_KEY],
+    cloudflare:[env?.CF_API_TOKEN,env?.CLOUDFLARE_API_TOKEN,env?.TRINITY_CF_TOKEN,env?.cloudflare],
+    github:[env?.TRINITY_GITHUB_TOKEN,env?.GITHUB_TOKEN,env?.GITHUBE_API_KEY,env?.trinitygithube_key,env?.github],
+    onedrive:[env?.ONEDRIVE_TOKEN,env?.MICROSOFT_GRAPH_TOKEN,env?.MS_GRAPH_TOKEN,env?.MICROSOFT_TOKEN,env?.onedrive,env?.microsoft],
+    google_cloud:[env?.GOOGLE_CLOUD_TOKEN,env?.GCP_ACCESS_TOKEN,env?.GOOGLE_PROJECT_TOKEN,env?.GEMINI_API_KEY,env?.apigoogle,env?.TRINITY_MASTER_GOOGLE],
     firecrawl:[env?.FIRECRAWL_API_KEY,env?.TRINITY_FIRECRAWL_KEY,env?.firecrawl],
     firebase:[env?.FIREBASE_API_KEY,env?.FIREBASE_SERVICE_ACCOUNT,env?.TRINITY_FIREBASE_KEY],
     supabase:[env?.SUPABASE_KEY,env?.SUPABASE_SERVICE_ROLE_KEY],
@@ -378,16 +378,16 @@ export async function resolveProviderSecret(env,provider){
     discord:[env?.DISCORD_WEBHOOK_URL,env?.DISCORD_BOT_TOKEN],
     notion:[env?.NOTION_API_KEY,env?.notionaccess],
     revolut:[env?.REVOLUT_API_KEY,env?.REVOLUT_SECRET],
-    paypal:[env?.PAYPAL_CLIENT_SECRET,env?.PAYPAL_API_KEY],
-    ollama:[env?.OLLAMA_API_KEY,env?.OLLAMA_SECRET],
-    openai:[env?.OPENAI_API_KEY],
-    gemini:[env?.GEMINI_API_KEY,env?.apigoogle],
-    copilot:[env?.COPILOT_API_TOKEN],
-    groq:[env?.GROQ_API_KEY],
-    deepseek:[env?.DEEPSEEK_API_KEY],
-    anthropic:[env?.ANTHROPIC_API_KEY],
-    mistral:[env?.MISTRAL_API_KEY],
-    openrouter:[env?.OPENROUTER_API_KEY]
+    paypal:[env?.PAYPAL_CLIENT_SECRET,env?.PAYPAL_API_KEY,env?.paypal],
+    ollama:[env?.OLLAMA_API_KEY,env?.OLLAMA_SECRET,env?.ollama],
+    openai:[env?.OPENAI_API_KEY,env?.OPENAI_KEY,env?.OPENAI_SECRET,env?.openai,env?.TRINITY_MASTER_OPENAI],
+    gemini:[env?.GEMINI_API_KEY,env?.apigoogle,env?.TRINITY_MASTER_GOOGLE,env?.gemini],
+    copilot:[env?.COPILOT_API_TOKEN,env?.TRINITY_MASTER_COPILOT,env?.copilot],
+    groq:[env?.GROQ_API_KEY,env?.groq],
+    deepseek:[env?.DEEPSEEK_API_KEY,env?.deepseek],
+    anthropic:[env?.ANTHROPIC_API_KEY,env?.anthropic],
+    mistral:[env?.MISTRAL_API_KEY,env?.mistral],
+    openrouter:[env?.OPENROUTER_API_KEY,env?.openrouter]
   };
   const candidates=Array.isArray(envMap[provider])?envMap[provider]:[];
   for(const candidate of candidates){
