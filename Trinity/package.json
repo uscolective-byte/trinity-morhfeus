@@ -26,7 +26,7 @@
     "secrets:test": "node --test tests/secrets-store-doctor.test.mjs tests/trinity-master-secrets.test.mjs tests/trinity-master-wrangler.test.mjs tests/trinity-master-provider-resolution.test.mjs"
   },
   "dependencies": {
-    "@cloudflare/puppeteer": "^1.4.0",
+    "@cloudflare/puppeteer": "^2.0.0",
     "@modelcontextprotocol/ext-apps": "2.0.4",
     "@modelcontextprotocol/server": "2.4.0",
     "@noble/curves": "2.4.0",
