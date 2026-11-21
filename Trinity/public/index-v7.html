@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trinity v7.0.0</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <h1>AURA Trinity v7.0.0</h1>
+    <span class="badge" id="status">connecting...</span>
+  </div>
+  <div class="chat-container">
+    <div id="conversation" aria-live="polite"></div>
+    <form id="task-form">
+      <textarea id="task" placeholder="Napíš správu..." rows="3"></textarea>
+      <select id="mode">
+        <option value="single">Single</option>
+        <option value="team">Team</option>
+        <option value="control">Control</option>
+      </select>
+      <select id="agent">
+        <option value="ORCHESTRATOR">Orchestrator</option>
+      </select>
+      <select id="provider">
+        <option value="workers-ai">Workers AI</option>
+        <option value="local">Local</option>
+        <option value="gemini">Gemini</option>
+        <option value="openai">OpenAI</option>
+        <option value="ollama">Ollama</option>
+      </select>
+      <button type="submit" id="send">Odoslať</button>
+    </form>
+  </div>
+</div>
+<script src="/auth-bootstrap.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,3 +1,5 @@
+console.error("This historical migration is disabled because it reintroduces unverified price, buyback and staking claims.");
+process.exit(1);
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

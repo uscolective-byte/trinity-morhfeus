@@ -1,0 +1,12 @@
+{
+  "name": "trinity-pc-bridge",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Local daemon that receives commands from the Trinity Worker and executes them on the user's PC",
+  "main": "pc-bridge-daemon.js",
+  "scripts": {
+    "start": "node pc-bridge-daemon.js",
+    "dev": "node pc-bridge-daemon.js"
+  },
+  "dependencies": {}
+}

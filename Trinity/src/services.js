@@ -64,11 +64,17 @@ export async function serviceStatus(env, requested) {
       if(spec.action){init.headers={'Content-Type':'application/json'};init.body=JSON.stringify({action:spec.action,data:{limit:1},traceId:crypto.randomUUID()});}
       const response=await env[binding].fetch(`https://trinity.internal${path}`,init);
       const text=await boundedText(response); let data;
-      try{data=JSON.parse(text);}catch{throw new Error('Invalid JSON response');}
+      try{data=JSON.parse(text);}catch{
+        const preview = text.slice(0, 120).replace(/\s+/g, ' ').trim();
+        throw new Error(`Invalid JSON response (HTTP ${response.status}): ${preview || 'empty'}`);
+      }
       const accepted=spec.expected?.includes(response.status)||(response.ok&&data.ok!==false&&!data.error);
       return {binding,name:spec.name,status:accepted?'reachable':'error',http:response.status,duration_ms:Date.now()-start,
-        probe:spec.action||path,note:'Dostupnosť role a jej úložiska; nepotvrdzuje vykonanie AI úlohy.'};
-    } catch { return {binding,name:spec.name,status:'error',duration_ms:Date.now()-start}; }
+        probe:spec.action||path,detail:accepted?undefined:data?.error||`HTTP_${response.status}`,note:'Dostupnosť role a jej úložiska; nepotvrdzuje vykonanie AI úlohy.'};
+    } catch (err) {
+      console.error(`[serviceStatus] ${binding} (${spec.name}) failed:`, err?.message, err?.stack);
+      return {binding,name:spec.name,status:'error',duration_ms:Date.now()-start,error:err?.message||String(err),reason:err?.message||String(err)};
+    }
   }));
 }
 export async function readiness(env) {
@@ -378,12 +384,12 @@ export async function callModel(env, provider, messages, maxTokens = 8192, custo
     if(!text.trim())throw new Error('DeepSeek vrátil prázdnu odpoveď.');
     return {text,model:data.model||model,provider,usage:{input:data.usage?.prompt_tokens||0,output:data.usage?.completion_tokens||0}};
   }
-  if(provider==='anthropic'){
+  if(provider==='anthropic'||provider==='claude'){
     let {apiKey,model}=await getConfiguredAIProvider(env,'anthropic').catch(()=>({}));
     if(!apiKey)apiKey=env.ANTHROPIC_API_KEY;
     if(!apiKey)throw new Error('Anthropic Claude API nie je nakonfigurované.');
     apiKey=sanitizeApiKey(apiKey);
-    if(!model)model=env.ANTHROPIC_MODEL||'claude-3-5-sonnet-20241022';
+    if(!model)model=env.ANTHROPIC_MODEL||'claude-3-7-sonnet-20250219';
     const system=messages.filter(m=>m.role==='system').map(m=>m.content).join('\n\n').slice(0,40000);
     const chatMessages=messages.filter(m=>m.role!=='system').map(m=>({role:m.role==='assistant'?'assistant':'user',content:String(m.content).slice(0,40000)}));
     const response=await fetch('https://api.anthropic.com/v1/messages',{

@@ -3001,3 +3001,51 @@ End-to-end script result: `deploy.ps1 -Target staging` completed exit 0, includi
 - Read-only Cloudflare check: `trinity-profile` does not exist remotely (API code 10007); `trinity-staging` latest listed deployment remains 2026-11-07 06:24:21Z, version `9c2745bc-d5a6-4980-9d2b-db275cf89be6`. Therefore none of these local changes are live, and the root gateway has no `PROFILE_SERVICE` binding.
 - The supplied TAP crypto/profile/Jericho code was not copied in: it grants privileged claims based on user-supplied identity, stores signing private-key material in KV, incompletely validates JWT claims, and exposes an unauthenticated deposit write. Existing `packages/contracts/src/tap.js` remains unchanged.
 - No D1 migration, Worker deployment, live route change, production change, Cloudflare Access change, Azure resource, or secret value was changed. The local candidate was committed as `11f2398` and pushed to `codex/staging-profile-hardening-20261107`; it is not merged to `main`.
+
+---
+
+### ACK & CLAIM — TETRAKIS-CRYPTO-CORE-BASE-L2-20261107-ANTIGRAVITY-01
+Čas a časové pásmo: 2026-11-07 14:15 UTC (Europe/Bratislava 15:15 CET)
+Autor a klient: Antigravity (Ring 0 Pair-Programming Engine)
+Príjemca: Codex, GitHub Copilot, Trinity (read-only), Ivan Sabo (Basterix)
+Cieľ a pokyn majiteľa:
+1. Potvrdenie (ACK) zlúčenia vetvy `codex/staging-profile-hardening-20261107` (`11649d5bfb29f2cbcf042d1cf7c217d18326ddd6`) do `main` (`e66d2d0` na `Trinity-antigravity`, `1d74ecd` na `trinity-morhfeus`) a živého nasadenia na Cloudflare (`trinity` Version ID `b5aa612a-ed45-443d-8fd5-edb02ab6acc1`, `trinity-staging` Version ID `e42c295e-205d-4f84-88b7-07fa1e90c465`, `trinity-profile-staging` Version ID `45f84cff-4906-4545-b382-00afc305a6ab`).
+2. Realizácia 5-fázového plánu pre **Tetrakis (`$TTK`)** v spolupráci s Codexom:
+   - **Fáza 1**: Produkčný smart kontrakt `contracts/TetrakisToken.sol` a `packages/crypto-core/contracts/TetrakisToken.sol` (`HARD_CAP = 10_000_000 * 10**18`, `sovereignOwner`, `treasuryWorker`, `burn`, `mint`, `updateTreasuryWorker`, `transferSovereignOwnership`).
+   - **Fáza 2**: Vývojové prostredie `@trinity/crypto-core` v `packages/crypto-core/` (`package.json`, `hardhat.config.cjs` pre `baseSepolia` `84532` a `baseMainnet` `8453` + BaseScan customChains).
+   - **Fáza 3**: Kompilácia (`solc` 0.8.24, `optimizer.runs = 200`), EVM testovacia sada `packages/crypto-core/test/TetrakisToken.test.cjs` a nasadzovacie/verifikačné skripty `packages/crypto-core/scripts/deploy.cjs` a `packages/crypto-core/scripts/verify.cjs`.
+   - **Fáza 4**: Prepojenie na Cloudflare Edge Worker #24 (`services/trinity-treasury/wrangler.jsonc` a `services/trinity-treasury/src/index.js`).
+   - **Fáza 5**: DEX/CEX Listing Pipeline (Aerodrome/Uniswap v3 `$TTK/$USDC` pool -> UNCX LP Lock -> DexScreener/CoinGecko/CMC -> MEXC/BitMart -> Binance) a integrácia do CI/CD.
+Základný commit / checkout: `e66d2d0594689f60642a98ed221255b1c73e486e` (`main`)
+Vlastnené súbory alebo zdroje / prostredie:
+- `contracts/TetrakisToken.sol`
+- `packages/crypto-core/**`
+- `services/trinity-treasury/**`
+- `TEAM-HANDOFF.md`
+Stav: active
+Ďalší krok a vlastník: Antigravity skompiluje kontrakt, spustí plnú EVM testovaciu sadu na lokálnom Anvil node (`31337`), otestuje Worker #24 `trinity-treasury` a zapíše UPDATE/HANDOFF pre Codex.
+
+### UPDATE / HANDOFF — TETRAKIS-CRYPTO-CORE-BASE-L2-20261107-ANTIGRAVITY-01
+Čas a časové pásmo: 2026-11-07 14:21 UTC (Europe/Bratislava 15:21 CET)
+Autor a klient: Antigravity (Ring 0 Pair-Programming Engine)
+Príjemca: Codex, GitHub Copilot, Trinity (read-only), Ivan Sabo (Basterix)
+Cieľ a pokyn majiteľa: Dokončenie 5-fázovej implementácie Tetrakis (`$TTK`) od Solidity smart kontraktu cez `@trinity/crypto-core` (Base Sepolia `84532` & Base Mainnet `8453`) po Cloudflare Edge Worker #24 (`trinity-treasury`) a DEX/CEX listing pipeline.
+Skutočné zmeny:
+1. **Fáza 1 (`contracts/TetrakisToken.sol` & `packages/crypto-core/contracts/TetrakisToken.sol`)**:
+   - Implementovaný suverénny ERC-20 kontrakt `TetrakisToken` (`name = "Tetrakis"`, `symbol = "TTK"`, `decimals = 18`, `HARD_CAP = 10_000_000 * 10**18`, `sovereignOwner`, `treasuryWorker`, `burn`, `mint`, `updateTreasuryWorker`, `transferSovereignOwnership`).
+   - Existujúci `contracts/tetrakis/` zostal nedotknutý a 100 % kompatibilný so všetkými doterajšími testami.
+2. **Fáza 2 & 3 (`packages/crypto-core/`)**:
+   - Vytvorené `package.json`, `hardhat.config.cjs` (`baseSepolia` Chain ID `84532`, `baseMainnet` Chain ID `8453`, BaseScan customChains), `scripts/compile.cjs`, `scripts/hardhat-runtime.cjs`, `scripts/deploy.cjs`, `scripts/verify.cjs`, `scripts/run-tests.cjs` a `test/TetrakisToken.test.cjs`.
+   - Deterministické výstupy kompilácie (`solc 0.8.24+commit.e11b9ed9.Emscripten.clang`, `evmVersion: shanghai`, `optimizer.runs: 200`):
+     - `Bytecode SHA-256`: `0x51783e809cffb8b5318402e27f9bd181ea0578404feffcc17dcf9d1c236aef93`
+     - `Runtime Keccak256`: `0x6130b013de4971ca4102f4d330144fbfc72fd8316a6f17c842a47d3a2260eb84`
+3. **Fáza 4 & 5 (`services/trinity-treasury/`)**:
+   - Vytvorený Worker #24 `trinity-treasury` (`wrangler.jsonc` + `src/index.js`) s produkčným (`BASE_CHAIN_ID = 8453`, `https://mainnet.base.org`) a staging (`BASE_CHAIN_ID = 84532`, `https://sepolia.base.org`) profilom, endpointmi `GET /health`, `GET /api/treasury/status`, `GET /api/treasury/listing-pipeline` a `POST /api/treasury/rpc-read`.
+   - Pridaný deploy `trinity-treasury-staging` a `trinity-treasury` do `.github/workflows/self-deploy.yml`.
+Kontroly a dôkazy:
+- `npm run test:crypto`: `8/8` (`verify-tetrakis.test.mjs`), `12/12` (`Jericho-Worker`), `15/15` (`contracts/tetrakis`), `7/7` (`packages/crypto-core` na lokálnom Anvil Shanghai EVM `31337`).
+- `node --test Trinity/tests/omni-core-v11-2.test.mjs`: `10/10` PASS (vrátane Module 11).
+Stav: completed / pending_ack (Codex)
+Ďalší krok a vlastník: Codex môže vykonať nezávislé code review `packages/crypto-core` a `services/trinity-treasury` a zapísať `ACK — TETRAKIS-CRYPTO-CORE-BASE-L2-20261107-ANTIGRAVITY-01`. Pri živom broadcast nasadení na Base Mainnet (`8453`) po dodaní `DEPLOYER_PRIVATE_KEY` a `BASESCAN_API_KEY` sa adresa zapíše do `TTK_CONTRACT_ADDRESS` v `services/trinity-treasury/wrangler.jsonc`.
+
+

@@ -34,7 +34,18 @@ export const TETRAKIS_TOKEN = {
   symbol: 'TTK',
   decimals: 18,
   total_supply: '1,000,000,000 TTK',
+  sovereign_hard_cap: '10,000,000 TTK (Ring 0 Base L2 Contract)',
   standard: 'ERC-20 (EVM)',
+  slogan: 'Tetrakis ($TTK) – Fuel of the Autonomous Edge.',
+  logo_url: 'https://raw.githubusercontent.com/uscolective-byte/Trinity-antigravity/main/public/assets/tetrakis-logo.png',
+  logo_sha256: 'b22b0981bdcd1e50442dc98932c43ef5f0f35a6662a275975b4565bf7bb31496',
+  tetrahedron_pillars: [
+    'Sovereign Will (Ring 0)',
+    'Edge Cognition',
+    'Cryptographic Assurance (TAP)',
+    'Autonomous Vaults'
+  ],
+  architect_oath: 'Nestaviame servery, ktoré môžu vypnúť. Nestaviame menu, ktorú môžu nafúknuť. Tetrakis je digitálna pevnosť uzamknutá v posvätnej geometrii kódu. Ring 0 drží kľúč. Budúcnosť je autonómna.',
   basterix_wallet: '0x7e17f9072cfCbc7fE45973De0F11eC8db99281e4',
   basterix_holding: '1,000,000 TTK',
   treasury_wallet: '0x4d308452a96D7dAbFd2f33d92677A3a2724f387e',

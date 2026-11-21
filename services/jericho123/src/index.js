@@ -7,6 +7,28 @@ export function computeMedian(numbers) {
   return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
+/**
+ * Ochrana proti cenovej manipulácii (>15% odchýlka medzi zdrojmi alebo voči sliding-window priemeru).
+ */
+export function detectPriceManipulation(prices, windowAverage = 0, maxDeviation = 0.15) {
+  const valid = (Array.isArray(prices) ? prices : []).filter(p => typeof p === "number" && p > 0);
+  if (valid.length === 0) {
+    return { manipulated: false, maxSpreadPct: 0, windowDeviationPct: 0 };
+  }
+  const median = computeMedian(valid);
+  const minP = Math.min(...valid);
+  const maxP = Math.max(...valid);
+  const spreadRatio = median > 0 ? (maxP - minP) / median : 0;
+  const windowRatio = windowAverage > 0 && median > 0 ? Math.abs(median - windowAverage) / windowAverage : 0;
+  const manipulated = spreadRatio > maxDeviation || windowRatio > maxDeviation;
+  return {
+    manipulated,
+    maxSpreadPct: Number((spreadRatio * 100).toFixed(2)),
+    windowDeviationPct: Number((windowRatio * 100).toFixed(2)),
+    thresholdPct: maxDeviation * 100
+  };
+}
+
 export async function fetchFromBinance(fetcher = fetch) {
   const res = await fetcher("https://api.binance.com/api/v3/ticker/price?symbols=[%22BTCUSDT%22,%22ETHUSDT%22,%22SOLUSDT%22]", {
     headers: { "User-Agent": "Trinity-Crypto-Oracle/1.0" }
@@ -74,9 +96,10 @@ export default {
     const db = resolveDb(env);
     const fetcher = env?.customFetcher || fetch;
 
-    // GET /crypto/oracle — Live orákulum s konsenzom a mediánom
+    // GET /crypto/oracle — Live orákulum s konsenzom, mediánom, sliding-window KV cache a >15% manipulation guardom
     if (request.method === "GET" && pathname === "/crypto/oracle") {
       const cacheKey = "ORACLE_PRICES_MEDIAN_CACHE";
+      const windowKey = "ORACLE_SLIDING_WINDOW_HISTORY";
       if (kv && typeof kv.get === "function") {
         try {
           const cached = await kv.get(cacheKey, { type: "json" });
@@ -108,18 +131,53 @@ export default {
       const ethPrices = validSources.map(s => s.ETH).filter(p => p > 0);
       const solPrices = validSources.map(s => s.SOL).filter(p => p > 0);
 
+      let windowHistory = [];
+      if (kv && typeof kv.get === "function") {
+        try {
+          const rawWindow = await kv.get(windowKey, { type: "json" });
+          if (Array.isArray(rawWindow)) windowHistory = rawWindow;
+        } catch {}
+      }
+
+      const avgBtcWindow = windowHistory.length > 0 ? computeMedian(windowHistory.map(w => w.BTC).filter(Boolean)) : 0;
+      const btcGuard = detectPriceManipulation(btcPrices, avgBtcWindow, 0.15);
+      const ethGuard = detectPriceManipulation(ethPrices, 0, 0.15);
+      const solGuard = detectPriceManipulation(solPrices, 0, 0.15);
+      const manipulationDetected = btcGuard.manipulated || ethGuard.manipulated || solGuard.manipulated;
+
+      if (manipulationDetected && url.searchParams.get("strict") === "1") {
+        return new Response(
+          JSON.stringify({
+            error: "ERR_ORACLE_DEVIATION_HALT",
+            message: "Price deviation exceeded 15% manipulation threshold",
+            guards: { BTC: btcGuard, ETH: ethGuard, SOL: solGuard }
+          }),
+          { status: 422, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
       const aggregated = {
         BTC: computeMedian(btcPrices),
         ETH: computeMedian(ethPrices),
         SOL: computeMedian(solPrices),
         TETRAKIS: 1.042,
         timestamp: Date.now(),
-        sources_count: validSources.length
+        sources_count: validSources.length,
+        manipulation_guard: {
+          threshold_pct: 15,
+          manipulated: manipulationDetected,
+          BTC: btcGuard,
+          ETH: ethGuard,
+          SOL: solGuard
+        }
       };
+
+      const nextWindow = [...windowHistory.slice(-9), { BTC: aggregated.BTC, ETH: aggregated.ETH, SOL: aggregated.SOL, timestamp: aggregated.timestamp }];
 
       const persistPromise = (async () => {
         if (kv && typeof kv.put === "function") {
           await kv.put(cacheKey, JSON.stringify(aggregated), { expirationTtl: 30 }).catch(() => null);
+          await kv.put(windowKey, JSON.stringify(nextWindow), { expirationTtl: 3600 }).catch(() => null);
         }
         if (db && typeof db.prepare === "function") {
           try {

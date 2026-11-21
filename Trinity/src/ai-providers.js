@@ -113,9 +113,20 @@ export async function getConfiguredAIProvider(env,provider){
     }
     return {apiKey:geminiKey,model:`models/${model}`};
   }
-  if(!row&&provider==='openai'&&typeof env.OPENAI_API_KEY==='string'&&sanitizeApiKey(env.OPENAI_API_KEY,/sk-[A-Za-z0-9_-]{16,}/).length>=20){
-    const openaiModel=env.OPENAI_MODEL&&!/luna/i.test(env.OPENAI_MODEL)?env.OPENAI_MODEL.trim():'gpt-4.1-mini';
-    return {apiKey:sanitizeApiKey(env.OPENAI_API_KEY,/sk-[A-Za-z0-9_-]{16,}/),model:openaiModel};
+  if(!row&&provider==='openai'){
+    const resolved=await resolveProviderSecret(env,'openai');
+    const openaiKey=sanitizeApiKey(resolved,/sk-[A-Za-z0-9_-]{16,}/);
+    if(openaiKey&&openaiKey.length>=20){
+      const openaiModel=env.OPENAI_MODEL&&!/luna/i.test(env.OPENAI_MODEL)?env.OPENAI_MODEL.trim():'gpt-4.1-mini';
+      return {apiKey:openaiKey,model:openaiModel};
+    }
+  }
+  if(!row&&['anthropic','claude','groq','deepseek','mistral','openrouter'].includes(provider)){
+    const resolved=await resolveProviderSecret(env,provider==='claude'?'anthropic':provider);
+    const key=sanitizeApiKey(resolved);
+    if(key&&key.length>=8){
+      return {apiKey:key,model:env[`${provider.toUpperCase()}_MODEL`]||(provider==='anthropic'||provider==='claude'?'claude-3-7-sonnet-20250219':'default')};
+    }
   }
   if(!row)throw new HttpError(503,`${provider==='gemini'?'Gemini':provider==='openai'?'OpenAI / ChatGPT':'AI poskytovateľ'} nie je nakonfigurovaný a overený.`);
   const material=await getSecretMaterial(env,{ownerId:row.owner_id,id:row.secret_id,provider});

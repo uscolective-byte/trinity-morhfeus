@@ -29,7 +29,7 @@ test('Banking Connectors: maskIdentifier masks sensitive information safely', ()
   assert.equal(maskIdentifier(null), null);
 });
 
-test('Banking Connectors: getConnectorsRegistry returns all 5 connectors with verified statuses', async () => {
+test('Banking Connectors: no payment account or crypto address is invented when unset', async () => {
   const env = {};
   const registry = await getConnectorsRegistry(env, 'admin');
 
@@ -53,17 +53,34 @@ test('Banking Connectors: getConnectorsRegistry returns all 5 connectors with ve
   assert.equal(rev.can_read_balance, false);
   assert.equal(rev.verified_balance, null);
 
-  // Sovereign EVM crypto is verified live on-chain
+  const revolut = registry.connectors.find(c => c.id === 'revolut_personal');
+  assert.equal(revolut.receiving_endpoint.iban, null);
+  assert.equal(revolut.receiving_endpoint.payment_link, null);
+  assert.equal(revolut.can_receive, false);
+
+  const paypal = registry.connectors.find(c => c.id === 'paypal');
+  assert.equal(paypal.receiving_endpoint.email, null);
+  assert.equal(paypal.receiving_endpoint.paypal_me, null);
+  assert.equal(paypal.can_receive, false);
+
+  const sepa = registry.connectors.find(c => c.id === 'sepa_instant');
+  assert.equal(sepa.receiving_endpoint.iban, null);
+  assert.equal(sepa.can_receive, false);
+
+  // An unset EVM destination is not presented as live or verified.
   const crypto = registry.connectors.find(c => c.id === 'crypto_evm');
-  assert.equal(crypto.status, 'live_verified');
+  assert.equal(crypto.status, 'needs_provider_setup');
   assert.equal(crypto.currency, 'USDC');
+  assert.equal(crypto.receiving_endpoint.address, null);
+  assert.equal(crypto.can_receive, false);
+  assert.equal(crypto.verified_balance, null);
 });
 
 test('Banking Connectors: syncConnector returns status and rejects unknown connector', async () => {
   const env = {};
   const res = await syncConnector(env, 'admin', 'crypto_evm');
   assert.equal(res.connector_id, 'crypto_evm');
-  assert.equal(res.status, 'live_verified');
+  assert.equal(res.status, 'needs_provider_setup');
 
   await assert.rejects(
     async () => syncConnector(env, 'admin', 'nonexistent_wallet'),

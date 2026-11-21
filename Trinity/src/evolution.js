@@ -51,7 +51,7 @@ export async function runEvolutionCycle(env) {
       lesson: `Pri vykonávaní úlohy nastala chyba: ${errorText}. Odporúčanie: Overiť parametre nástrojov a dostupnosť poskytovateľa ${job.provider}.`
     };
 
-    if (env.TRINITY_AUTO_IMPROVE === 'true' && (env.TRINITY_GITHUB_TOKEN || env.GITHUB_TOKEN)) {
+    if (env.TRINITY_AUTO_IMPROVE === 'true' && (env.TRINITY_GITHUB_TOKEN || env.GITHUB_TOKEN || env.trinitygithube_key || env.GITHUBE_API_KEY)) {
       const proposal=await createSelfImprovementProposal(env,{title:`Oprava zlyhanej úlohy ${job.id}`.slice(0,120),description:`Nájdi príčinu a priprav najmenšiu opravu s testom. Úloha: ${String(job.task).slice(0,2000)}. Chyba: ${errorText}`,kind:'code_improvement'},'evolution-engine');
       await approveSelfImprovementProposal(env,proposal.id,'owner-standing-policy:TRINITY_AUTO_IMPROVE');
       try { diagnosis.execution=await applySelfImprovementProposal(env,proposal.id,'evolution-engine'); }

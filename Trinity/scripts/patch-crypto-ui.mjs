@@ -1,3 +1,5 @@
+console.error("This historical patch is disabled because it reintroduces unverified TTK, staking and liquidity claims.");
+process.exit(1);
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
