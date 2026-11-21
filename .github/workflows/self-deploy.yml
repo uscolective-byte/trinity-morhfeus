@@ -231,7 +231,7 @@ jobs:
             };
             fs.writeFileSync('DEPLOYMENT_RECEIPT_CI.json', JSON.stringify(receipt, null, 2));
           "
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: trinity-deployment-receipt-${{ github.sha }}
           path: DEPLOYMENT_RECEIPT_CI.json
