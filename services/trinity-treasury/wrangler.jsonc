@@ -7,15 +7,13 @@
   "preview_urls": false,
   "vars": {
     "ENVIRONMENT": "production",
-    "TTK_CONTRACT_ADDRESS": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    "TTK_CONTRACT_ADDRESS": "",
     "BASE_CHAIN_ID": "8453",
     "BASE_RPC_URL": "https://mainnet.base.org",
     "BASE_SEPOLIA_CHAIN_ID": "84532",
     "BASE_SEPOLIA_RPC_URL": "https://sepolia.base.org",
     "POLYGON_CHAIN_ID": "137",
-    "POLYGON_RPC_URL": "https://polygon-rpc.com",
-    "TTK_HARD_CAP": "10000000",
-    "TTK_INITIAL_SUPPLY": "2000000"
+    "POLYGON_RPC_URL": "https://polygon-rpc.com"
   },
   "d1_databases": [
     {
@@ -44,15 +42,13 @@
       "preview_urls": false,
       "vars": {
         "ENVIRONMENT": "staging",
-        "TTK_CONTRACT_ADDRESS": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+        "TTK_CONTRACT_ADDRESS": "",
         "BASE_CHAIN_ID": "84532",
         "BASE_RPC_URL": "https://sepolia.base.org",
         "BASE_SEPOLIA_CHAIN_ID": "84532",
         "BASE_SEPOLIA_RPC_URL": "https://sepolia.base.org",
         "POLYGON_CHAIN_ID": "137",
-        "POLYGON_RPC_URL": "https://polygon-rpc.com",
-        "TTK_HARD_CAP": "10000000",
-        "TTK_INITIAL_SUPPLY": "2000000"
+        "POLYGON_RPC_URL": "https://polygon-rpc.com"
       },
       "d1_databases": [
         {

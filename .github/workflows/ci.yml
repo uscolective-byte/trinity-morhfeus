@@ -27,9 +27,20 @@ jobs:
         run: |
           npm ci --ignore-scripts
           npm --prefix packages/contracts ci --ignore-scripts
+          npm --prefix packages/crypto-core ci --ignore-scripts || npm --prefix packages/crypto-core ci --legacy-peer-deps --ignore-scripts
           npm --prefix Jericho-Worker ci
+
           npm --prefix contracts/tetrakis ci
           npm --prefix Trinity ci
+
+
+      - name: Ensure native workspace search dependency
+        run: |
+          if ! command -v rg >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install --yes ripgrep
+          fi
+          rg --version
 
       - name: Run Full Test Suite
         run: npm test

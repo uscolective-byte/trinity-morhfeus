@@ -51,6 +51,9 @@ jobs:
       - name: Install TAP contracts dependencies
         working-directory: packages/contracts
         run: npm ci --ignore-scripts
+      - name: Install crypto-core dependencies
+        working-directory: packages/crypto-core
+        run: npm ci --ignore-scripts || npm ci --legacy-peer-deps --ignore-scripts
       - run: npm ci
       - name: Check synchronized release documentation
         working-directory: .
@@ -67,6 +70,7 @@ jobs:
 
   deploy-development:
     needs: verify
+    if: github.repository == 'uscolective-byte/Trinity-antigravity'
     runs-on: ubuntu-latest
     concurrency:
       group: deployment-development

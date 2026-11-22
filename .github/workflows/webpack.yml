@@ -64,6 +64,10 @@ jobs:
         working-directory: packages/contracts
         run: npm ci --ignore-scripts
 
+      - name: Install crypto-core dependencies
+        working-directory: packages/crypto-core
+        run: npm ci --ignore-scripts || npm ci --legacy-peer-deps --ignore-scripts
+
       - name: Install Trinity dependencies
         working-directory: Trinity
         run: npm ci
@@ -102,6 +106,14 @@ jobs:
         run: |
           npm ci --prefix PC-Bridge-Worker
           npm test --prefix PC-Bridge-Worker
+
+      - name: Ensure native workspace search dependency
+        run: |
+          if ! command -v rg >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install --yes ripgrep
+          fi
+          rg --version
 
       - name: Validate Local Gateway
         run: |

@@ -1,9 +1,11 @@
 // services/trinity-treasury/src/index.js
 // WORKER #24: TRINITY TREASURY ($TTK Base L2 & Polygon Sovereign Controller)
 
-import tetrakisArtifact from "../../../packages/crypto-core/build/TetrakisToken.json" with { type: "json" };
+import tetrakisArtifact from "../../../contracts/tetrakis/build/TetrakisToken.json" with { type: "json" };
 import tetrakisManifesto from "../../../packages/crypto-core/lore/manifesto.json" with { type: "json" };
 import { verifyTapToken } from "../../../packages/contracts/src/tap.js";
+import { verifyMerkleProof, verifyExecutionReceipt } from "../../../packages/crypto-core/src/proof-of-execution.js";
+import { MerkleMountainRange, verifyMmrProof } from "../../../packages/crypto-core/src/merkle-mountain-range.js";
 
 export const TETRAKIS_ABI = tetrakisArtifact.abi;
 export const TETRAKIS_ARTIFACT_DIGESTS = {
@@ -27,9 +29,7 @@ const SELECTORS = {
   symbol: "0x95d89b41",
   decimals: "0x313ce567",
   totalSupply: "0x18160ddd",
-  HARD_CAP: "0x59bf1abe",
-  sovereignOwner: "0x90d9834f",
-  treasuryWorker: "0x183c637c",
+  TOTAL_SUPPLY_CAP: "0x48931352",
   balanceOf: "0x70a08231"
 };
 
@@ -42,9 +42,9 @@ export const LISTING_PIPELINE = [
     details: {
       contract: "TetrakisToken ($TTK)",
       compiler: "solc 0.8.24 (optimizer runs: 200)",
-      hardCap: "10,000,000 TTK",
-      initialSupply: "2,000,000 TTK",
-      antiBackdoor: "Infinite minting disabled; HARD_CAP enforced on-chain"
+      totalSupply: "1,000,000,000 TTK (fixed)",
+      initialAllocation: "1,000,000 TTK Basterix + 999,000,000 TTK Treasury",
+      antiBackdoor: "No mint function exists; supply is fixed at deployment"
     }
   },
   {
@@ -215,7 +215,9 @@ export default {
     }
 
     const url = new URL(request.url);
-    const contractAddress = env.TTK_CONTRACT_ADDRESS || "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+    // Empty/unset = the token has NOT been deployed yet. Never fall back to a placeholder address.
+    const contractAddress = /^0x[0-9a-fA-F]{40}$/.test(env.TTK_CONTRACT_ADDRESS || "") ? env.TTK_CONTRACT_ADDRESS : null;
+    const deployed = contractAddress !== null;
     const baseChainId = String(env.BASE_CHAIN_ID || "8453");
     const baseRpcUrl = env.BASE_RPC_URL || "https://mainnet.base.org";
     const polygonChainId = String(env.POLYGON_CHAIN_ID || "137");
@@ -246,8 +248,9 @@ export default {
             name: "Tetrakis",
             symbol: "TTK",
             decimals: 18,
-            hardCapTokens: Number(env.TTK_HARD_CAP || 10000000),
-            initialSupplyTokens: Number(env.TTK_INITIAL_SUPPLY || 2000000),
+            totalSupplyTokens: 1_000_000_000,
+            mintable: false,
+            deployed,
             contractAddress,
             baseChainId,
             baseRpcUrl,
@@ -307,8 +310,9 @@ export default {
             name: "Tetrakis",
             symbol: "TTK",
             decimals: 18,
-            hardCapWei: (10_000_000n * 10n ** 18n).toString(),
-            initialSupplyWei: (2_000_000n * 10n ** 18n).toString(),
+            totalSupplyWei: (1_000_000_000n * 10n ** 18n).toString(),
+            mintable: false,
+            deployed,
             contractAddress,
             baseChainId: Number(baseChainId),
             baseRpcUrl,
@@ -347,6 +351,9 @@ export default {
         const targetRpc = network === "polygon" ? polygonRpcUrl : baseRpcUrl;
         const targetChainId = network === "polygon" ? Number(polygonChainId) : Number(baseChainId);
 
+        if (!deployed) {
+          return new Response(JSON.stringify({ error: "CONTRACT_NOT_DEPLOYED", message: "TTK_CONTRACT_ADDRESS is not configured; the token is not deployed on-chain." }), { status: 409, headers: CORS_HEADERS });
+        }
         let dataHex = SELECTORS[method];
         if (!dataHex) {
           return new Response(JSON.stringify({ error: "UNSUPPORTED_METHOD" }), { status: 400, headers: CORS_HEADERS });
@@ -490,6 +497,140 @@ export default {
           usd_value: usdValue,
           status: "SETTLED",
           created_at: now
+        }),
+        { status: 200, headers: CORS_HEADERS }
+      );
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/treasury/poe/verify") {
+      let body;
+      try {
+        body = await request.json();
+      } catch {
+        return new Response(JSON.stringify({ ok: false, error: "INVALID_JSON" }), { status: 400, headers: CORS_HEADERS });
+      }
+
+      const { receipt, proof, rootHash } = body;
+      if (!receipt || !proof || !rootHash) {
+        return new Response(JSON.stringify({ ok: false, error: "MISSING_REQUIRED_FIELDS", required: ["receipt", "proof", "rootHash"] }), { status: 400, headers: CORS_HEADERS });
+      }
+
+      const receiptCheck = verifyExecutionReceipt(receipt, { requireSuccess: true });
+      if (!receiptCheck.ok) {
+        return new Response(JSON.stringify({ ok: false, status: "RECEIPT_REJECTED", error: receiptCheck.reason }), { status: 422, headers: CORS_HEADERS });
+      }
+      const calculatedLeaf = receiptCheck.leafHash;
+      const isMmrProof = proof?.format === "trinity-mmr-v1";
+      const isValid = isMmrProof
+        ? verifyMmrProof(calculatedLeaf, proof, rootHash)
+        : Array.isArray(proof) && verifyMerkleProof(calculatedLeaf, proof, rootHash);
+
+      return new Response(
+        JSON.stringify({
+          ok: isValid,
+          status: isValid ? "VERIFIED" : "PROOF_REJECTED",
+          taskId: receipt.taskId,
+          agentId: receipt.agentId,
+          leafHash: calculatedLeaf,
+          rootHash,
+          timestamp: Date.now()
+        }),
+        { status: isValid ? 200 : 422, headers: CORS_HEADERS }
+      );
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/treasury/poe/epoch/commit") {
+      let body;
+      try {
+        body = await request.json();
+      } catch {
+        return new Response(JSON.stringify({ ok: false, error: "INVALID_JSON" }), { status: 400, headers: CORS_HEADERS });
+      }
+
+      const { receipts = [], epochNumber } = body;
+      if (!Array.isArray(receipts) || receipts.length === 0) {
+        return new Response(JSON.stringify({ ok: false, error: "EMPTY_RECEIPTS_BATCH" }), { status: 400, headers: CORS_HEADERS });
+      }
+      if (receipts.length > 1000) {
+        return new Response(JSON.stringify({ ok: false, error: "EPOCH_BATCH_TOO_LARGE", maxReceipts: 1000 }), { status: 413, headers: CORS_HEADERS });
+      }
+
+      const receiptChecks = receipts.map((receipt) => verifyExecutionReceipt(receipt, { requireSuccess: true }));
+      const invalidIndex = receiptChecks.findIndex((result) => !result.ok);
+      if (invalidIndex !== -1) {
+        return new Response(JSON.stringify({ ok: false, error: "INVALID_EXECUTION_RECEIPT", index: invalidIndex, reason: receiptChecks[invalidIndex].reason }), { status: 422, headers: CORS_HEADERS });
+      }
+
+      const mmr = new MerkleMountainRange(receiptChecks.map((result) => result.leafHash));
+      const rootHash = mmr.getRoot();
+      const now = Date.now();
+      const requestedEpochId = epochNumber === undefined ? now : Number(epochNumber);
+      if (!Number.isSafeInteger(requestedEpochId) || requestedEpochId <= 0) {
+        return new Response(JSON.stringify({ ok: false, error: "INVALID_EPOCH_ID" }), { status: 400, headers: CORS_HEADERS });
+      }
+      const epochId = requestedEpochId;
+
+      const db = env?.DB || env?.TRINITY_D1;
+      let persisted = false;
+      let alreadyCommitted = false;
+      if (db && typeof db.prepare === "function") {
+        try {
+          await db.prepare(`
+            CREATE TABLE IF NOT EXISTS sovereign_epoch_roots (
+              epoch_id INTEGER PRIMARY KEY,
+              root_hash TEXT NOT NULL,
+              task_count INTEGER NOT NULL,
+              created_at INTEGER NOT NULL
+            );
+          `).run();
+          await db.prepare(`
+            CREATE TRIGGER IF NOT EXISTS sovereign_epoch_roots_no_update
+            BEFORE UPDATE ON sovereign_epoch_roots BEGIN
+              SELECT RAISE(ABORT, 'SOVEREIGN_EPOCHS_ARE_IMMUTABLE');
+            END;
+          `).run();
+          await db.prepare(`
+            CREATE TRIGGER IF NOT EXISTS sovereign_epoch_roots_no_delete
+            BEFORE DELETE ON sovereign_epoch_roots BEGIN
+              SELECT RAISE(ABORT, 'SOVEREIGN_EPOCHS_ARE_IMMUTABLE');
+            END;
+          `).run();
+
+          const existing = await db.prepare(
+            "SELECT root_hash, task_count FROM sovereign_epoch_roots WHERE epoch_id = ?1"
+          ).bind(epochId).first();
+          if (existing) {
+            if (existing.root_hash !== rootHash || Number(existing.task_count) !== receipts.length) {
+              return new Response(JSON.stringify({ ok: false, error: "EPOCH_ID_CONFLICT", epochId }), { status: 409, headers: CORS_HEADERS });
+            }
+            alreadyCommitted = true;
+          } else {
+            await db.prepare(`
+              INSERT INTO sovereign_epoch_roots (epoch_id, root_hash, task_count, created_at)
+              VALUES (?1, ?2, ?3, ?4);
+            `).bind(epochId, rootHash, receipts.length, now).run();
+          }
+          persisted = true;
+        } catch (dbErr) {
+          console.error("[PoE Epoch Commit] D1 error:", dbErr);
+          return new Response(JSON.stringify({ ok: false, error: "EPOCH_PERSISTENCE_FAILED" }), { status: 503, headers: CORS_HEADERS });
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          epochId,
+          rootHash,
+          taskCount: receipts.length,
+          rootFormat: "trinity-mmr-v1",
+          nodeCount: mmr.getNodeCount(),
+          peaks: mmr.getPeaks().map(({ hash, height }) => ({ hash, height })),
+          inclusionProofs: receipts.map((receipt, leafIndex) => ({ taskId: receipt.taskId, proof: mmr.getProof(leafIndex) })),
+          compressedState: true,
+          persisted,
+          status: persisted ? (alreadyCommitted ? "ALREADY_COMMITTED" : "COMMITTED") : "PREPARED",
+          timestamp: now
         }),
         { status: 200, headers: CORS_HEADERS }
       );
