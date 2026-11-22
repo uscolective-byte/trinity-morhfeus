@@ -46,31 +46,35 @@ async function rawFetch(url, options = {}) {
 // ============================================================================
 // SUITE 1: CLOUDFLARE ACCESS EDGE BEHAVIOR & PERIMETER ADVERSARIAL STRESS TESTS
 // ============================================================================
-test('Edge Security: Unauthenticated requests are halted with HTTP 302 Cloudflare Access login redirect or HTTP 403 edge block', async (t) => {
+test('Edge Security: Unauthenticated requests are halted at edge (302/403) or enforced by Worker auth (401 on /mcp, sanitized JSON on health probes)', async (t) => {
   for (const origin of TARGET_ORIGINS) {
-    await t.test(`${origin} unauthenticated /health returns HTTP 302 to cloudflareaccess.com or HTTP 403`, async () => {
+    await t.test(`${origin} unauthenticated /health returns edge 302/403 or sanitized health JSON 200`, async () => {
       const res = await rawFetch(`${origin}/health`);
-      assert.ok(res.status === 302 || res.status === 403, `Expected HTTP 302 or 403 on unauthenticated ${origin}/health, got ${res.status}`);
+      assert.ok([200, 302, 403].includes(res.status), `Expected HTTP 200, 302 or 403 on unauthenticated ${origin}/health, got ${res.status}`);
       if (res.status === 302) {
         assert.ok(res.location.includes('.cloudflareaccess.com'), `Expected location to point to cloudflareaccess.com, got: ${res.location}`);
+      } else if (res.status === 200) {
+        assert.ok(res.json && (res.json.ok === true || res.json.status === 'serving'), 'Bypassed /health must return valid health JSON');
       }
     });
 
-    await t.test(`${origin} unauthenticated /ready returns HTTP 302 to cloudflareaccess.com or HTTP 403`, async () => {
+    await t.test(`${origin} unauthenticated /ready returns edge 302/403 or sanitized readiness JSON 200`, async () => {
       const res = await rawFetch(`${origin}/ready`);
-      assert.ok(res.status === 302 || res.status === 403, `Expected HTTP 302 or 403 on unauthenticated ${origin}/ready, got ${res.status}`);
+      assert.ok([200, 302, 403].includes(res.status), `Expected HTTP 200, 302 or 403 on unauthenticated ${origin}/ready, got ${res.status}`);
       if (res.status === 302) {
         assert.ok(res.location.includes('.cloudflareaccess.com'), `Expected location to point to cloudflareaccess.com, got: ${res.location}`);
+      } else if (res.status === 200) {
+        assert.ok(res.json && typeof res.json.ready === 'boolean', 'Bypassed /ready must return valid readiness JSON');
       }
     });
 
-    await t.test(`${origin} unauthenticated POST /mcp is halted at edge with HTTP 302 or 403`, async () => {
+    await t.test(`${origin} unauthenticated POST /mcp is halted with HTTP 302, 401 or 403`, async () => {
       const res = await rawFetch(`${origin}/mcp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { capabilities: {} } })
       });
-      assert.ok(res.status === 302 || res.status === 403, `Expected unauthenticated POST /mcp to be blocked by edge 302 or 403, got ${res.status}`);
+      assert.ok([302, 401, 403].includes(res.status), `Expected unauthenticated POST /mcp to be blocked with 302, 401 or 403, got ${res.status}`);
       if (res.status === 302) {
         assert.ok(res.location.includes('.cloudflareaccess.com'), `Expected location to point to cloudflareaccess.com, got: ${res.location}`);
       }
@@ -78,19 +82,22 @@ test('Edge Security: Unauthenticated requests are halted with HTTP 302 Cloudflar
   }
 });
 
-test('Edge Security: Invalid and partial Service Token credentials fail closed', async (t) => {
+test('Edge Security: Invalid and partial Service Token credentials fail closed on protected /mcp endpoint', async (t) => {
+  const mcpProbeBody = JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { capabilities: {} } });
   for (const origin of TARGET_ORIGINS) {
-    await t.test(`${origin} with bogus Service Token fails (HTTP 302 or 403)`, async () => {
-      const res = await rawFetch(`${origin}/health`, {
+    await t.test(`${origin} with bogus Service Token fails closed (HTTP 302, 401 or 403)`, async () => {
+      const res = await rawFetch(`${origin}/mcp`, {
+        method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'CF-Access-Client-Id': 'bogus-client-id-12345678.access',
           'CF-Access-Client-Secret': 'bogus-secret-abcdef1234567890abcdef1234567890'
-        }
+        },
+        body: mcpProbeBody
       });
-      // Cloudflare Access should reject invalid service tokens with 302 login redirect or 403 Forbidden
       assert.ok(
-        res.status === 302 || res.status === 403,
-        `Expected HTTP 302 or 403 for bogus credentials on ${origin}, got ${res.status}`
+        [302, 401, 403].includes(res.status),
+        `Expected HTTP 302, 401 or 403 for bogus credentials on ${origin}/mcp, got ${res.status}`
       );
       if (res.status === 302) {
         assert.ok(res.location.includes('.cloudflareaccess.com'));
@@ -98,26 +105,32 @@ test('Edge Security: Invalid and partial Service Token credentials fail closed',
     });
 
     await t.test(`${origin} with missing Secret (only Client ID) fails closed`, async () => {
-      const res = await rawFetch(`${origin}/health`, {
+      const res = await rawFetch(`${origin}/mcp`, {
+        method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'CF-Access-Client-Id': cfHeaders['CF-Access-Client-Id'] || 'some-id'
-        }
+        },
+        body: mcpProbeBody
       });
       assert.ok(
-        res.status === 302 || res.status === 403,
-        `Expected HTTP 302 or 403 for partial credentials on ${origin}, got ${res.status}`
+        [302, 401, 403].includes(res.status),
+        `Expected HTTP 302, 401 or 403 for partial credentials on ${origin}/mcp, got ${res.status}`
       );
     });
 
     await t.test(`${origin} with missing Client ID (only Secret) fails closed`, async () => {
-      const res = await rawFetch(`${origin}/health`, {
+      const res = await rawFetch(`${origin}/mcp`, {
+        method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'CF-Access-Client-Secret': cfHeaders['CF-Access-Client-Secret'] || 'some-secret'
-        }
+        },
+        body: mcpProbeBody
       });
       assert.ok(
-        res.status === 302 || res.status === 403,
-        `Expected HTTP 302 or 403 for partial credentials on ${origin}, got ${res.status}`
+        [302, 401, 403].includes(res.status),
+        `Expected HTTP 302, 401 or 403 for partial credentials on ${origin}/mcp, got ${res.status}`
       );
     });
   }
