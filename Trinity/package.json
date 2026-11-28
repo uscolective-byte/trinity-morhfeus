@@ -39,7 +39,7 @@
     "@cloudflare/workers-types": "5.20261104.1",
     "esbuild": "0.28.2",
     "miniflare": "5.20261006.1-alpha",
-    "wrangler": "4.157.0"
+    "wrangler": "4.168.0"
   },
   "overrides": {
     "@puppeteer/browsers": "3.2.6",
